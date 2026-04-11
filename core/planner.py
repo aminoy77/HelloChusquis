@@ -9,6 +9,18 @@ console = Console()
 
 def detect_complexity(user_input: str, pool) -> bool:
     """Pregunta al LLM si la tarea es simple o compleja."""
+    
+    # Detecta casos simples sin llamar al LLM
+    simple_patterns = [
+        "hola", "hello", "hi", "hey", "buenos días", "buenas",
+        "gracias", "thanks", "ok", "vale", "sí", "no", "adios",
+        "bye", "hasta luego", "qué tal", "cómo estás"
+    ]
+    if user_input.lower().strip() in simple_patterns:
+        return False
+    if len(user_input.split()) <= 4:
+        return False
+
     try:
         response = pool.chat_with_retry([
             {
@@ -27,6 +39,7 @@ def detect_complexity(user_input: str, pool) -> bool:
         return "complex" in result
     except Exception:
         return False
+      
 
 
 def generate_plan(user_input: str, pool) -> list[str]:

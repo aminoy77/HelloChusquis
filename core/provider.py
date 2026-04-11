@@ -121,7 +121,10 @@ class ProviderPool:
             "model": provider.model,
             "messages": messages,
         }
-        if tools:
+
+        provider_supports_tools = "groq.com" not in provider.base_url.lower()
+
+        if tools and provider_supports_tools:
             payload["tools"] = tools
 
         with httpx.Client(timeout=self.timeout) as client:
@@ -133,7 +136,6 @@ class ProviderPool:
                 },
                 json=payload,
             )
-            
             response.raise_for_status()
             return response.json()
 
