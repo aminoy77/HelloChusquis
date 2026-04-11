@@ -21,6 +21,27 @@ def main():
         list_plugins()
         return
 
+    if args and args[0] == "build":
+        from core.setup import ensure_config
+        from core.provider import ProviderPool
+        ensure_config()
+        pool = ProviderPool()
+        from core.builder import build_plugin
+        build_plugin(pool)
+        return
+
+    if args and args[0] == "learn":
+        from core.setup import ensure_config
+        from core.learning import load_learnings
+        from rich.console import Console
+        import json
+        ensure_config()
+        console = Console()
+        learnings = load_learnings()
+        console.print("\n[bold]Current learnings:[/bold]")
+        console.print_json(json.dumps(learnings, indent=2, ensure_ascii=False))
+        return
+
     from main import main as run
     run()
 

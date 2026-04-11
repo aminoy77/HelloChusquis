@@ -6,6 +6,8 @@ from typing import Optional
 from pathlib import Path
 from rich.console import Console
 
+
+
 console = Console()
 
 
@@ -72,6 +74,12 @@ class ProviderPool:
         if not available:
             raise RuntimeError("All providers exhausted. Try again later.")
 
+        # Si hay tools, prioriza providers que los soporten
+        if tools:
+            tools_available = [p for p in available if "groq.com" not in p.base_url.lower()]
+            if tools_available:
+                available = tools_available
+
         last_error = None
         for provider in available:
             try:
@@ -103,12 +111,10 @@ class ProviderPool:
                     console.print(f"[yellow]↻ {provider.name} error {status}, switching...[/yellow]")
                 last_error = e
                 continue
-
             except httpx.TimeoutException:
                 console.print(f"[yellow]↻ {provider.name} timeout, switching...[/yellow]")
                 last_error = Exception(f"{provider.name} timed out")
                 continue
-
             except httpx.ConnectError:
                 console.print(f"[yellow]↻ {provider.name} connection failed, switching...[/yellow]")
                 last_error = Exception(f"{provider.name} connection failed")

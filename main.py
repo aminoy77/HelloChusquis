@@ -2,8 +2,8 @@ from core.setup import ensure_config
 from ui.terminal import print_assistant, print_banner, get_input, print_status
 from core.agent import Agent
 from core.planner import detect_complexity, generate_plan, confirm_plan, execute_plan
+from core.learning import add_feedback
 from rich.console import Console
-from rich.prompt import Prompt
 
 console = Console()
 
@@ -17,6 +17,23 @@ def main():
     try:
         user_input = get_input()
         while user_input not in ["exit", "quit"]:
+
+            # Feedback
+            if user_input in ["👍", "+", "good", "bien"]:
+                msgs = agent.history.get()
+                context = msgs[-2]["content"] if len(msgs) >= 2 else ""
+                add_feedback("positive", context)
+                console.print("[green]✓ Feedback saved[/green]")
+                user_input = get_input()
+                continue
+
+            if user_input in ["👎", "-", "bad", "mal"]:
+                msgs = agent.history.get()
+                context = msgs[-2]["content"] if len(msgs) >= 2 else ""
+                add_feedback("negative", context)
+                console.print("[red]✓ Feedback saved[/red]")
+                user_input = get_input()
+                continue
 
             if user_input == "/status":
                 print_status(agent.pool.status())
@@ -41,7 +58,6 @@ def main():
 
             else:
                 try:
-                    # Detecta si es tarea compleja
                     console.print("[dim]...[/dim]", end="\r")
                     is_complex = detect_complexity(user_input, agent.pool)
 
@@ -53,12 +69,12 @@ def main():
                             if final:
                                 execute_plan(final, agent)
                         else:
-                            # Si falla el plan, ejecuta normal
                             respuesta = agent.run(user_input)
                             print_assistant(respuesta)
                     else:
                         respuesta = agent.run(user_input)
                         print_assistant(respuesta)
+                        console.print("[dim]  👍 / 👎 to give feedback[/dim]")
 
                 except RuntimeError as e:
                     console.print(f"\n[red]✗ {e}[/red]")

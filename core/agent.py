@@ -1,5 +1,6 @@
 import json
 import core.memory as memory
+import core.learning as learning
 from core.provider import ProviderPool
 from core.history import History
 from tools.shell import ShellTool
@@ -70,15 +71,27 @@ class Agent:
         self.code = CodeTool()
         self.system_prompt = config["agent"]["system_prompt"]
         self.workspace_dirs = config["settings"]["workspace_dirs"]
-        self.auto_install_plugins = config["settings"].get("auto_install_plugins", True)
 
+        # Cargar memoria de sesiones anteriores
         summary = memory.load_summary()
         if summary:
             self.system_prompt += f"\n\nWhat you remember from past sessions:\n{summary}"
 
+        # Cargar learnings
+        learnings = learning.load_learnings()
+        learning_prompt = learning.build_learning_prompt(learnings)
+        if learning_prompt:
+            self.system_prompt += f"\n\n{learning_prompt}"
+
+        # Cargar plugins
         self.plugins = load_plugins()
         for plugin in self.plugins:
             TOOLS_SCHEMA.append(plugin["schema"])
+
+        # Informar al agente qué plugins tiene disponibles
+        if self.plugins:
+            plugin_names = ", ".join(p["name"] for p in self.plugins)
+            self.system_prompt += f"\n\nInstalled plugins available as tools: {plugin_names}. Use them directly without asking the user to install anything."
 
     def _dispatch_tool(self, name: str, args: dict):
         if name == "shell":
@@ -95,7 +108,6 @@ class Agent:
                 self.files.allow_dir(path)
             return self.files.run(**args)
 
-        # Busca en plugins
         for plugin in self.plugins:
             if plugin["name"] == name:
                 try:
@@ -116,7 +128,8 @@ class Agent:
             {"role": "system", "content": (
                 self.system_prompt +
                 f"\n\nWorkspace directories: {', '.join(self.workspace_dirs)}. "
-                "Always use absolute paths when calling file tools."
+                "Always use absolute paths when calling file tools. "
+                "Only use tools when strictly necessary. Never use shell or code tools just to print or display text."
             )},
             *self.history.get()
         ]
@@ -169,5 +182,8 @@ class Agent:
             memory.save_summary(summary)
         except Exception:
             pass
+
+        # Analizar y aprender de la sesión
+        learning.analyze_and_learn(messages, self.pool)
 
         memory.cleanup_old_sessions(retention_days)
