@@ -35,7 +35,28 @@ def main():
                 user_input = get_input()
                 continue
 
-            if user_input == "/status":
+            if user_input == "/help":
+                console.print("""
+[bold cyan]HelloChusquis Commands[/bold cyan]
+
+[bold]Chat commands:[/bold]
+  /help      — Show this help
+  /status    — Show provider status
+  /clear     — Clear conversation history
+  /plan      — Force planning mode: /plan <task>
+  👍 / +     — Positive feedback on last response
+  👎 / -     — Negative feedback on last response
+  exit       — Exit and save memory
+
+[bold]Terminal commands:[/bold]
+  hellochusquis install <plugin>    — Install a plugin
+  hellochusquis uninstall <plugin>  — Remove a plugin
+  hellochusquis plugins             — List installed plugins
+  hellochusquis build               — Build a new plugin
+  hellochusquis learn               — Show learned patterns
+""")
+
+            elif user_input == "/status":
                 print_status(agent.pool.status())
 
             elif user_input == "/clear":
