@@ -98,7 +98,7 @@ hellochusquis install calculator
 hellochusquis install worldclock
 ```
 
-Browse all available plugins at [github.com/aminoy77/OpenManolo-plugins](https://github.com/aminoy77/OpenManolo-plugins)
+Browse all available plugins at [github.com/aminoy77/Hellochusquis-plugins](https://github.com/aminoy77/HelloChusquis-plugins.git)
 
 ### Build your own plugin
 
