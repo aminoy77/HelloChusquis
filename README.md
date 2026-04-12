@@ -37,6 +37,17 @@ git clone https://github.com/aminoy77/HelloChusquis.git
 cd HelloChusquis
 pip install -e .
 ```
+### Option 3 — pip (recommended)
+
+```bash
+pip install hellochusquis
+```
+
+### Option 4 — curl
+
+```bash
+curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash
+```
 
 ## First Run
 
