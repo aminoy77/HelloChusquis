@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelloChusquis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f0f13;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 14px 24px;
+            background: #1a1a24;
+            border-bottom: 1px solid #2a2a3a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #7dd3fc;
+            letter-spacing: 0.5px;
+        }
+
+        header .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 220px;
+            background: #13131b;
+            border-right: 1px solid #2a2a3a;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar-section h3 {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            padding: 4px 0;
+            color: #9ca3af;
+        }
+
+        .sidebar-item .indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .indicator.ready { background: #22c55e; }
+        .indicator.exhausted { background: #ef4444; }
+        .indicator.plugin { background: #7dd3fc; }
+
+        .memory-stat {
+            font-size: 0.75rem;
+            color: #6b7280;
+            padding: 2px 0;
+        }
+
+        .memory-stat span {
+            color: #9ca3af;
+        }
+
+        /* CHAT */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-width: 75%;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user { align-self: flex-end; }
+        .message.assistant { align-self: flex-start; }
+
+        .message-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 0 4px;
+        }
+
+        .message.user .message-label { color: #7dd3fc; text-align: right; }
+        .message.assistant .message-label { color: #a78bfa; }
+
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: #1e3a5f;
+            border: 1px solid #2563eb44;
+            color: #e0e0e0;
+        }
+
+        .message.assistant .message-bubble {
+            background: #1e1e2e;
+            border: 1px solid #2a2a3a;
+            color: #e0e0e0;
+        }
+
+        .tool-calls {
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tool-call {
+            font-size: 0.72rem;
+            color: #6b7280;
+            background: #0f0f18;
+            border: 1px solid #1f1f2e;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-family: monospace;
+        }
+
+        .tool-call.success { border-left: 2px solid #22c55e; }
+        .tool-call.error { border-left: 2px solid #ef4444; }
+
+        .thinking {
+            align-self: flex-start;
+            display: flex;
+            gap: 4px;
+            padding: 10px 14px;
+            background: #1e1e2e;
+            border: 1px solid #2a2a3a;
+            border-radius: 12px;
+        }
+
+        .thinking span {
+            width: 6px;
+            height: 6px;
+            background: #a78bfa;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+
+        .thinking span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        /* INPUT */
+        .input-area {
+            padding: 16px 24px;
+            background: #13131b;
+            border-top: 1px solid #2a2a3a;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            background: #1e1e2e;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #e0e0e0;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-area input:focus {
+            border-color: #7dd3fc44;
+        }
+
+        .input-area input::placeholder { color: #4b5563; }
+
+        .input-area button {
+            background: #1d4ed8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .input-area button:hover { background: #2563eb; }
+        .input-area button:disabled { background: #374151; cursor: not-allowed; }
+
+        .welcome {
+            align-self: center;
+            text-align: center;
+            color: #4b5563;
+            margin-top: auto;
+            margin-bottom: auto;
+        }
+
+        .welcome h2 { font-size: 1.5rem; color: #7dd3fc; margin-bottom: 8px; }
+        .welcome p { font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="dot"></div>
+        <h1>HelloChusquis</h1>
+    </header>
+
+    <div class="main">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <h3>Providers</h3>
+                <div id="providers-list">—</div>
+            </div>
+            <div class="sidebar-section">
+                <h3>Plugins</h3>
+                <div id="plugins-list">—</div>
+            </div>
+            <div class="sidebar-section">
+                <h3>Memory</h3>
+                <div id="memory-info">—</div>
+            </div>
+            <div class="sidebar-section">
+                <h3>Learnings</h3>
+                <div id="learnings-info">—</div>
+            </div>
+        </aside>
+
+        <div class="chat-area">
+            <div class="messages" id="messages">
+                <div class="welcome">
+                    <h2>HelloChusquis</h2>
+                    <p>Tu agente AI en el navegador</p>
+                </div>
+            </div>
+            <div class="input-area">
+                <input
+                    type="text"
+                    id="input"
+                    placeholder="Escribe un mensaje... (/help para comandos)"
+                    autocomplete="off"
+                />
+                <button id="send-btn" onclick="sendMessage()">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const messagesEl = document.getElementById('messages');
+        const inputEl = document.getElementById('input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // Load sidebar status
+        async function loadStatus() {
+            try {
+                const res = await fetch('/status');
+                const data = await res.json();
+
+                // Providers
+                const provEl = document.getElementById('providers-list');
+                provEl.innerHTML = data.providers.map(p => `
+                    <div class="sidebar-item">
+                        <div class="indicator ${p.status}"></div>
+                        <span>${p.name}</span>
+                    </div>
+                `).join('');
+
+                // Plugins
+                const plugEl = document.getElementById('plugins-list');
+                plugEl.innerHTML = data.plugins.length
+                    ? data.plugins.map(p => `
+                        <div class="sidebar-item">
+                            <div class="indicator plugin"></div>
+                            <span>${p.name}</span>
+                        </div>
+                    `).join('')
+                    : '<div class="sidebar-item">No plugins</div>';
+
+                // Memory
+                const memEl = document.getElementById('memory-info');
+                memEl.innerHTML = `
+                    <div class="memory-stat">Sessions: <span>${data.memory.sessions}</span></div>
+                    ${data.memory.summary ? `<div class="memory-stat" style="margin-top:4px;font-size:0.7rem;color:#4b5563">${data.memory.summary}</div>` : ''}
+                `;
+
+                // Learnings
+                const learnEl = document.getElementById('learnings-info');
+                learnEl.innerHTML = `
+                    <div class="memory-stat">Patterns: <span>${data.learnings.patterns}</span></div>
+                    <div class="memory-stat">Rules: <span>${data.learnings.improvements}</span></div>
+                `;
+            } catch (e) {
+                console.error('Status error:', e);
+            }
+        }
+
+        function addMessage(role, content, toolCalls = []) {
+            // Remove welcome if present
+            const welcome = document.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = role === 'user' ? 'Tú' : 'HelloChusquis';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = content;
+
+            div.appendChild(label);
+            div.appendChild(bubble);
+
+            if (toolCalls.length > 0) {
+                const tcDiv = document.createElement('div');
+                tcDiv.className = 'tool-calls';
+                toolCalls.forEach(tc => {
+                    const tcEl = document.createElement('div');
+                    tcEl.className = `tool-call ${tc.success ? 'success' : 'error'}`;
+                    const argsStr = Object.entries(tc.args).map(([k,v]) => `${k}=${JSON.stringify(v)}`).join(', ');
+                    tcEl.textContent = `→ ${tc.tool}(${argsStr})`;
+                    tcDiv.appendChild(tcEl);
+                });
+                div.appendChild(tcDiv);
+            }
+
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function addThinking() {
+            const div = document.createElement('div');
+            div.className = 'thinking';
+            div.id = 'thinking';
+            div.innerHTML = '<span></span><span></span><span></span>';
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return div;
+        }
+
+        async function sendMessage() {
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            inputEl.value = '';
+            sendBtn.disabled = true;
+            addMessage('user', text);
+
+            const thinking = addThinking();
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                thinking.remove();
+                addMessage('assistant', data.response, data.tool_calls || []);
+                loadStatus();
+            } catch (e) {
+                thinking.remove();
+                addMessage('assistant', 'Error connecting to server.');
+            } finally {
+                sendBtn.disabled = false;
+                inputEl.focus();
+            }
+        }
+
+        inputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        loadStatus();
+        setInterval(loadStatus, 30000);
+    </script>
+</body>
+</html>

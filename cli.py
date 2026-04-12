@@ -42,6 +42,17 @@ def main():
         console.print_json(json.dumps(learnings, indent=2, ensure_ascii=False))
         return
 
+    if args and args[0] == "web":
+        import webbrowser
+        from rich.console import Console
+        console = Console()
+        console.print("[cyan]Starting HelloChusquis web interface...[/cyan]")
+        console.print("[dim]Open: http://localhost:8000[/dim]")
+        webbrowser.open("http://localhost:8000")
+        from web.server import start
+        start()
+        return
+
     from main import main as run
     run()
 
