@@ -1,144 +1,76 @@
 # HelloChusquis
 
-A powerful terminal AI agent built in Python with web interface, multi-provider fallback, plugin system, persistent memory, and auto-learning.
+**🤖 A powerful Terminal AI Agent** built in Python with web interface, multi-provider fallback, plugin system, persistent memory, and auto-learning.
 
-## Features
+[![PyPI version](https://img.shields.io/pypi/v/hellochusquis)](https://pypi.org/project/hellochusquis/)
+[![GitHub stars](https://img.shields.io/github/stars/aminoy77/HelloChusquis)](https://github.com/aminoy77/HelloChusquis/stargazers)
+[![License](https://img.shields.io/github/license/aminoy77/HelloChusquis)](https://github.com/aminoy77/HelloChusquis/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 
-- 🤖 **AI Agent** — chat in terminal or browser with full tool access
-- 🔄 **Multi-provider fallback** — automatically switches between providers when one fails
+---
+
+An intelligent AI agent that lives in your terminal (and browser). It can execute commands, create real files (PDF, Word), control the browser, plan tasks, and learn from every conversation.
+
+## ✨ Features
+
+- 🤖 **Full AI Agent** — chat in terminal or browser with tool access
+- 🔄 **Multi-provider fallback** — automatically switches providers when one fails
 - 🧩 **Plugin system** — install plugins with one command, build your own
-- 🧠 **Persistent memory** — remembers past conversations and learns from them
-- 📋 **Task planner** — detects complex tasks and executes them step by step
-- 🌐 **Web interface** — chat from your browser with sidebar showing status
-- 📄 **Real file creation** — generates real PDF and Word documents
+- 🧠 **Persistent memory** — remembers conversations and learns from them
+- 📋 **Task Planner** — breaks down complex tasks and executes them step by step
+- 🌐 **Web Interface** — beautiful chat in your browser
+- 📄 **Real file generation** — creates actual PDF and Word documents
 - 🔍 **Browser control** — search the web and extract content from pages
 
 ## Supported Providers
-
-OpenRouter, Ollama Cloud, Anthropic Claude, OpenAI, Google Gemini, Groq, xAI (Grok), Perplexity, Qwen, MiniMax, Mistral, DeepSeek, Cohere, Together AI, Fireworks AI, Novita AI, and more.
+OpenRouter, Ollama, Anthropic Claude, OpenAI, Google Gemini, Groq, xAI (Grok), Perplexity, Qwen, Mistral, DeepSeek, Cohere, Together AI, Fireworks AI, and more.
 
 ## Installation
 
-### Option 1 — Download ZIP
-
-1. Go to [github.com/aminoy77/HelloChusquis](https://github.com/aminoy77/HelloChusquis)
-2. Click **Code → Download ZIP**
-3. Unzip the file
-4. Open terminal in the unzipped folder
-5. Run:
+### Recommended (pip)
 ```bash
-pip install -e .
-```
-
-### Option 2 — Clone repo
-
-```bash
+pip install hellochusquis
+Other options
+Bash# Clone from GitHub
 git clone https://github.com/aminoy77/HelloChusquis.git
 cd HelloChusquis
 pip install -e .
-```
-### Option 3 — pip (recommended)
 
-```bash
-pip install hellochusquis
-```
-
-### Option 4 — curl
-
-```bash
+# One-click installer
 curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash
-```
+First Run
+Bashhellochusquis
+It will launch the setup wizard. It is recommended to add at least 2 providers for reliable fallback.
+Usage
+Bashhellochusquis          # Start terminal chat
+hellochusquis web      # Start web interface (opens browser at http://localhost:8000)
+Useful Commands
 
-## First Run
+/help — Show all commands
+/status — Check provider status
+/plan <task> — Force planning mode
+👍 or + — Give positive feedback (agent learns)
+👎 or - — Give negative feedback
+hellochusquis install weather — Install a plugin
 
-```bash
-hellochusquis
-```
-
-First run will launch the setup wizard to configure your providers. It is recommended to add at least 2 providers for automatic fallback.
-
-Get free API keys at:
-- [openrouter.ai](https://openrouter.ai) — access 300+ models, many free
-- [console.groq.com](https://console.groq.com) — fastest free tier
-- [ollama.com](https://ollama.com) — cloud models
-
-## Usage
-
-### Terminal
-
-```bash
-hellochusquis          # Start chat in terminal
-hellochusquis web      # Start web interface (opens browser)
-```
-
-### Chat Commands
-
-| Command | Description |
-|---|---|
-| `/help` | Show available commands |
-| `/status` | Show provider status |
-| `/clear` | Clear conversation history |
-| `/plan <task>` | Force planning mode for a task |
-| `👍` or `+` | Positive feedback on last response |
-| `👎` or `-` | Negative feedback on last response |
-| `exit` | Exit and save memory |
-
-### Terminal Commands
-
-```bash
-hellochusquis install      # Install a plugin
-hellochusquis uninstall    # Remove a plugin
-hellochusquis plugins              # List installed plugins
-hellochusquis build                # Build a new plugin with AI
-hellochusquis learn                # Show learned patterns and rules
-hellochusquis web                  # Start web interface
-```
-
-## Plugins
-
-Install plugins from the public registry:
-
-```bash
-hellochusquis install weather
+Plugins
+Bashhellochusquis install weather
 hellochusquis install stocks
 hellochusquis install browser
 hellochusquis install pdf
 hellochusquis install docx
 hellochusquis install crypto
-hellochusquis install calculator
-hellochusquis install worldclock
-```
+Browse all available plugins → HelloChusquis Plugins
+Create your own plugin:
+Bashhellochusquis build
+Web Interface
+Bashhellochusquis web
+Opens a modern chat at http://localhost:8000 with sidebar showing providers, plugins, memory, and learned patterns.
+How it Works
 
-Browse all available plugins at [github.com/aminoy77/Hellochusquis-plugins](https://github.com/aminoy77/HelloChusquis-plugins.git)
+Smart Fallback — automatically uses the best available provider
+Task Planner — plans complex tasks and asks for confirmation
+Auto-learning — improves itself after every session based on your feedback
 
-### Build your own plugin
-
-```bash
-hellochusquis build
-```
-
-The AI will research the API, write the plugin code, test it, and ask if you want to submit it to the public registry.
-
-## Web Interface
-
-```bash
-hellochusquis web
-```
-
-Opens a web chat at `http://localhost:8000` with:
-- Chat interface with tool call visualization
-- Sidebar with provider status, installed plugins, memory stats, and learned patterns
-
-## How it works
-
-**Provider fallback** — if a provider hits rate limits or times out, HelloChusquis automatically switches to the next one. Providers that support tool calling are prioritized for tasks that need tools.
-
-**Task planner** — for complex tasks, HelloChusquis generates a step-by-step plan, shows it to you for confirmation, then executes each step automatically.
-
-**Memory** — at the end of each session, HelloChusquis summarizes the conversation and stores it. Next session it remembers what you discussed.
-
-**Auto-learning** — after each session, the agent analyzes what worked and what didn't, and improves its behavior over time.
-
-## License
-
+License
 MIT
