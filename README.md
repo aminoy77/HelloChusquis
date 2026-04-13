@@ -1,61 +1,83 @@
-# HelloChusquis
+# HelloChusquis 🧠✨
 
-**🤖 A powerful Terminal AI Agent** with multi-provider fallback, plugins, persistent memory and auto-learning.
+**HelloChusquis** is an advanced, self-improving AI terminal agent built in Python. Designed for developers and power-users, it seamlessly integrates with your terminal to automate complex tasks, manage files, execute code, and even build its own tools on demand.
 
-[![PyPI version](https://img.shields.io/pypi/v/hellochusquis.svg)](https://pypi.org/project/hellochusquis/)
-[![GitHub stars](https://img.shields.io/github/stars/aminoy77/HelloChusquis.svg)](https://github.com/aminoy77/HelloChusquis/stargazers)
-[![License](https://img.shields.io/github/license/aminoy77/HelloChusquis)](https://github.com/aminoy77/HelloChusquis/blob/main/LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+## 🚀 Features & Capabilities
+
+HelloChusquis is more than just a terminal agent; it's a dynamic, evolving system:
+
+*   **Intelligent Task Automation**: Execute terminal commands, manage files (read, write, create, delete), and run Python code directly within your workspace.
+*   **Multi-Provider AI Orchestration**: Supports a wide array of AI providers (OpenRouter, Ollama Cloud, Anthropic, OpenAI, Gemini, Groq, xAI, Perplexity, Qwen, MiniMax, Mistral, DeepSeek, Cohere, Together AI, Fireworks, Novita, and more) with automatic fallback and intelligent retry mechanisms for enhanced reliability.
+*   **Self-Building Agent (`core/builder.py`)**: A groundbreaking feature that allows HelloChusquis to:
+    *   **Research APIs**: Automatically investigate new APIs and functionalities on the web.
+    *   **Generate Plugins**: Write new Python plugins from scratch, adhering to the official HelloChusquis plugin standard.
+    *   **Self-Validate & Self-Correct**: Test newly generated plugins in a sandbox environment and iteratively fix errors.
+    *   **Suggest Contributions**: Provide clear instructions for contributing new, self-built plugins to the official repository via Pull Requests.
+*   **Robust Error Handling**: Features `chat_with_retry` for resilient AI interactions and clean, user-friendly error messages (e.g., `⚠ Step X failed, skipping...`) to maintain workflow continuity.
+*   **Rich Plugin Ecosystem**: Access to the [HelloChusquis-Plugins](https://github.com/aminoy77/HelloChusquis-plugins) repository, offering a vast collection of over 80 specialized tools, including:
+    *   **`browser`**: Advanced web navigation, search (via Brave Search), content extraction, and screenshots.
+    *   **`stocks`**: Real-time stock data, historical analysis, and financial insights powered by `yfinance`.
+    *   And many more for productivity, communication, development, and entertainment.
+*   **Persistent Memory**: Maintains conversation history and context across sessions, ensuring a seamless user experience.
+
+## ⚡ Quick Start
+
+Get HelloChusquis up and running in minutes:
+
+### 📥 Installation
+
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/aminoy77/HelloChusquis.git
+    cd HelloChusquis
+    ```
+2.  **Install dependencies**:
+    ```bash
+    pip install -e .
+    ```
+    *(Ensure you have Python 3.9+ installed. `pip` will handle other requirements.)*
+
+### ▶️ Run the Agent
+
+Simply execute from your terminal:
+
+```bash
+hellochusquis
+```
+
+*The first run will guide you through configuring your AI providers. It's highly recommended to add at least two providers to enable the automatic fallback mechanism.* 
+
+### 🔌 Plugin Management
+
+Extend HelloChusquis's capabilities by installing plugins from the official repository:
+
+```bash
+hellochusquis install <plugin_name>
+```
+
+*Example: `hellochusquis install browser`*
+
+## ⚙️ Core Commands
+
+| Command   | Description                                     |
+| :-------- | :---------------------------------------------- |
+| `/status` | Displays the status of configured AI providers. |
+| `/clear`  | Clears the current conversation history.        |
+| `exit`    | Exits the agent and saves the session memory.   |
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Whether it's a new plugin, a bug fix, or an enhancement to the core agent, your input is valuable.
+
+1.  **Fork** the project.
+2.  Create a new branch for your feature or fix: `git checkout -b feature/your-feature-name`.
+3.  **Commit** your changes: `git commit -m 'feat: Add your feature'`.
+4.  Push to the branch: `git push origin feature/your-feature-name`.
+5.  Open a **Pull Request**.
+
+## 📄 License
+
+This project is licensed under the **MIT License**. See the `LICENSE` file for more details.
 
 ---
-
-An intelligent AI agent that lives in your terminal (and browser). Supports 15+ LLM providers, has a plugin system, persistent memory, learns from you, and can create real files.
-
-## ✨ Features
-
-- 🔄 **Smart Multi-Provider Fallback** — automatically switches when a provider fails or rate limits
-- 🧩 **Plugin System** — install with one command, create your own easily
-- 🧠 **Persistent Memory + Auto-learning** — remembers conversations and improves with feedback (`👍` / `👎`)
-- 📋 **Task Planner** — breaks down complex tasks and executes them step by step
-- 🌐 **Web Interface** — clean browser chat with sidebar
-- 📄 **Real File Creation** — generates actual PDF and Word documents
-- 🔍 **Browser Control** — search the web and extract content
-
-## Supported Providers
-OpenRouter, Groq, Anthropic Claude, OpenAI, Google Gemini, xAI Grok, Ollama, Perplexity, Mistral, DeepSeek, Qwen, and more.
-
-## Installation
-
-### Recommended
-```bash
-pip install hellochusquis
-Alternative (one-click)
-Bashcurl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash
-Quick Start
-Bashhellochusquis          # Start terminal chat
-hellochusquis web      # Start web interface<a href="http://localhost:8000" target="_blank" rel="noopener noreferrer nofollow"></a>
-First run will guide you to add API keys. Add at least 2 providers for best experience.
-Useful Commands
-
-/plan <task> → Force planning mode
-hellochusquis install weather → Install a plugin
-👍 or + → Positive feedback (agent learns)
-hellochusquis web → Open browser interface
-
-Plugins
-Bashhellochusquis install browser
-hellochusquis install pdf
-hellochusquis install stocks
-hellochusquis install crypto
-hellochusquis install docx
-Explore all plugins → HelloChusquis Plugins
-How it Works
-
-Intelligent provider routing (prefers tool-calling models)
-Task planning with user confirmation
-Automatic conversation summarization and learning
-
-
-License: MIT
-Made with ❤️ for power users and AI enthusiasts
-⭐ Star the repo if you like it!
+*Developed with ❤️ by aminoy77 and the HelloChusquis community. This agent is designed to be a ruthless mentor, stress-testing ideas and building bulletproof solutions.*
