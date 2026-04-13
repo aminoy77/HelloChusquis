@@ -1,5 +1,5 @@
-HelloChusquis
-A powerful terminal AI agent built in Python with web interface, multi-provider fallback, plugin system, persistent memory, and auto-learning.
+##HelloChusquis
+#A powerful terminal AI agent built in Python with web interface, multi-provider fallback, plugin system, persistent memory, and auto-learning.
 
 Features
 🤖 AI Agent — chat in terminal or browser with full tool access
