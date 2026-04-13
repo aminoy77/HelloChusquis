@@ -26,6 +26,19 @@ Get HelloChusquis up and running in minutes:
 
 ### 📥 Installation
 
+Choose your preferred method:
+
+#### 📦 Via `pip` (Recommended)
+```bash
+pip install hellochusquis
+```
+
+#### 🌐 Via `curl` (One-click)
+```bash
+curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash
+```
+
+#### 💻 Via `git clone`
 1.  **Clone the repository**:
     ```bash
     git clone https://github.com/aminoy77/HelloChusquis.git
@@ -36,6 +49,11 @@ Get HelloChusquis up and running in minutes:
     pip install -e .
     ```
     *(Ensure you have Python 3.9+ installed. `pip` will handle other requirements.)*
+
+#### ⬇️ Download ZIP
+1.  Download the latest release ZIP from [GitHub](https://github.com/aminoy77/HelloChusquis/releases).
+2.  Unzip the file and navigate into the directory.
+3.  Install dependencies: `pip install -e .`
 
 ### ▶️ Run the Agent
 
@@ -49,21 +67,36 @@ hellochusquis
 
 ### 🔌 Plugin Management
 
-Extend HelloChusquis's capabilities by installing plugins from the official repository:
+Extend HelloChusquis's capabilities by installing and uninstalling plugins from the official repository:
 
-```bash
-hellochusquis install <plugin_name>
-```
+*   **Install a plugin**:
+    ```bash
+    hellochusquis install <plugin_name>
+    ```
+    *Example: `hellochusquis install browser`*
 
-*Example: `hellochusquis install browser`*
+*   **Uninstall a plugin**:
+    ```bash
+    hellochusquis uninstall <plugin_name>
+    ```
+    *Example: `hellochusquis uninstall browser`*
 
 ## ⚙️ Core Commands
 
-| Command   | Description                                     |
-| :-------- | :---------------------------------------------- |
-| `/status` | Displays the status of configured AI providers. |
-| `/clear`  | Clears the current conversation history.        |
-| `exit`    | Exits the agent and saves the session memory.   |
+HelloChusquis offers several commands to enhance your interaction:
+
+| Command                  | Description                                                                                               |
+| :----------------------- | :-------------------------------------------------------------------------------------------------------- |
+| `hellochusquis`          | Starts the agent in terminal chat mode.                                                                   |
+| `hellochusquis web`      | Launches a web-based interface for interacting with the agent in your browser.                            |
+| `hellochusquis learn`    | Initiates a learning session where the agent can be taught new skills or workflows.                       |
+| `/help`                  | Displays a list of available commands and their descriptions.                                             |
+| `/plan <task>`           | Forces the agent into planning mode to break down and execute complex tasks.                              |
+| `/status`                | Shows the status of configured AI providers and other system information.                                 |
+| `/clear`                 | Clears the current conversation history.                                                                  |
+| `exit`                   | Exits the agent and saves the session memory.                                                             |
+| `👍` or `+`              | Provides positive feedback to the agent, helping it learn and improve.                                     |
+| `👎` or `-`              | Provides negative feedback, indicating an area for improvement.                                           |
 
 ## 🤝 Contributing
 
@@ -80,4 +113,4 @@ We welcome contributions from the community! Whether it's a new plugin, a bug fi
 This project is licensed under the **MIT License**. See the `LICENSE` file for more details.
 
 ---
-*Developed with ❤️ by aminoy77 and the HelloChusquis community. This agent is designed to be a ruthless mentor, stress-testing ideas and building bulletproof solutions.*
+*Developed with ❤️ by aminoy77 and the HelloChusquis community.*
