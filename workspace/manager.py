@@ -17,7 +17,7 @@ class WorkspaceManager:
         p = Path(path).expanduser().resolve()
         if self.is_allowed(path):
             return True
-        console.print(f"\n[yellow]⚠ OpenClaw wants access to:[/yellow] {p}")
+        console.print(f"\n[yellow]⚠ HelloChusquis wants access to:[/yellow] {p}")
         granted = Confirm.ask("Allow?", default=False)
         if granted:
             self.allowed.append(p)

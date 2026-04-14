@@ -6,7 +6,7 @@ Thank you for your interest in contributing! 🎉
 
 - **Report bugs** — open an issue with steps to reproduce
 - **Suggest features** — open an issue describing your idea
-- **Submit plugins** — contribute to [OpenManolo-plugins](https://github.com/aminoy77/OpenManolo-plugins)
+- **Submit plugins** — contribute to [HelloChusquis-plugins](https://github.com/aminoy77/HelloChusquis-plugins)
 - **Improve docs** — fix typos, add examples, clarify steps
 - **Submit code** — open a pull request
 
@@ -31,7 +31,7 @@ hellochusquis
 
 ## Submitting a Plugin
 
-Plugins live in a separate repo: [OpenManolo-plugins](https://github.com/aminoy77/OpenManolo-plugins)
+Plugins live in a separate repo: [HelloChusquis-plugins](https://github.com/aminoy77/HelloChusquis-plugins)
 
 Each plugin is a single `.py` file following this structure:
 
