@@ -434,7 +434,7 @@
 
                 document.getElementById('memory-info').innerHTML = `
                     <div class="memory-stat">Sessions: <span>${data.memory.sessions}</span></div>
-                    ${data.memory.summary ? `<div class="memory-stat" style="margin-top:6px;font-size:0.65rem;color:var(--text-dim);line-height:1.5">${data.memory.summary}</div>` : ''}
+                    <div class="memory-stat">Summary: <span>${data.memory.summary ? 'Available' : 'None yet'}</span></div>
                 `;
 
                 document.getElementById('learnings-info').innerHTML = `
