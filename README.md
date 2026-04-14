@@ -4,50 +4,44 @@ A powerful terminal AI agent built in Python with web interface, multi-provider 
 
 ## Features
 
-- 🤖 **AI Agent** — chat in terminal or browser with full tool access
-- 🔄 **Multi-provider fallback** — automatically switches between providers when one fails
-- 🧩 **Plugin system** — install plugins with one command, build your own
-- 🧠 **Persistent memory** — remembers past conversations and learns from them
-- 📋 **Task planner** — detects complex tasks and executes them step by step
-- 🌐 **Web interface** — chat from your browser with sidebar showing status
-- 📄 **Real file creation** — generates real PDF and Word documents
-- 🔍 **Browser control** — search the web and extract content from pages
+- 🔄 **Multi-provider fallback** — 19+ providers, switches automatically when one fails
+- 🧩 **Plugin system** — install with one command, build your own with AI
+- 🧠 **Persistent memory** — remembers past sessions and learns from them
+- 📋 **Task planner** — detects complex tasks, plans, confirms, executes autonomously
+- 🌐 **Web interface** — chat from your browser with live sidebar
+- 🔍 **Browser control** — search the web, extract content from pages
+- 📄 **Real file generation** — actual PDF and Word documents
+- 📈 **Real stock data** — historical prices, volatility, moving averages
+- 🔒 **Workspace permissions** — only accesses directories you allow
+- 🤖 **Auto-learning** — gets better with every session
 
 ## Supported Providers
 
-OpenRouter, Ollama Cloud, Anthropic Claude, OpenAI, Google Gemini, Groq, xAI (Grok), Perplexity, Qwen, MiniMax, Mistral, DeepSeek, Cohere, Together AI, Fireworks AI, Novita AI, and more.
+OpenRouter, Ollama Cloud, Anthropic Claude, OpenAI, Google Gemini, Groq, xAI (Grok), Perplexity, Qwen, MiniMax, Mistral, DeepSeek, Cohere, Together AI, Fireworks AI, Novita AI, Blackbox AI, Xiaomi MiMo, and more.
 
 ## Installation
 
-### Option 1 — Download ZIP
+### pip — recommended
 
-1. Go to [github.com/aminoy77/HelloChusquis](https://github.com/aminoy77/HelloChusquis)
-2. Click **Code → Download ZIP**
-3. Unzip the file
-4. Open terminal in the unzipped folder
-5. Run:
 ```bash
-pip install -e .
+pip install hellochusquis
 ```
 
-### Option 2 — Clone repo
+### curl
+
+```bash
+curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash
+```
+
+### git clone
 
 ```bash
 git clone https://github.com/aminoy77/HelloChusquis.git
 cd HelloChusquis
 pip install -e .
 ```
-### Option 3 — pip (recommended)
 
-```bash
-pip install hellochusquis
-```
-
-### Option 4 — curl
-
-```bash
-curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash
-```
+Requires Python 3.10+
 
 ## First Run
 
@@ -55,48 +49,39 @@ curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.
 hellochusquis
 ```
 
-First run will launch the setup wizard to configure your providers. It is recommended to add at least 2 providers for automatic fallback.
-
-Get free API keys at:
-- [openrouter.ai](https://openrouter.ai) — access 300+ models, many free
-- [console.groq.com](https://console.groq.com) — fastest free tier
-- [ollama.com](https://ollama.com) — cloud models
+Setup wizard launches automatically. Add at least 2 providers for fallback. Free tiers available on all major providers.
 
 ## Usage
 
-### Terminal
-
 ```bash
-hellochusquis          # Start chat in terminal
-hellochusquis web      # Start web interface (opens browser)
+hellochusquis          # Terminal chat
+hellochusquis web      # Web interface at localhost:8000
 ```
 
-### Chat Commands
+## Chat Commands
 
 | Command | Description |
 |---|---|
 | `/help` | Show available commands |
 | `/status` | Show provider status |
 | `/clear` | Clear conversation history |
-| `/plan <task>` | Force planning mode for a task |
-| `👍` or `+` | Positive feedback on last response |
-| `👎` or `-` | Negative feedback on last response |
+| `/plan <task>` | Force planning mode |
+| `👍` or `+` | Positive feedback |
+| `👎` or `-` | Negative feedback |
 | `exit` | Exit and save memory |
 
-### Terminal Commands
+## Terminal Commands
 
 ```bash
-hellochusquis install      # Install a plugin
-hellochusquis uninstall    # Remove a plugin
+hellochusquis install <plugin>     # Install a plugin
+hellochusquis uninstall <plugin>   # Remove a plugin
 hellochusquis plugins              # List installed plugins
 hellochusquis build                # Build a new plugin with AI
-hellochusquis learn                # Show learned patterns and rules
+hellochusquis learn                # Show learned patterns
 hellochusquis web                  # Start web interface
 ```
 
 ## Plugins
-
-Install plugins from the public registry:
 
 ```bash
 hellochusquis install weather
@@ -107,17 +92,18 @@ hellochusquis install docx
 hellochusquis install crypto
 hellochusquis install calculator
 hellochusquis install worldclock
+hellochusquis install currency
 ```
 
-Browse all available plugins at [github.com/aminoy77/Hellochusquis-plugins](https://github.com/aminoy77/HelloChusquis-plugins.git)
+All available plugins: [github.com/aminoy77/OpenManolo-plugins](https://github.com/aminoy77/OpenManolo-plugins)
 
-### Build your own plugin
+### Build your own
 
 ```bash
 hellochusquis build
 ```
 
-The AI will research the API, write the plugin code, test it, and ask if you want to submit it to the public registry.
+The AI researches the API, writes the plugin, tests it, and asks if you want to submit it to the public registry.
 
 ## Web Interface
 
@@ -125,19 +111,13 @@ The AI will research the API, write the plugin code, test it, and ask if you wan
 hellochusquis web
 ```
 
-Opens a web chat at `http://localhost:8000` with:
-- Chat interface with tool call visualization
-- Sidebar with provider status, installed plugins, memory stats, and learned patterns
+Opens at `http://localhost:8000` — same aesthetic as the landing page.
 
-## How it works
+## Links
 
-**Provider fallback** — if a provider hits rate limits or times out, HelloChusquis automatically switches to the next one. Providers that support tool calling are prioritized for tasks that need tools.
-
-**Task planner** — for complex tasks, HelloChusquis generates a step-by-step plan, shows it to you for confirmation, then executes each step automatically.
-
-**Memory** — at the end of each session, HelloChusquis summarizes the conversation and stores it. Next session it remembers what you discussed.
-
-**Auto-learning** — after each session, the agent analyzes what worked and what didn't, and improves its behavior over time.
+- Website: [aminoy77.github.io/HelloChusquis](https://aminoy77.github.io/HelloChusquis)
+- PyPI: [pypi.org/project/hellochusquis](https://pypi.org/project/hellochusquis)
+- Plugins: [github.com/aminoy77/OpenManolo-plugins](https://github.com/aminoy77/OpenManolo-plugins)
 
 ## License
 

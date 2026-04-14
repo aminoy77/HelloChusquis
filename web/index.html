@@ -1,48 +1,88 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HelloChusquis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #080807;
+            --surface: #0f0f0d;
+            --surface2: #161614;
+            --amber: #f5a623;
+            --amber-dim: #c4841c;
+            --amber-glow: rgba(245, 166, 35, 0.08);
+            --text: #e8e3d8;
+            --text-muted: #6b6860;
+            --text-dim: #3d3c39;
+            --border: #1f1e1b;
+            --green: #5eb97e;
+            --blue: #7eb8d4;
+        }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: #0f0f13;
-            color: #e0e0e0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.3;
         }
 
         header {
             padding: 14px 24px;
-            background: #1a1a24;
-            border-bottom: 1px solid #2a2a3a;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
+            flex-shrink: 0;
         }
 
-        header h1 {
+        .header-logo {
+            font-family: 'Playfair Display', serif;
             font-size: 1.1rem;
-            font-weight: 600;
-            color: #7dd3fc;
-            letter-spacing: 0.5px;
+            font-weight: 700;
+            color: var(--amber);
+            font-style: italic;
         }
 
-        header .dot {
-            width: 8px;
-            height: 8px;
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
-            background: #22c55e;
+            background: var(--green);
             animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+            50% { opacity: 0.3; }
         }
 
         .main {
@@ -54,53 +94,55 @@
         /* SIDEBAR */
         .sidebar {
             width: 220px;
-            background: #13131b;
-            border-right: 1px solid #2a2a3a;
-            padding: 16px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 20px 16px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
             overflow-y: auto;
+            flex-shrink: 0;
         }
 
         .sidebar-section h3 {
-            font-size: 0.65rem;
-            font-weight: 600;
+            font-size: 0.6rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #6b7280;
-            margin-bottom: 8px;
+            letter-spacing: 0.2em;
+            color: var(--amber);
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
         }
 
         .sidebar-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.8rem;
-            padding: 4px 0;
-            color: #9ca3af;
+            font-size: 0.72rem;
+            padding: 3px 0;
+            color: var(--text-muted);
         }
 
-        .sidebar-item .indicator {
-            width: 6px;
-            height: 6px;
+        .indicator {
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             flex-shrink: 0;
         }
 
-        .indicator.ready { background: #22c55e; }
+        .indicator.ready { background: var(--green); }
         .indicator.exhausted { background: #ef4444; }
-        .indicator.plugin { background: #7dd3fc; }
+        .indicator.plugin { background: var(--blue); }
 
         .memory-stat {
-            font-size: 0.75rem;
-            color: #6b7280;
+            font-size: 0.7rem;
+            color: var(--text-muted);
             padding: 2px 0;
+            line-height: 1.6;
         }
 
-        .memory-stat span {
-            color: #9ca3af;
-        }
+        .memory-stat span { color: var(--text); }
 
         /* CHAT */
         .chat-area {
@@ -113,22 +155,26 @@
         .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 24px;
+            padding: 32px 40px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
         }
+
+        .messages::-webkit-scrollbar { width: 4px; }
+        .messages::-webkit-scrollbar-track { background: transparent; }
+        .messages::-webkit-scrollbar-thumb { background: var(--border); }
 
         .message {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            max-width: 75%;
-            animation: fadeIn 0.2s ease;
+            gap: 6px;
+            max-width: 72%;
+            animation: fadeUp 0.2s ease;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -136,160 +182,202 @@
         .message.assistant { align-self: flex-start; }
 
         .message-label {
-            font-size: 0.65rem;
-            font-weight: 600;
+            font-size: 0.6rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
-            padding: 0 4px;
+            letter-spacing: 0.15em;
+            padding: 0 2px;
         }
 
-        .message.user .message-label { color: #7dd3fc; text-align: right; }
-        .message.assistant .message-label { color: #a78bfa; }
+        .message.user .message-label {
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .message.assistant .message-label {
+            color: var(--amber);
+        }
 
         .message-bubble {
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 0.875rem;
-            line-height: 1.6;
+            padding: 12px 16px;
+            font-size: 0.825rem;
+            line-height: 1.7;
             white-space: pre-wrap;
             word-break: break-word;
         }
 
         .message.user .message-bubble {
-            background: #1e3a5f;
-            border: 1px solid #2563eb44;
-            color: #e0e0e0;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: white;
+            border-right: 2px solid var(--text-muted);
         }
 
         .message.assistant .message-bubble {
-            background: #1e1e2e;
-            border: 1px solid #2a2a3a;
-            color: #e0e0e0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-left: 2px solid var(--amber);
         }
 
         .tool-calls {
             margin-top: 6px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
         }
 
         .tool-call {
-            font-size: 0.72rem;
-            color: #6b7280;
-            background: #0f0f18;
-            border: 1px solid #1f1f2e;
-            border-radius: 6px;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            background: var(--bg);
+            border: 1px solid var(--border);
             padding: 4px 10px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .tool-call.success { border-left: 2px solid #22c55e; }
+        .tool-call.success { border-left: 2px solid var(--green); color: var(--text-muted); }
         .tool-call.error { border-left: 2px solid #ef4444; }
 
         .thinking {
             align-self: flex-start;
             display: flex;
-            gap: 4px;
-            padding: 10px 14px;
-            background: #1e1e2e;
-            border: 1px solid #2a2a3a;
-            border-radius: 12px;
+            gap: 5px;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 2px solid var(--amber);
         }
 
         .thinking span {
-            width: 6px;
-            height: 6px;
-            background: #a78bfa;
+            width: 5px;
+            height: 5px;
+            background: var(--amber);
             border-radius: 50%;
             animation: bounce 1.2s infinite;
+            opacity: 0.4;
         }
 
-        .thinking span:nth-child(2) { animation-delay: 0.2s; }
-        .thinking span:nth-child(3) { animation-delay: 0.4s; }
+        .thinking span:nth-child(2) { animation-delay: 0.15s; }
+        .thinking span:nth-child(3) { animation-delay: 0.3s; }
 
         @keyframes bounce {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-6px); }
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-5px); opacity: 1; }
         }
 
         /* INPUT */
         .input-area {
-            padding: 16px 24px;
-            background: #13131b;
-            border-top: 1px solid #2a2a3a;
+            padding: 16px 40px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
             display: flex;
             gap: 10px;
+            flex-shrink: 0;
         }
 
         .input-area input {
             flex: 1;
-            background: #1e1e2e;
-            border: 1px solid #2a2a3a;
-            border-radius: 8px;
-            padding: 10px 14px;
-            color: #e0e0e0;
-            font-size: 0.875rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.825rem;
             outline: none;
             transition: border-color 0.2s;
         }
 
         .input-area input:focus {
-            border-color: #7dd3fc44;
+            border-color: rgba(245, 166, 35, 0.3);
         }
 
-        .input-area input::placeholder { color: #4b5563; }
+        .input-area input::placeholder { color: var(--text-dim); }
 
         .input-area button {
-            background: #1d4ed8;
-            color: white;
+            background: var(--amber);
+            color: var(--bg);
             border: none;
-            border-radius: 8px;
-            padding: 10px 18px;
-            font-size: 0.875rem;
-            font-weight: 500;
+            padding: 10px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
             cursor: pointer;
             transition: background 0.2s;
         }
 
-        .input-area button:hover { background: #2563eb; }
-        .input-area button:disabled { background: #374151; cursor: not-allowed; }
+        .input-area button:hover { background: var(--amber-dim); }
+        .input-area button:disabled { background: var(--surface2); color: var(--text-dim); cursor: not-allowed; }
 
         .welcome {
             align-self: center;
             text-align: center;
-            color: #4b5563;
-            margin-top: auto;
-            margin-bottom: auto;
+            margin: auto;
         }
 
-        .welcome h2 { font-size: 1.5rem; color: #7dd3fc; margin-bottom: 8px; }
-        .welcome p { font-size: 0.875rem; }
+        .welcome h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--amber);
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .welcome-hint {
+            margin-top: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .hint-item {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .hint-item span { color: var(--amber); }
     </style>
 </head>
 <body>
     <header>
-        <div class="dot"></div>
-        <h1>HelloChusquis</h1>
+        <div class="header-logo">HelloChusquis</div>
+        <div class="header-status">
+            <div class="status-dot"></div>
+            <span>Ready</span>
+        </div>
     </header>
 
     <div class="main">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-section">
                 <h3>Providers</h3>
-                <div id="providers-list">—</div>
+                <div id="providers-list"><div class="sidebar-item">Loading...</div></div>
             </div>
             <div class="sidebar-section">
                 <h3>Plugins</h3>
-                <div id="plugins-list">—</div>
+                <div id="plugins-list"><div class="sidebar-item">Loading...</div></div>
             </div>
             <div class="sidebar-section">
                 <h3>Memory</h3>
-                <div id="memory-info">—</div>
+                <div id="memory-info"><div class="memory-stat">Loading...</div></div>
             </div>
             <div class="sidebar-section">
                 <h3>Learnings</h3>
-                <div id="learnings-info">—</div>
+                <div id="learnings-info"><div class="memory-stat">Loading...</div></div>
             </div>
         </aside>
 
@@ -297,17 +385,23 @@
             <div class="messages" id="messages">
                 <div class="welcome">
                     <h2>HelloChusquis</h2>
-                    <p>Tu agente AI en el navegador</p>
+                    <p>Terminal AI Agent</p>
+                    <div class="welcome-hint">
+                        <div class="hint-item"><span>/help</span> — show commands</div>
+                        <div class="hint-item"><span>/status</span> — provider status</div>
+                        <div class="hint-item"><span>/clear</span> — clear history</div>
+                        <div class="hint-item"><span>👍 / 👎</span> — give feedback</div>
+                    </div>
                 </div>
             </div>
             <div class="input-area">
                 <input
                     type="text"
                     id="input"
-                    placeholder="Escribe un mensaje... (/help para comandos)"
+                    placeholder="Type a message..."
                     autocomplete="off"
                 />
-                <button id="send-btn" onclick="sendMessage()">Enviar</button>
+                <button id="send-btn" onclick="sendMessage()">Send →</button>
             </div>
         </div>
     </div>
@@ -317,52 +411,40 @@
         const inputEl = document.getElementById('input');
         const sendBtn = document.getElementById('send-btn');
 
-        // Load sidebar status
         async function loadStatus() {
             try {
                 const res = await fetch('/status');
                 const data = await res.json();
 
-                // Providers
-                const provEl = document.getElementById('providers-list');
-                provEl.innerHTML = data.providers.map(p => `
+                document.getElementById('providers-list').innerHTML = data.providers.map(p => `
                     <div class="sidebar-item">
                         <div class="indicator ${p.status}"></div>
                         <span>${p.name}</span>
                     </div>
                 `).join('');
 
-                // Plugins
-                const plugEl = document.getElementById('plugins-list');
-                plugEl.innerHTML = data.plugins.length
+                document.getElementById('plugins-list').innerHTML = data.plugins.length
                     ? data.plugins.map(p => `
                         <div class="sidebar-item">
                             <div class="indicator plugin"></div>
                             <span>${p.name}</span>
                         </div>
                     `).join('')
-                    : '<div class="sidebar-item">No plugins</div>';
+                    : '<div class="sidebar-item" style="color:var(--text-dim)">No plugins</div>';
 
-                // Memory
-                const memEl = document.getElementById('memory-info');
-                memEl.innerHTML = `
+                document.getElementById('memory-info').innerHTML = `
                     <div class="memory-stat">Sessions: <span>${data.memory.sessions}</span></div>
-                    ${data.memory.summary ? `<div class="memory-stat" style="margin-top:4px;font-size:0.7rem;color:#4b5563">${data.memory.summary}</div>` : ''}
+                    ${data.memory.summary ? `<div class="memory-stat" style="margin-top:6px;font-size:0.65rem;color:var(--text-dim);line-height:1.5">${data.memory.summary}</div>` : ''}
                 `;
 
-                // Learnings
-                const learnEl = document.getElementById('learnings-info');
-                learnEl.innerHTML = `
+                document.getElementById('learnings-info').innerHTML = `
                     <div class="memory-stat">Patterns: <span>${data.learnings.patterns}</span></div>
                     <div class="memory-stat">Rules: <span>${data.learnings.improvements}</span></div>
                 `;
-            } catch (e) {
-                console.error('Status error:', e);
-            }
+            } catch(e) {}
         }
 
         function addMessage(role, content, toolCalls = []) {
-            // Remove welcome if present
             const welcome = document.querySelector('.welcome');
             if (welcome) welcome.remove();
 
@@ -371,7 +453,7 @@
 
             const label = document.createElement('div');
             label.className = 'message-label';
-            label.textContent = role === 'user' ? 'Tú' : 'HelloChusquis';
+            label.textContent = role === 'user' ? 'You' : 'HelloChusquis';
 
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble';
@@ -427,9 +509,9 @@
                 thinking.remove();
                 addMessage('assistant', data.response, data.tool_calls || []);
                 loadStatus();
-            } catch (e) {
+            } catch(e) {
                 thinking.remove();
-                addMessage('assistant', 'Error connecting to server.');
+                addMessage('assistant', 'Connection error. Is the server running?');
             } finally {
                 sendBtn.disabled = false;
                 inputEl.focus();
