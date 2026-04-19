@@ -1,11 +1,62 @@
 from core.setup import ensure_config
 from ui.terminal import print_assistant, print_banner, get_input, print_status
 from core.agent import Agent
-from core.planner import detect_complexity, generate_plan, confirm_plan, execute_plan
+from core.planner import generate_plan, confirm_plan, execute_plan
 from core.learning import add_feedback
 from rich.console import Console
 
 console = Console()
+
+# Palabras que siempre son tareas complejas — sin llamar al LLM
+FORCE_PLAN_KEYWORDS = [
+    "informe", "report", "analiza", "analyze", "investiga", "research",
+    "crea un pdf", "crea un word", "crea un documento", "haz un estudio",
+    "busca y", "busca las", "compara", "compare", "cada", "every",
+    "paso a paso", "step by step", "lista de", "plan de"
+]
+
+# Palabras que siempre son simples — sin llamar al LLM
+FORCE_SIMPLE_KEYWORDS = [
+    "hola", "hello", "hi", "hey", "gracias", "thanks", "ok", "vale",
+    "sí", "no", "adios", "bye", "qué tal", "cómo estás", "buenas"
+]
+
+
+def is_complex(text: str) -> bool:
+    """Detecta complejidad SIN llamar al LLM — instant."""
+    lower = text.lower().strip()
+
+    if lower in FORCE_SIMPLE_KEYWORDS:
+        return False
+
+    if len(text.split()) <= 5:
+        return False
+
+    for kw in FORCE_PLAN_KEYWORDS:
+        if kw in lower:
+            return True
+
+    # Solo llama al LLM si tiene más de 10 palabras y no es claramente simple
+    if len(text.split()) > 10:
+        return True
+
+    return False
+
+
+def handle_feedback(user_input: str, history):
+    if user_input in ["👍", "+", "good", "bien"]:
+        msgs = history.get()
+        ctx = msgs[-2]["content"] if len(msgs) >= 2 else ""
+        add_feedback("positive", ctx)
+        console.print("[green]✓ Feedback saved[/green]")
+        return True
+    if user_input in ["👎", "-", "bad", "mal"]:
+        msgs = history.get()
+        ctx = msgs[-2]["content"] if len(msgs) >= 2 else ""
+        add_feedback("negative", ctx)
+        console.print("[red]✓ Feedback saved[/red]")
+        return True
+    return False
 
 
 def main():
@@ -18,72 +69,61 @@ def main():
         user_input = get_input()
         while user_input not in ["exit", "quit"]:
 
-            # Feedback
-            if user_input in ["👍", "+", "good", "bien"]:
-                msgs = agent.history.get()
-                context = msgs[-2]["content"] if len(msgs) >= 2 else ""
-                add_feedback("positive", context)
-                console.print("[green]✓ Feedback saved[/green]")
-                user_input = get_input()
-                continue
-
-            if user_input in ["👎", "-", "bad", "mal"]:
-                msgs = agent.history.get()
-                context = msgs[-2]["content"] if len(msgs) >= 2 else ""
-                add_feedback("negative", context)
-                console.print("[red]✓ Feedback saved[/red]")
+            if handle_feedback(user_input, agent.history):
                 user_input = get_input()
                 continue
 
             if user_input == "/help":
                 console.print("""
-[bold cyan]HelloChusquis Commands[/bold cyan]
+[bold #f5a623]HelloChusquis Commands[/bold #f5a623]
 
-[bold]Chat commands:[/bold]
+[bold]Chat:[/bold]
   /help      — Show this help
-  /status    — Show provider status
-  /clear     — Clear conversation history
-  /plan      — Force planning mode: /plan <task>
-  👍 / +     — Positive feedback on last response
-  👎 / -     — Negative feedback on last response
-  exit       — Exit and save memory
+  /status    — Provider status
+  /clear     — Clear history
+  /plan      — Force plan: /plan <task>
+  👍 / +     — Positive feedback
+  👎 / -     — Negative feedback
+  exit       — Exit
 
-[bold]Terminal commands:[/bold]
-  hellochusquis install <plugin>    — Install a plugin
-  hellochusquis uninstall <plugin>  — Remove a plugin
-  hellochusquis plugins             — List installed plugins
-  hellochusquis build               — Build a new plugin
-  hellochusquis learn               — Show learned patterns
+[bold]Terminal:[/bold]
+  hellochusquis install <plugin>
+  hellochusquis uninstall <plugin>
+  hellochusquis plugins
+  hellochusquis build
+  hellochusquis learn
+  hellochusquis web
+  hellochusquis daemon [start|stop|status|install|add|tasks|log]
 """)
 
             elif user_input == "/status":
-                print_status(agent.pool.status())
+                statuses = agent.pool.status()
+                print_status(statuses)
+                for s in statuses:
+                    if s.get("avg_ms"):
+                        console.print(f"  [dim]avg {s['avg_ms']}ms · {s['calls']} calls · {s['failures']} failures[/dim]")
 
             elif user_input == "/clear":
                 agent.history.clear()
-                console.print("  [dim]Historial limpiado.[/dim]")
+                console.print("[dim]History cleared.[/dim]")
 
             elif user_input.startswith("/plan "):
                 task = user_input[6:].strip()
-                console.print("[dim]Generating plan...[/dim]")
                 steps = generate_plan(task, agent.pool)
                 if steps:
                     final = confirm_plan(steps, agent.pool, task)
                     if final:
                         execute_plan(final, agent)
                 else:
-                    console.print("[red]Could not generate a plan.[/red]")
+                    console.print("[red]Could not generate plan.[/red]")
 
             elif user_input.strip() == "":
                 pass
 
             else:
                 try:
-                    console.print("[dim]...[/dim]", end="\r")
-                    is_complex = detect_complexity(user_input, agent.pool)
-
-                    if is_complex:
-                        console.print("[dim]Complex task detected. Generating plan...[/dim]")
+                    if is_complex(user_input):
+                        console.print("[dim]Complex task — generating plan...[/dim]")
                         steps = generate_plan(user_input, agent.pool)
                         if steps:
                             final = confirm_plan(steps, agent.pool, user_input)
@@ -95,20 +135,20 @@ def main():
                     else:
                         respuesta = agent.run(user_input)
                         print_assistant(respuesta)
-                        console.print("[dim]  👍 / 👎 to give feedback[/dim]")
+                        console.print("[dim]  👍 / 👎[/dim]")
 
                 except RuntimeError as e:
                     console.print(f"\n[red]✗ {e}[/red]")
-                    console.print("[dim]Tip: Run 'rm config.yaml && hellochusquis' to add more providers.[/dim]")
+                    console.print("[dim]Add more providers: rm config.yaml && hellochusquis[/dim]")
 
             user_input = get_input()
 
     except KeyboardInterrupt:
         console.print("\n")
 
-    console.print("[dim]Guardando memoria...[/dim]")
+    console.print("[dim]Saving memory...[/dim]")
     agent.summarize_and_save(retention_days)
-    console.print("[dim]Hasta luego.[/dim]")
+    console.print("[dim]Goodbye.[/dim]")
 
 
 if __name__ == "__main__":

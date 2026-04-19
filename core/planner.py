@@ -7,43 +7,7 @@ from rich.table import Table
 console = Console()
 
 
-def detect_complexity(user_input: str, pool) -> bool:
-    """Pregunta al LLM si la tarea es simple o compleja."""
-    
-    # Detecta casos simples sin llamar al LLM
-    simple_patterns = [
-        "hola", "hello", "hi", "hey", "buenos días", "buenas",
-        "gracias", "thanks", "ok", "vale", "sí", "no", "adios",
-        "bye", "hasta luego", "qué tal", "cómo estás"
-    ]
-    if user_input.lower().strip() in simple_patterns:
-        return False
-    if len(user_input.split()) <= 4:
-        return False
-
-    try:
-        response = pool.chat_with_retry([
-            {
-                "role": "system",
-                "content": (
-                    "You are a task classifier. "
-                    "Respond with ONLY one word: 'simple' or 'complex'. "
-                    "A task is 'complex' if it requires more than 2 steps, "
-                    "multiple tool calls, research, or producing a document/file. "
-                    "A task is 'simple' if it's a greeting, question, or single action."
-                )
-            },
-            {"role": "user", "content": user_input}
-        ])
-        result = response["choices"][0]["message"]["content"].strip().lower()
-        return "complex" in result
-    except Exception:
-        return False
-      
-
-
 def generate_plan(user_input: str, pool) -> list[str]:
-    """Pide al LLM que genere un plan de pasos."""
     try:
         response = pool.chat_with_retry([
             {
@@ -51,7 +15,7 @@ def generate_plan(user_input: str, pool) -> list[str]:
                 "content": (
                     "You are a task planner. "
                     "Given a task, respond ONLY with a JSON array of steps. "
-                    "Each step is a short action string. Maximum 8 steps. "
+                    "Each step is a short, concrete action string. Maximum 6 steps. "
                     "Example: [\"Search temperature in Barcelona\", \"Write report to file\"] "
                     "Respond ONLY with the JSON array, nothing else."
                 )
@@ -59,7 +23,6 @@ def generate_plan(user_input: str, pool) -> list[str]:
             {"role": "user", "content": user_input}
         ])
         content = response["choices"][0]["message"]["content"].strip()
-        # Limpia posibles backticks
         content = content.replace("```json", "").replace("```", "").strip()
         steps = json.loads(content)
         return steps if isinstance(steps, list) else []
@@ -70,12 +33,11 @@ def generate_plan(user_input: str, pool) -> list[str]:
 def show_plan(steps: list[str]) -> None:
     table = Table(show_header=False, box=None, padding=(0, 2))
     for i, step in enumerate(steps, 1):
-        table.add_row(f"[cyan]{i}.[/cyan]", step)
+        table.add_row(f"[#f5a623]{i}.[/#f5a623]", step)
     console.print(Panel(table, title="[bold]Execution Plan[/bold]", expand=False))
 
 
 def confirm_plan(steps: list[str], pool, user_input: str) -> list[str] | None:
-    """Muestra el plan al user y pide confirmación. Devuelve el plan final o None."""
     while True:
         show_plan(steps)
         console.print("\n[dim]s = execute · n = cancel · e = edit[/dim]")
@@ -84,21 +46,20 @@ def confirm_plan(steps: list[str], pool, user_input: str) -> list[str] | None:
         if choice == "s":
             return steps
         elif choice == "n":
-            console.print("[dim]Plan cancelled.[/dim]")
+            console.print("[dim]Cancelled.[/dim]")
             return None
         elif choice == "e":
             feedback = Prompt.ask("What should I change?")
-            steps = generate_plan(f"{user_input}. Changes requested: {feedback}", pool)
+            steps = generate_plan(f"{user_input}. Changes: {feedback}", pool)
             if not steps:
-                console.print("[red]Could not regenerate plan. Try again.[/red]")
+                console.print("[red]Could not regenerate plan.[/red]")
                 return None
 
 
 def execute_plan(steps: list[str], agent) -> None:
-    """Auto-ejecuta cada paso del plan pasándolo al agente."""
     console.print(f"\n[dim]Executing {len(steps)} steps...[/dim]\n")
     for i, step in enumerate(steps, 1):
-        console.print(f"[bold cyan]Step {i}/{len(steps)}:[/bold cyan] {step}")
+        console.print(f"[bold #f5a623]Step {i}/{len(steps)}:[/bold #f5a623] {step}")
         try:
             result = agent.run(step)
             from ui.terminal import print_assistant
@@ -106,4 +67,4 @@ def execute_plan(steps: list[str], agent) -> None:
         except RuntimeError as e:
             console.print(f"[yellow]⚠ Step {i} failed, skipping...[/yellow]")
             continue
-    console.print("\n[green]✓ Plan completed.[/green]")
+    console.print("\n[#5eb97e]✓ Plan completed.[/#5eb97e]")
