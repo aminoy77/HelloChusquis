@@ -1,7 +1,10 @@
+import tiktoken
+
 class History:
     def __init__(self, max_entries: int = 20):
         self.messages = []
         self.max_entries = max_entries
+        self.encoder = tiktoken.get_encoding("cl100k_base") # GPT-4, GPT-3.5-turbo
 
     def add(self, role: str, content: str):
         self.messages.append({"role": role, "content": content})
@@ -19,36 +22,47 @@ class History:
     def clear(self):
         self.messages = []
         
-    def get_context_size(self) -> int:
-        """Calculate approximate token count of history"""
-        total_chars = sum(len(msg["content"]) for msg in self.messages)
-        # Rough approximation: 1 token ≈ 4 characters
-        return total_chars // 4
-    
-    def optimize_context(self, max_tokens: int = 3000) -> list[dict]:
-        """
-        Return a optimized version of history that fits within token limits
-        """
-        if self.get_context_size() <= max_tokens:
-            return self.messages
-            
-        # Start with system message if present
-        optimized = []
+    def get_token_count(self, messages: list[dict]) -> int:
+        """Calculate the approximate token count for a list of messages."""
+        text = " ".join([msg["content"] for msg in messages if msg.get("content")])
+        return len(self.encoder.encode(text))
+
+    def optimize_context(self, max_tokens: int = 4000) -> list[dict]:
+        """Optimize history to fit within max_tokens, prioritizing system and recent messages."""
+        optimized_messages = []
+        current_token_count = 0
+
+        # Always include the system message if present
         if self.messages and self.messages[0].get("role") == "system":
-            optimized.append(self.messages[0])
+            system_message = self.messages[0]
+            optimized_messages.append(system_message)
+            current_token_count += self.get_token_count([system_message])
+
+        # Add recent messages until max_tokens is reached
+        # Iterate backwards to prioritize most recent messages
+        for message in reversed(self.messages):
+            if message.get("role") == "system":
+                continue # Already added
             
-        # Add recent messages until we approach token limit
-        recent_messages = self.messages[-10:] if self.messages[0].get("role") == "system" else self.messages[-10:]
-        
-        current_tokens = self.get_context_size()
-        for msg in reversed(recent_messages):
-            if msg.get("role") == "system":
-                continue  # Already added
-                
-            msg_tokens = len(msg["content"]) // 4
-            if len(optimized) >= 20 or (current_tokens + msg_tokens) > max_tokens * 0.8:
+            message_token_count = self.get_token_count([message])
+            
+            # If adding this message exceeds the limit, stop
+            if current_token_count + message_token_count > max_tokens:
                 break
-                
-            optimized.insert(1 if optimized and optimized[0].get("role") == "system" else 0, msg)
             
-        return optimized
+            # Add message to the beginning of the optimized list (after system message if present)
+            if optimized_messages and optimized_messages[0].get("role") == "system":
+                optimized_messages.insert(1, message)
+            else:
+                optimized_messages.insert(0, message)
+            current_token_count += message_token_count
+            
+        # Ensure messages are in chronological order (system, then oldest to newest user/assistant)
+        if optimized_messages and optimized_messages[0].get("role") == "system":
+            return [optimized_messages[0]] + sorted(optimized_messages[1:], key=lambda x: self.messages.index(x))
+        else:
+            return sorted(optimized_messages, key=lambda x: self.messages.index(x))
+
+    def get_user_inputs(self) -> list[str]:
+        """Returns a list of all user inputs in the history."""
+        return [msg["content"] for msg in self.messages if msg["role"] == "user"]

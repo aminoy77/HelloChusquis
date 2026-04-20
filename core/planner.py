@@ -65,6 +65,17 @@ def execute_plan(steps: list[str], agent) -> None:
             from ui.terminal import print_assistant
             print_assistant(result)
         except RuntimeError as e:
-            console.print(f"[yellow]⚠ Step {i} failed, skipping...[/yellow]")
-            continue
-    console.print("\n[#5eb97e]✓ Plan completed.[/#5eb97e]")
+            console.print(f"[yellow]⚠ Step {i} failed. Attempting to re-plan...[/yellow]")
+            try:
+                new_plan = generate_plan(f"The step '{step}' failed. The original goal was: {agent.history.get_user_inputs()[-1]}. Please generate a new plan to achieve the goal, avoiding the previous error.", agent.pool)
+                if new_plan:
+                    console.print("[bold green]New plan generated. Continuing execution.[/bold green]")
+                    execute_plan(new_plan, agent)
+                    return # Exit the current execution loop
+                else:
+                    console.print("[red]Could not generate a new plan. Skipping step.[/red]")
+                    continue
+            except Exception as e2:
+                console.print(f"[red]Failed to generate a new plan: {e2}. Skipping step.[/red]")
+                continue
+    console.print("\n[#5eb97e]✓ Plan completed.[/#5eb97e]")"))

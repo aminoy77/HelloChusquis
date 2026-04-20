@@ -130,20 +130,21 @@ class Agent:
     def _build_messages(self) -> list[dict]:
         system = (
             self.system_prompt
-            + f"\n\nWorkspace directories: {', '.join(self.workspace_dirs)}. "
+            + f"\n\nWorkspace directories: {\', \'.join(self.workspace_dirs)}. "
             "Always use absolute paths when calling file tools. "
             "Only use tools when strictly necessary. "
-            "Never use shell or code tools just to print or display text."
+            "Never use shell or code tools just to print or display text.\n\n"
+            "You must follow this thought process for every turn:\n"
+            "1. <thought>: Analyze the current state and decide the next best action.\n"
+            "2. <call>: Execute the tool if needed.\n"
+            "3. <verify>: Check if the tool output solves the user\'s request.\n"
         )
         return [{"role": "system", "content": system}, *self.history.get()]
 
     def run(self, user_input: str) -> str:
         self.history.add("user", user_input)
         messages = self._build_messages()
-
-        # Sliding window — máximo 40 mensajes en contexto para evitar tokens infinitos
-        if len(messages) > 41:
-            messages = [messages[0]] + messages[-40:]
+        messages = self.history.optimize_context(messages)
 
         while True:
             response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
