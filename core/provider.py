@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -49,7 +48,7 @@ class ProviderPool:
 
     def __init__(self, config_path: str | Path = "config.yaml") -> None:
         self.providers: List[Provider] = []
-        self.reset_after_seconds: float = 3600  # default 1 hour
+        self.reset_after_seconds: float = 3600  # default 1 hour
         self.timeout: int = 15  # seconds
         self._load(Path(config_path))
 
@@ -100,7 +99,7 @@ class ProviderPool:
                 provider.exhausted_at = 0.0
                 logger.debug("Provider %s reset after %s seconds", provider.name, elapsed)
 
-    def _available(self, tools: Optional[List[str]] = None) -> List[Provider]:
+    def _available(self, tools: Optional[List[dict]] = None) -> List[Provider]:
         """Return a list of providers that are not currently exhausted.
 
         If *tools* is supplied, providers that cannot handle tools (e.g., Groq)
@@ -124,13 +123,12 @@ class ProviderPool:
         self,
         messages: List[dict],
         tools: Optional[List[dict]] = None,
-        max_retries: int = 2,
+        max_retries: int = 3,
     ) -> dict:
         """Attempt to chat, retrying up to *max_retries* times on failure.
 
         The method delegates to :meth:`chat` and catches :class:`RuntimeError`
-        from failed providers. No artificial sleep is introduced – the
-        exhausted flag already prevents immediate re‑use of a failing provider.
+        from failed providers.
         """
         last_error: Optional[Exception] = None
         for attempt in range(max_retries):
@@ -142,6 +140,7 @@ class ProviderPool:
                     logger.warning(
                         "Chat attempt %d failed (%s); retrying", attempt + 1, exc
                     )
+                    time.sleep(2)
                 continue
         raise RuntimeError(f"All providers failed after {max_retries} attempts: {last_error}")
 
@@ -177,7 +176,7 @@ class ProviderPool:
                 continue
             except (httpx.TimeoutException, httpx.ConnectError) as e:
                 provider.failed_calls += 1
-                console.print(f"[yellow]↻ {provider.name} {e.__class__.__name__}")
+                console.print(f"[yellow]↻ {provider.name} {e.__class__.__name__}[/yellow]")
                 logger.debug("%s error for provider %s: %s", e.__class__.__name__, provider.name, e)
                 last_error = e
                 continue
@@ -189,29 +188,39 @@ class ProviderPool:
     def _handle_http_error(self, provider: Provider, error: httpx.HTTPStatusError) -> None:
         """Log and mark the provider based on HTTP status codes.
 
-        The provider is marked *exhausted* for rate‑limit, quota, or auth errors.
+        The provider is marked *exhausted* for rate-limit, quota, or auth errors.
         """
         status = error.response.status_code
         try:
             error_msg = error.response.json().get("error", {}).get("message", "")
         except Exception:
             error_msg = ""
+
         if status == 429:
             console.print(f"[yellow]↻ {provider.name} rate limited[/yellow]")
+            provider.exhausted = True
+            provider.exhausted_at = time.time()
         elif status in (402, 403):
             console.print(f"[yellow]↻ {provider.name} quota exceeded[/yellow]")
+            provider.exhausted = True
+            provider.exhausted_at = time.time()
         elif status == 401:
             console.print(f"[red]✗ {provider.name} invalid API key[/red]")
+            provider.exhausted = True
+            provider.exhausted_at = time.time()
         elif status == 404:
             console.print(f"[yellow]↻ {provider.name} model not found[/yellow]")
+            # No exhausted — el provider funciona, solo el modelo no existe
         elif status == 400:
             console.print(f"[yellow]↻ {provider.name} bad request[/yellow]")
+            # No exhausted — puede ser un problema del payload, no del provider
         else:
             console.print(f"[yellow]↻ {provider.name} error {status}[/yellow]")
-        provider.exhausted = True
-        provider.exhausted_at = time.time()
+            provider.exhausted = True
+            provider.exhausted_at = time.time()
+
         logger.info(
-            "Provider %s marked exhausted (status %s). Message: %s",
+            "Provider %s handled HTTP error (status %s). Message: %s",
             provider.name,
             status,
             error_msg,

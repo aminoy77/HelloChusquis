@@ -20,6 +20,8 @@ def print_user(message: str):
 
 
 def print_assistant(message: str):
+    if not message:
+        return
     console.print(f"\n[bold #f5a623]HelloChusquis[/bold #f5a623]:")
     console.print(Markdown(message))
 

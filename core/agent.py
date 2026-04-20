@@ -150,7 +150,7 @@ class Agent:
             message = response["choices"][0]["message"]
 
             if not message.get("tool_calls"):
-                content = message.get("content", "")
+                content = message.get("content") or ""
                 self.history.add("assistant", content)
                 return content
 
