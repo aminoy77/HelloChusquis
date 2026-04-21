@@ -128,11 +128,9 @@ class Agent:
         return ToolResult(success=False, output="", error=f"Unknown tool: {name}")
 
     def _build_messages(self) -> list[dict]:
-        system = (
-            self.system_prompt
-            + f"\n\nWorkspace directories: {\', \'.join(self.workspace_dirs)}. "
-            "Always use absolute paths when calling file tools. "
-            "Only use tools when strictly necessary. "
+                   self.system_prompt
+            + f"\n\nWorkspace directories: {', '.join(self.workspace_dirs)}. "
+            "Always use absolute paths when calling file tools. "       "Only use tools when strictly necessary. "
             "Never use shell or code tools just to print or display text.\n\n"
             "You must follow this thought process for every turn:\n"
             "1. <thought>: Analyze the current state and decide the next best action.\n"
