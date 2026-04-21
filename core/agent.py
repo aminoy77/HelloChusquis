@@ -1,14 +1,17 @@
 import json
-import core.memory as memory
+import os
+import core.db_memory as memory
 import core.learning as learning
 from core.provider import ProviderPool
 from core.history import History
 from tools.shell import ShellTool
 from tools.files import FilesTool
 from tools.code import CodeTool
+from tools.websearch import WebSearchTool
 from tools.base import ToolResult
 from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
+from core.security_evaluator import evaluate_command_safety
 from ui.terminal import print_tool_call, print_tool_result
 
 
@@ -46,6 +49,20 @@ def _build_tools_schema(plugins: list) -> list:
         {
             "type": "function",
             "function": {
+                "name": "web_search",
+                "description": "Search the internet via DuckDuckGo",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"}
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "files",
                 "description": "Read, write, delete, list files in the workspace",
                 "parameters": {
@@ -76,10 +93,11 @@ class Agent:
         self.shell = ShellTool()
         self.files = FilesTool(config["settings"]["workspace_dirs"])
         self.code = CodeTool()
+        self.websearch = WebSearchTool()
         self.system_prompt = config["agent"]["system_prompt"]
         self.workspace_dirs = config["settings"]["workspace_dirs"]
 
-        # Memoria
+        # Memoria (estructurada vía SQLite ahora)
         summary = memory.load_summary()
         if summary:
             self.system_prompt += f"\n\nWhat you remember from past sessions:\n{summary}"
@@ -103,10 +121,28 @@ class Agent:
 
     def _dispatch_tool(self, name: str, args: dict) -> ToolResult:
         if name == "shell":
+            cmd = args.get("command", "")
+            
+            # Skip security checks if disabled via CLI
+            unsafe_mode = os.getenv("HELLOCHUSQUIS_UNSAFE_MODE") == "1"
+            profile = os.getenv("HELLOCHUSQUIS_PROFILE", "default")
+
+            # En modo agresivo o deshabilitado por CLI, saltarse las revisiones
+            if not unsafe_mode and profile != "aggressive":
+                safety_check = evaluate_command_safety(cmd, self.pool)
+                if not safety_check.get("safe", True):
+                    risk_msg = safety_check.get("reason", "Potentially unsafe command detected.")
+                    console.print(f"[bold red]⛔ Blocked unsafe command:[/bold red] {cmd}")
+                    console.print(f"[dim]{risk_msg}[/dim]")
+                    return ToolResult(success=False, output="", error=f"Safety check failed: {risk_msg}")
+
             return self.shell.run(**args)
 
         if name == "code":
             return self.code.run(**args)
+
+        if name == "web_search":
+            return self.websearch.run(**args)
 
         if name == "files":
             path = args.get("path", "")
@@ -128,23 +164,23 @@ class Agent:
         return ToolResult(success=False, output="", error=f"Unknown tool: {name}")
 
     def _build_messages(self) -> list[dict]:
-    system = (
-        self.system_prompt
-        + f"\n\nWorkspace directories: {', '.join(self.workspace_dirs)}. "
-        "Always use absolute paths when calling file tools. "
-        "Only use tools when strictly necessary. "
-        "Never use shell or code tools just to print or display text.\n\n"
-        "You must follow this thought process for every turn:\n"
-        "1. <thought>: Analyze the current state and decide the next best action.\n"
-        "2. <call>: Execute the tool if needed.\n"
-        "3. <verify>: Check if the tool output solves the user's request.\n"
-    )
-    return [{"role": "system", "content": system}, *self.history.get()]
+        system = (
+            self.system_prompt
+            + f"\n\nWorkspace directories: {', '.join(self.workspace_dirs)}. "
+            "Always use absolute paths when calling file tools. "
+            "Only use tools when strictly necessary. "
+            "Never use shell or code tools just to print or display text.\n\n"
+            "You must follow this thought process for every turn:\n"
+            "1. <thought>: Analyze the current state and decide the next best action.\n"
+            "2. <call>: Execute the tool if needed.\n"
+            "3. <verify>: Check if the tool output solves the user's request.\n"
+        )
+        return [{"role": "system", "content": system}, *self.history.get()]
 
     def run(self, user_input: str) -> str:
         self.history.add("user", user_input)
         messages = self._build_messages()
-        messages = self.history.optimize_context(messages)
+        messages = self.history.optimize_context(max_tokens=4000)
 
         while True:
             response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
@@ -194,4 +230,4 @@ class Agent:
             pass
 
         learning.analyze_and_learn(messages, self.pool)
-        memory.cleanup_old_sessions(retention_days)
+        # Ya no limpiamos viejos porque SQLite permite gestionarlo mejor internamente

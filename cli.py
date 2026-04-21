@@ -1,10 +1,28 @@
 import sys
 import os
+import argparse
 sys.path.insert(0, os.path.dirname(__file__))
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Advanced HelloChusquis Terminal Agent')
+    parser.add_argument('--profile', choices=['default', 'safe', 'aggressive'], default='default',
+                        help='Choose configuration behavior mode')
+    parser.add_argument('--unsafe-mode', action='store_true',
+                        help='Disable advanced safety checks (expert use only)')
+    parser.add_argument('command', nargs='*', default=[], help='Subcommand and its arguments')
+
+    return parser.parse_args()
+
+
 def main():
-    args = sys.argv[1:]
+    parsed_args = parse_args()
+    args = parsed_args.command
+
+    # Apply profile settings globally
+    os.environ["HELLOCHUSQUIS_PROFILE"] = parsed_args.profile
+    if parsed_args.unsafe_mode:
+        os.environ["HELLOCHUSQUIS_UNSAFE_MODE"] = "1"
 
     if args and args[0] == "install" and len(args) > 1:
         from core.plugins import install_plugin

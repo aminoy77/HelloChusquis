@@ -75,8 +75,10 @@ class ProviderPool:
         self.reset_after_seconds = settings.get("provider_reset_hours", 1) * 3600
         self.timeout = settings.get("timeout_seconds", 15)
 
-        providers_cfg = config.get("providers", [])
-        for p in sorted(providers_cfg, key=lambda x: x.get("priority", 0)):
+        providers_cfg_raw = config.get("providers", [])
+        providers_list = list(providers_cfg_raw.values()) if isinstance(providers_cfg_raw, dict) else providers_cfg_raw
+        
+        for p in sorted(providers_list, key=lambda x: x.get("priority", 0)):
             provider = Provider(
                 name=p["name"],
                 base_url=p["base_url"].rstrip("/"),

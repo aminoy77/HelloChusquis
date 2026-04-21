@@ -78,4 +78,4 @@ def execute_plan(steps: list[str], agent) -> None:
             except Exception as e2:
                 console.print(f"[red]Failed to generate a new plan: {e2}. Skipping step.[/red]")
                 continue
-    console.print("\n[#5eb97e]✓ Plan completed.[/#5eb97e]")"))
+    console.print("\n[#5eb97e]✓ Plan completed.[/#5eb97e]")
