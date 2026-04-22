@@ -22,6 +22,7 @@
             --border: #1f1e1b;
             --green: #5eb97e;
             --blue: #7eb8d4;
+            --red: #ef4444;
         }
 
         body {
@@ -54,12 +55,47 @@
             flex-shrink: 0;
         }
 
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
         .header-logo {
             font-family: 'Playfair Display', serif;
             font-size: 1.1rem;
             font-weight: 700;
             color: var(--amber);
             font-style: italic;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .header-btn:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+        }
+
+        .header-btn.active {
+            background: var(--amber);
+            color: var(--bg);
+            border-color: var(--amber);
         }
 
         .header-status {
@@ -93,7 +129,7 @@
 
         /* SIDEBAR */
         .sidebar {
-            width: 220px;
+            width: 240px;
             background: var(--surface);
             border-right: 1px solid var(--border);
             padding: 20px 16px;
@@ -102,6 +138,14 @@
             gap: 24px;
             overflow-y: auto;
             flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+            z-index: 100;
         }
 
         .sidebar-section h3 {
@@ -132,7 +176,7 @@
         }
 
         .indicator.ready { background: var(--green); }
-        .indicator.exhausted { background: #ef4444; }
+        .indicator.exhausted { background: var(--red); }
         .indicator.plugin { background: var(--blue); }
 
         .memory-stat {
@@ -143,6 +187,88 @@
         }
 
         .memory-stat span { color: var(--text); }
+
+        /* CONFIG PANEL */
+        .config-panel {
+            display: none;
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            width: 320px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 20px;
+            z-index: 200;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .config-panel.visible { display: block; }
+
+        .config-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amber);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .config-section {
+            margin-bottom: 20px;
+        }
+
+        .config-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .config-value {
+            font-size: 0.75rem;
+            color: var(--text);
+            padding: 6px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            word-break: break-all;
+        }
+
+        .config-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+        }
+
+        .toggle-switch {
+            width: 36px;
+            height: 20px;
+            background: var(--border);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-switch.active { background: var(--amber); }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: var(--text);
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch.active::after { transform: translateX(16px); }
 
         /* CHAT */
         .chat-area {
@@ -181,6 +307,13 @@
         .message.user { align-self: flex-end; }
         .message.assistant { align-self: flex-start; }
 
+        .message-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
         .message-label {
             font-size: 0.6rem;
             font-weight: 700;
@@ -197,6 +330,34 @@
         .message.assistant .message-label {
             color: var(--amber);
         }
+
+        .message-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message:hover .message-actions { opacity: 1; }
+
+        .action-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 3px 8px;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            border-color: var(--text-muted);
+            color: var(--text);
+        }
+
+        .action-btn.like:hover { border-color: var(--green); color: var(--green); }
+        .action-btn.dislike:hover { border-color: var(--red); color: var(--red); }
+        .action-btn.copy:hover { border-color: var(--amber); color: var(--amber); }
 
         .message-bubble {
             padding: 12px 16px;
@@ -237,7 +398,7 @@
         }
 
         .tool-call.success { border-left: 2px solid var(--green); color: var(--text-muted); }
-        .tool-call.error { border-left: 2px solid #ef4444; }
+        .tool-call.error { border-left: 2px solid var(--red); }
 
         .thinking {
             align-self: flex-start;
@@ -350,16 +511,77 @@
         }
 
         .hint-item span { color: var(--amber); }
+
+        /* COPTOAST */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--surface);
+            border: 1px solid var(--green);
+            color: var(--green);
+            padding: 10px 20px;
+            font-size: 0.75rem;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 300;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
     <header>
-        <div class="header-logo">HelloChusquis</div>
+        <div class="header-left">
+            <div class="header-logo">HelloChusquis</div>
+            <div class="header-actions">
+                <button class="header-btn" id="toggle-sidebar" onclick="toggleSidebar()">☰ Sidebar</button>
+                <button class="header-btn" id="toggle-config" onclick="toggleConfig()">⚙ Config</button>
+            </div>
+        </div>
         <div class="header-status">
             <div class="status-dot"></div>
             <span>Ready</span>
         </div>
     </header>
+
+    <div class="config-panel" id="config-panel">
+        <div class="config-title">Configuration</div>
+        
+        <div class="config-section">
+            <div class="config-label">Profile</div>
+            <div class="config-value" id="config-profile">default</div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Memory Retention</div>
+            <div class="config-value" id="config-memory">30 days</div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Auto-Save</div>
+            <div class="config-toggle">
+                <div class="toggle-switch active" id="toggle-autosave" onclick="toggleAutosave()"></div>
+                <span>Save sessions automatically</span>
+            </div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Sound Effects</div>
+            <div class="config-toggle">
+                <div class="toggle-switch" id="toggle-sound" onclick="toggleSound()"></div>
+                <span>Play sound on response</span>
+            </div>
+        </div>
+        
+        <div class="config-section" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+            <button class="header-btn" onclick="clearHistory()" style="width: 100%;">🗑 Clear History</button>
+        </div>
+    </div>
 
     <div class="main">
         <aside class="sidebar" id="sidebar">
@@ -379,6 +601,11 @@
                 <h3>Learnings</h3>
                 <div id="learnings-info"><div class="memory-stat">Loading...</div></div>
             </div>
+            <div class="sidebar-section" style="margin-top: auto;">
+                <h3>Quick Actions</h3>
+                <button class="header-btn" onclick="showStatus()" style="width: 100%; margin-bottom: 8px;">/status</button>
+                <button class="header-btn" onclick="clearHistory()" style="width: 100%;">/clear</button>
+            </div>
         </aside>
 
         <div class="chat-area">
@@ -395,21 +622,52 @@
                 </div>
             </div>
             <div class="input-area">
-                <input
-                    type="text"
-                    id="input"
-                    placeholder="Type a message..."
-                    autocomplete="off"
-                />
+                <input type="text" id="input" placeholder="Type a message..." autocomplete="off" />
                 <button id="send-btn" onclick="sendMessage()">Send →</button>
             </div>
         </div>
     </div>
 
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
     <script>
         const messagesEl = document.getElementById('messages');
         const inputEl = document.getElementById('input');
         const sendBtn = document.getElementById('send-btn');
+        let configVisible = false;
+        let sidebarVisible = true;
+        let autosaveEnabled = true;
+        let soundEnabled = false;
+
+        function toggleSidebar() {
+            sidebarVisible = !sidebarVisible;
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden', !sidebarVisible);
+            document.getElementById('toggle-sidebar').classList.toggle('active', sidebarVisible);
+        }
+
+        function toggleConfig() {
+            configVisible = !configVisible;
+            document.getElementById('config-panel').classList.toggle('visible', configVisible);
+            document.getElementById('toggle-config').classList.toggle('active', configVisible);
+        }
+
+        function toggleAutosave() {
+            autosaveEnabled = !autosaveEnabled;
+            document.getElementById('toggle-autosave').classList.toggle('active', autosaveEnabled);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('toggle-sound').classList.toggle('active', soundEnabled);
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            toast.textContent = text;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
 
         async function loadStatus() {
             try {
@@ -451,15 +709,32 @@
             const div = document.createElement('div');
             div.className = `message ${role}`;
 
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            
             const label = document.createElement('div');
             label.className = 'message-label';
             label.textContent = role === 'user' ? 'You' : 'HelloChusquis';
-
+            
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble';
             bubble.textContent = content;
+            bubble.id = 'msg-' + Date.now();
 
-            div.appendChild(label);
+            header.appendChild(label);
+            
+            if (role === 'assistant') {
+                const actions = document.createElement('div');
+                actions.className = 'message-actions';
+                actions.innerHTML = `
+                    <button class="action-btn copy" onclick="copyMessage('${bubble.id}')">📋 Copy</button>
+                    <button class="action-btn like" onclick="giveFeedback('positive')">👍</button>
+                    <button class="action-btn dislike" onclick="giveFeedback('negative')">👎</button>
+                `;
+                header.appendChild(actions);
+            }
+            
+            div.appendChild(header);
             div.appendChild(bubble);
 
             if (toolCalls.length > 0) {
@@ -477,6 +752,30 @@
 
             messagesEl.appendChild(div);
             messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function copyMessage(id) {
+            const text = document.getElementById(id).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!');
+            });
+        }
+
+        async function giveFeedback(type) {
+            const lastMsg = document.querySelector('.message.assistant:last-child .message-bubble');
+            if (!lastMsg) return;
+            
+            try {
+                const res = await fetch('/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: type, context: lastMsg.textContent })
+                });
+                const data = await res.json();
+                showToast(type === 'positive' ? 'Thanks for the positive feedback!' : 'Thanks for the feedback. I\'ll learn from this.');
+            } catch(e) {
+                showToast('Could not save feedback');
+            }
         }
 
         function addThinking() {
@@ -508,6 +807,14 @@
                 const data = await res.json();
                 thinking.remove();
                 addMessage('assistant', data.response, data.tool_calls || []);
+                
+                if (soundEnabled) {
+                    // Play notification sound
+                    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleR4ORpXc27+5oxkPIEndpoints');
+                    audio.volume = 0.1;
+                    audio.play().catch(() => {});
+                }
+                
                 loadStatus();
             } catch(e) {
                 thinking.remove();
@@ -516,6 +823,22 @@
                 sendBtn.disabled = false;
                 inputEl.focus();
             }
+        }
+
+        async function clearHistory() {
+            try {
+                await fetch('/clear', { method: 'POST' });
+                messagesEl.innerHTML = '';
+                showToast('History cleared!');
+                loadStatus();
+            } catch(e) {
+                showToast('Could not clear history');
+            }
+        }
+
+        function showStatus() {
+            inputEl.value = '/status';
+            sendMessage();
         }
 
         inputEl.addEventListener('keydown', e => {
