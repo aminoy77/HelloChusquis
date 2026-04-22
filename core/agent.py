@@ -8,24 +8,26 @@ from tools.shell import ShellTool
 from tools.files import FilesTool
 from tools.code import CodeTool
 from tools.websearch import WebSearchTool
-from tools.github import GitHubTool
-from tools.slack import SlackTool
-from tools.discord import DiscordTool
-from tools.docker import DockerTool
-from tools.notion import NotionTool
-from tools.aws import AWSTool
-from tools.twitter import TwitterTool
-from tools.gmail import GmailTool
-from tools.jira import JiraTool
-from tools.postgresql import PostgreSQLTool
-from tools.mongodb import MongoDBTool
-from tools.google_calendar import GoogleCalendarTool
-from tools.spotify import SpotifyTool
 from tools.base import ToolResult
 from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
 from core.security_evaluator import evaluate_command_safety
 from ui.terminal import print_tool_call, print_tool_result
+
+# Import tool modules directly (they provide run functions)
+import tools.github as github_module
+import tools.slack as slack_module
+import tools.discord as discord_module
+import tools.docker as docker_module
+import tools.notion as notion_module
+import tools.aws as aws_module
+import tools.twitter as twitter_module
+import tools.gmail as gmail_module
+import tools.jira as jira_module
+import tools.postgresql as postgresql_module
+import tools.mongodb as mongodb_module
+import tools.google_calendar as google_calendar_module
+import tools.spotify as spotify_module
 
 
 def _build_tools_schema(plugins: list) -> list:
@@ -337,18 +339,7 @@ class Agent:
         self.files = FilesTool(config["settings"]["workspace_dirs"])
         self.code = CodeTool()
         self.websearch = WebSearchTool()
-        self.github = GitHubTool()
-        self.slack = SlackTool()
-        self.docker = DockerTool()
-        self.notion = NotionTool()
-        self.aws = AWSTool()
-        self.twitter = TwitterTool()
-        self.gmail = GmailTool()
-        self.jira = JiraTool()
-        self.postgresql = PostgreSQLTool()
-        self.mongodb = MongoDBTool()
-        self.google_calendar = GoogleCalendarTool()
-        self.spotify = SpotifyTool()
+        # Los módulos de herramientas externos se usan directamente via run()
         self.system_prompt = config["agent"]["system_prompt"]
         self.workspace_dirs = config["settings"]["workspace_dirs"]
 
@@ -402,42 +393,6 @@ class Agent:
         if name == "github":
             return self.github.run(**args)
 
-        if name == "slack":
-            return self.slack.run(**args)
-
-        if name == "discord":
-            return self.discord.run(**args)
-
-        if name == "docker":
-            return self.docker.run(**args)
-
-        if name == "notion":
-            return self.notion.run(**args)
-
-        if name == "aws":
-            return self.aws.run(**args)
-
-        if name == "twitter":
-            return self.twitter.run(**args)
-
-        if name == "gmail":
-            return self.gmail.run(**args)
-
-        if name == "jira":
-            return self.jira.run(**args)
-
-        if name == "postgresql":
-            return self.postgresql.run(**args)
-
-        if name == "mongodb":
-            return self.mongodb.run(**args)
-
-        if name == "google_calendar":
-            return self.google_calendar.run(**args)
-
-        if name == "spotify":
-            return self.spotify.run(**args)
-
         if name == "files":
             path = args.get("path", "")
             if not self.workspace.is_allowed(path):
@@ -446,6 +401,98 @@ class Agent:
                     return ToolResult(success=False, output="", error="Access denied by user")
                 self.files.allow_dir(path)
             return self.files.run(**args)
+
+        # External tool modules - call run() directly from module
+        if name == "github":
+            try:
+                result = github_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "slack":
+            try:
+                result = slack_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "discord":
+            try:
+                result = discord_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "docker":
+            try:
+                result = docker_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "notion":
+            try:
+                result = notion_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "aws":
+            try:
+                result = aws_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "twitter":
+            try:
+                result = twitter_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "gmail":
+            try:
+                result = gmail_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "jira":
+            try:
+                result = jira_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "postgresql":
+            try:
+                result = postgresql_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "mongodb":
+            try:
+                result = mongodb_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "google_calendar":
+            try:
+                result = google_calendar_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "spotify":
+            try:
+                result = spotify_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
 
         for plugin in self.plugins:
             if plugin["name"] == name:

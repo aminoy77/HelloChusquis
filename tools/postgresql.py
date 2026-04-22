@@ -133,7 +133,7 @@ def run(action: str, sql: str = "", database: str = "", schema: str = "public",
                 # Format result
                 result = []
                 for row in rows[:limit]:
-                    result.append(" | ".join([str(r)[:30] for r in row)))
+                    result.append(" | ".join([str(r)[:30] for r in row]))
                 
                 header = " | ".join(col_names) if col_names else "Results"
                 conn.close()

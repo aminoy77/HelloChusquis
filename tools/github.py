@@ -3,6 +3,43 @@ import httpx
 import json
 
 
+class GitHubTool(BaseTool):
+    name = "github"
+    description = "Interact with GitHub API - manage repos, issues, PRs, and more"
+
+    def run(self, action: str = "", owner: str = "", repo: str = "", title: str = "", body: str = "", 
+          state: str = "open", base: str = "main", head: str = "", query: str = "", 
+          per_page: int = 10) -> ToolResult:
+        try:
+            # Code from original run function here
+            token = os.getenv("GITHUB_TOKEN") or os.getenv("GITHUB_API_TOKEN") or os.getenv("GH_TOKEN")
+            if not token:
+                return ToolResult(success=False, output="", error="No GitHub token found. Set GITHUB_TOKEN, GITHUB_API_TOKEN, or GH_TOKEN")
+            
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github.v3+json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+            
+            base_url = "https://api.github.com"
+            client = httpx.Client(timeout=30)
+            
+            if action == "get_user":
+                resp = client.get(f"{base_url}/user", headers=headers)
+                if resp.status_code == 200:
+                    user = resp.json()
+                    return ToolResult(success=True, output=f"User: {user.get('login')}\nName: {user.get('name')}\nBio: {user.get('bio')}\nRepos: {user.get('public_repos')}")
+                return ToolResult(success=False, output="", error=f"Error: {resp.status_code}")
+            
+            # ... más acciones aquí
+            
+            return ToolResult(success=False, output="", error=f"Unknown action: {action}")
+        except Exception as e:
+            return ToolResult(success=False, output="", error=str(e))
+
+
+# Legacy functions for compatibility
 PLUGIN_NAME = "github"
 PLUGIN_DESCRIPTION = "Interact with GitHub API - manage repos, issues, PRs, and more"
 

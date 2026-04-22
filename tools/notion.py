@@ -92,9 +92,9 @@ def run(action: str, page_id: str = "", database_id: str = "", title: str = "",
             
             # Build page properties
             page_properties = {
-                "title": [
-                    {"text": {"content": {"text": {"content": title}}}
-                ]
+                "Name": {
+                    "title": [{"text": {"content": title}}]
+                }
             }
             
             # Parse custom properties if provided
