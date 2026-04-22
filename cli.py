@@ -94,6 +94,14 @@ def main():
         console.print(f"[green]Cache cleared! ({cleared} items, {size} bytes freed)[/green]")
         return
 
+    if args and args[0] == "tool":
+        from core.tool_builder import build_tool
+        from core.setup import ensure_config
+        ensure_config()
+        tool_name = args[1] if len(args) > 1 else None
+        build_tool(tool_name)
+        return
+
     from main import main as run
     run()
 

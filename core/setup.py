@@ -10,6 +10,7 @@ console = Console()
 CONFIG_PATH = Path("config.yaml")
 
 KNOWN_PROVIDERS = [
+    # Major Providers
     {"name": "Groq",            "base_url": "https://api.groq.com/openai/v1",                          "docs": "console.groq.com/keys"},
     {"name": "OpenRouter",      "base_url": "https://openrouter.ai/api/v1",                            "docs": "openrouter.ai/keys"},
     {"name": "Ollama Cloud",    "base_url": "https://ollama.com/v1",                                   "docs": "ollama.com → Sign in → API Keys"},
@@ -18,16 +19,46 @@ KNOWN_PROVIDERS = [
     {"name": "Google Gemini",   "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "docs": "aistudio.google.com/apikey"},
     {"name": "xAI (Grok)",      "base_url": "https://api.x.ai/v1",                                    "docs": "console.x.ai"},
     {"name": "Perplexity",      "base_url": "https://api.perplexity.ai",                               "docs": "perplexity.ai/settings/api"},
+    
+    # Chinese Providers
     {"name": "Qwen / Alibaba",  "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "docs": "dashscope.aliyuncs.com"},
     {"name": "MiniMax",         "base_url": "https://api.minimax.chat/v1",                             "docs": "platform.minimax.io"},
+    {"name": "Baichuan",       "base_url": "https://api.baichuan-ai.com/v1",                        "docs": "platform.baichuan-ai.com"},
+    {"name": "Zhipu (ChatGLM)", "base_url": "https://open.bigmodel.cn/api/paas/v4",                "docs": "open.bigmodel.cn"},
+    {"name": "Moonshot",        "base_url": "https://api.moonshot.cn/v1",                             "docs": "platform.moonshot.cn"},
+    
+    # European Providers
     {"name": "Mistral",         "base_url": "https://api.mistral.ai/v1",                               "docs": "console.mistral.ai/api-keys"},
     {"name": "DeepSeek",        "base_url": "https://api.deepseek.com/v1",                             "docs": "platform.deepseek.com/api_keys"},
     {"name": "Cohere",          "base_url": "https://api.cohere.com/v1",                               "docs": "dashboard.cohere.com/api-keys"},
+    
+    # AI Platforms
     {"name": "Together AI",     "base_url": "https://api.together.xyz/v1",                             "docs": "api.together.ai/settings/api-keys"},
     {"name": "Fireworks AI",    "base_url": "https://api.fireworks.ai/inference/v1",                   "docs": "fireworks.ai/account/api-keys"},
     {"name": "Novita AI",       "base_url": "https://api.novita.ai/v3/openai",                         "docs": "novita.ai/settings/key-management"},
+    {"name": "Lepton AI",       "base_url": "https://api.lepton.ai/httpapi/v1",                        "docs": "dashboard.lepton.ai"},
+    {"name": "Hyperbolic",      "base_url": "https://api.hyperbolic.xyz/v1",                           "docs": "hyperbolic.xyz/dashboard"},
+    {"name": "SambaNova",       "base_url": "https://api.sambanova.ai/v1",                             "docs": "cloud.sambanova.ai"},
+    
+    # Open Source Focused
     {"name": "Blackbox AI",     "base_url": "https://api.blackbox.ai/v1",                              "docs": "blackbox.ai"},
     {"name": "Xiaomi (MiMo)",   "base_url": "https://api.mimo.xiaomi.com/v1",                         "docs": "mimo.xiaomi.com"},
+    {"name": "Replicate",       "base_url": "https://api.replicate.com/v1",                            "docs": "replicate.com/account/tokens"},
+    {"name": "HuggingFace",     "base_url": "https://api-inference.huggingface.co/v1",               "docs": "huggingface.co/settings/tokens"},
+    {"name": "Anyscale",        "base_url": "https://api.endpoints.anyscale.com/v1",                    "docs": "anyscale.com"},
+    {"name": "Beam",            "base_url": "https://api.beam.cloud/v1",                                "docs": "beam.cloud/dashboard"},
+    
+    # Enterprise
+    {"name": "Azure OpenAI",    "base_url": "https://YOUR_RESOURCE.openai.azure.com/openai/v1",     "docs": "azure.com"},
+    {"name": "AWS Bedrock",     "base_url": "https://bedrock-runtime.{region}.amazonaws.com",         "docs": "aws.amazon.com/bedrock"},
+    {"name": "Vertex AI",       "base_url": "https://{location}-aiplatform.googleapis.com/v1",       "docs": "cloud.google.com/vertex-ai"},
+    
+    # Specialized
+    {"name": "Writer",          "base_url": "https://api.writer.com/v1",                               "docs": "writer.com"},
+    {"name": "Aleph Alpha",     "base_url": "https://api.aleph-alpha.com/v1",                        "docs": "aleph-alpha.com"},
+    {"name": "Nomic",          "base_url": "https://api-atlas.nomic.ai/v1",                          "docs": "nomic.ai"},
+    
+    # Open AI Compatible
     {"name": "Custom / Other",  "base_url": "",                                                        "docs": ""},
 ]
 

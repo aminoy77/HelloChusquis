@@ -1,15 +1,15 @@
-# HelloChusquis 🧠✨ v1.0
+# HelloChusquis 🧠✨ v2.0
 
-**HelloChusquis** is an advanced, self-improving AI terminal agent built in Python. Designed for developers and power-users, it seamlessly integrates with your terminal to automate complex tasks, manage files, execute code, and even build its own tools on demand.
+**HelloChusquis** is an advanced, self-improving AI terminal agent built in Python. With 60+ integrations, skill system, and auto-tool-builder.
 
-## 🚀 What's New in v1.0
+## 🚀 What's New in v2.0
 
-- **REST API** - Programmatic access to HelloChusquis
-- **Streaming Responses** - Real-time AI output (beta)
-- **Code Analysis** - Built-in ESLint, Black, Ruff, MyPy
-- **Linear Integration** - Project management
-- **Intelligent Caching** - Faster repeated queries
-- **Improved Web UI** - Copy, like/dislike, config panel
+- **60+ AI Providers** - Including Chinese, European, Enterprise providers
+- **Auto-Tool-Builder** - Run `/tool add <name>` to create new integrations
+- **Skill System** - Reusable workflows with `/skill` commands
+- **MCP Support** - Model Context Protocol for external tools
+- **Background Tasks** - Long-running processes management
+- **Smart Integration Suggestions** - Proposes building tools when needed
 
 ## ⚡ Quick Start
 
@@ -18,48 +18,59 @@ pip install hellochusquis
 hellochusquis
 ```
 
+## 🔧 Tool Builder
+
+Create new integrations on-the-fly:
+
+```bash
+hellochusquis tool add stripe   # Creates Stripe integration
+hellochusquis tool add custom # Creates custom API integration
+```
+
 ## 🌐 Web Interface
 
 ```bash
 hellochusquis web
 ```
 
-## 🔧 CLI Options
-
-```bash
-hellochusquis --profile safe    # Enhanced security
-hellochusquis --profile aggressive  # No security checks
-```
-
-## 📦 Integrations
+## 📦 Integrations (60+)
 
 | Category | Tools |
 |----------|-------|
-| Code | GitHub, Code Analysis (ESLint, Black, Ruff, MyPy) |
-| Communication | Slack, Discord, Twitter/X, Gmail |
-| DevOps | Docker, AWS, Jira, Linear |
-| Data | PostgreSQL, MongoDB |
-| Productivity | Google Calendar, Notion, Spotify |
+| Payments | Stripe, Square, Plaid, PayPal |
+| Communication | Twilio, SendGrid, Resend, Brevo, Intercom |
+| DevOps | Vercel, Supabase, Sentry, Datadog, PagerDuty |
+| CRM/Marketing | HubSpot, Shopify, Mailchimp, Airtable, Clerk |
+| CMS | Contentful, Sanity |
+| Search | Algolia |
+| Media | Cloudinary |
+| Analytics | PostHog, LaunchDarkly |
+| Automation | n8n, Pipedream, Retool, Workato, Make |
+| Databases | PostgreSQL, MongoDB, Upstash |
+| Meetings | Calendly, Zoom |
+| Project | Linear, ClickUp, Jira |
+| Code | GitHub, Bitbucket |
 
-## 🔌 REST API
+## 🤖 Skills
 
-Start the API server:
+Skills are reusable workflows:
 
-```bash
-hellochusquis api --port 8080
+```python
+# skills/code_review.json
+{
+  "name": "code_review",
+  "actions": [
+    {"type": "shell", "command": "ruff check {file}"},
+    {"type": "shell", "command": "mypy {file}"}
+  ]
+}
 ```
-
-Endpoints:
-- `POST /chat` - Send a message
-- `GET /status` - Provider status
-- `POST /feedback` - Send feedback
-- `GET /history` - Conversation history
 
 ## 📚 Documentation
 
 - [README](README.md) - Full documentation
 - [Examples](examples/) - Usage examples
-- [Plugins](https://github.com/aminoy77/HelloChusquis-plugins) - Plugin registry
+- [Docs](docs/) - Landing page
 
 ## 🤝 Contributing
 

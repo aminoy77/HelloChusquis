@@ -28,6 +28,41 @@ import tools.postgresql as postgresql_module
 import tools.mongodb as mongodb_module
 import tools.google_calendar as google_calendar_module
 import tools.spotify as spotify_module
+import tools.stripe as stripe_module
+import tools.twilio as twilio_module
+import tools.sendgrid as sendgrid_module
+import tools.supabase as supabase_module
+import tools.vercel as vercel_module
+import tools.sentry as sentry_module
+import tools.pagerduty as pagerduty_module
+import tools.datadog as datadog_module
+import tools.intercom as intercom_module
+import tools.contentful as contentful_module
+import tools.sanity as sanity_module
+import tools.hubspot as hubspot_module
+import tools.shopify as shopify_module
+import tools.mailchimp as mailchimp_module
+import tools.airtable as airtable_module
+import tools.plaid as plaid_module
+import tools.square as square_module
+import tools.cloudinary as cloudinary_module
+import tools.algolia as algolia_module
+import tools.resend as resend_module
+import tools.brevo as brevo_module
+import tools.upstash as upstash_module
+import tools.clerk as clerk_module
+import tools.posthog as posthog_module
+import tools.launchdarkly as launchdarkly_module
+import tools.calendly as calendly_module
+import tools.zoom as zoom_module
+import tools.clickup as clickup_module
+import tools.raycast as raycast_module
+import tools.bitbucket as bitbucket_module
+import tools.n8n as n8n_module
+import tools.pipedream as pipedream_module
+import tools.retool as retool_module
+import tools.workato as workato_module
+import tools.make as make_module
 
 
 def _build_tools_schema(plugins: list) -> list:
@@ -308,6 +343,446 @@ def _build_tools_schema(plugins: list) -> list:
         {
             "type": "function",
             "function": {
+                "name": "stripe",
+                "description": "Stripe payment processing - customers, charges, subscriptions",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_customers", "create_customer", "create_charge", "list_invoices", "list_subscriptions"]},
+                        "email": {"type": "string"},
+                        "amount": {"type": "number"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "twilio",
+                "description": "Twilio SMS, voice calls, and messaging",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["send_sms", "list_messages", "make_call"]},
+                        "to": {"type": "string"},
+                        "message": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "sendgrid",
+                "description": "SendGrid transactional email",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["send_email", "list_contacts", "get_stats"]},
+                        "to": {"type": "string"},
+                        "subject": {"type": "string"},
+                        "content": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "supabase",
+                "description": "Supabase PostgreSQL database",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["select", "insert", "update", "delete", "list_tables"]},
+                        "table": {"type": "string"},
+                        "data": {"type": "object"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "vercel",
+                "description": "Vercel deployments and projects",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_deployments", "get_deployment", "list_projects", "get_project"]},
+                        "id": {"type": "string"},
+                        "name": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "sentry",
+                "description": "Sentry error tracking",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_issues", "get_issue", "list_projects", "get_stats"]},
+                        "id": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "pagerduty",
+                "description": "PagerDuty incident management",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_incidents", "get_incident", "list_services", "list_on_calls", "trigger_incident"]},
+                        "id": {"type": "string"},
+                        "title": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "datadog",
+                "description": "Datadog monitoring and metrics",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["query_metrics", "list_hosts", "get_services", "list_monitors"]},
+                        "query": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "intercom",
+                "description": "Intercom customer messaging",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_conversations", "get_conversation", "list_contacts", "send_message"]},
+                        "id": {"type": "string"},
+                        "user_id": {"type": "string"},
+                        "message": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "contentful",
+                "description": "Contentful CMS content management",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_entries", "get_entry", "list_assets", "list_content_types"]},
+                        "id": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "sanity",
+                "description": "Sanity CMS structured content",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["fetch", "mutate"]},
+                        "query": {"type": "string"},
+                        "mutations": {"type": "array"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "hubspot",
+                "description": "HubSpot CRM contacts and deals",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_contacts", "create_contact", "list_deals", "list_companies"]},
+                        "email": {"type": "string"},
+                        "first_name": {"type": "string"},
+                        "last_name": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "shopify",
+                "description": "Shopify e-commerce products and orders",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_products", "get_product", "list_orders", "list_customers"]},
+                        "id": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "mailchimp",
+                "description": "Mailchimp email marketing",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_campaigns", "create_campaign", "send_campaign", "list_lists"]},
+                        "id": {"type": "string"},
+                        "subject": {"type": "string"},
+                        "list_id": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "airtable",
+                "description": "Airtable collaborative bases",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_records", "create_record", "update_record", "delete_record"]},
+                        "table": {"type": "string"},
+                        "id": {"type": "string"},
+                        "fields": {"type": "object"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "plaid",
+                "description": "Plaid banking and financial data",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["create_link_token", "exchange_token", "get_transactions", "get_balance"]},
+                        "public_token": {"type": "string"},
+                        "access_token": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "square",
+                "description": "Square payments and orders",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_payments", "create_payment", "list_orders", "list_locations"]},
+                        "amount": {"type": "number"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "cloudinary",
+                "description": "Cloudinary image and video management",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["upload", "list_resources", "delete_resource", "transform"]},
+                        "file": {"type": "string"},
+                        "public_id": {"type": "string"},
+                        "transformations": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "algolia",
+                "description": "Algolia search and analytics",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["search", "add_object", "delete_object", "search_settings"]},
+                        "query": {"type": "string"},
+                        "data": {"type": "object"},
+                        "id": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "resend",
+                "description": "Resend modern email delivery",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["send", "batch", "list"]},
+                        "to": {"type": "string"},
+                        "subject": {"type": "string"},
+                        "html": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "brevo",
+                "description": "Brevo email marketing and SMS",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["send_email", "list_contacts", "create_contact", "list_campaigns"]},
+                        "to": {"type": "string"},
+                        "subject": {"type": "string"},
+                        "email": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "upstash",
+                "description": "Upstash Redis serverless database",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["get", "set", "incr", "del"]},
+                        "key": {"type": "string"},
+                        "value": {"type": "string"},
+                        "ttl": {"type": "number"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "clerk",
+                "description": "Clerk authentication and user management",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_users", "get_user", "create_user", "list_organizations"]},
+                        "id": {"type": "string"},
+                        "email": {"type": "string"},
+                        "password": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "posthog",
+                "description": "PostHog product analytics and feature flags",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["capture", "list_feature_flags", "get_flag", "list_insights"]},
+                        "event": {"type": "string"},
+                        "properties": {"type": "object"},
+                        "key": {"type": "string"},
+                        "distinct_id": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "launchdarkly",
+                "description": "LaunchDarkly feature flags",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_flags", "get_flag", "toggle_flag", "list_environments"]},
+                        "flag": {"type": "string"},
+                        "state": {"type": "boolean"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "calendly",
+                "description": "Calendly meeting scheduling",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_events", "list_event_types", "get_event", "list_users"]},
+                        "id": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "zoom",
+                "description": "Zoom video meetings and recordings",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_meetings", "create_meeting", "get_meeting", "list_recordings"]},
+                        "id": {"type": "string"},
+                        "topic": {"type": "string"},
+                        "duration": {"type": "number"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "files",
                 "description": "Read, write, delete, list files in the workspace",
                 "parameters": {
@@ -364,6 +839,20 @@ class Agent:
                 f"\n\nInstalled plugins available as tools: {plugin_names}. "
                 "Use them directly without asking the user to install anything."
             )
+
+        # Available integrations list for proposing new tools
+        available_integrations = [
+            "stripe", "square", "plaid",  # Payments
+            "twilio", "sendgrid", "resend", "brevo",  # Communication
+            "vercel", "supabase", "sentry", "datadog", "pagerduty",  # DevOps
+            "shopify", "hubspot", "mailchimp", "airtable", "clerk",  # CRM/Marketing
+            "contentful", "sanity",  # CMS
+            "algolia", "cloudinary", "posthog", "launchdarkly", "upstash",  # Tools
+            "clickup", "raycast", "bitbucket", "n8n", "pipedream", "retool", "workato", "make",  # Automation
+            "calendly", "zoom"  # Meetings
+        ]
+        
+        self.system_prompt += f"\n\nIf user requests an integration not in available tools ({', '.join(available_integrations)}), offer to build it using the /tool command or suggest it as a feature request."
 
     def _dispatch_tool(self, name: str, args: dict) -> ToolResult:
         if name == "shell":
@@ -494,6 +983,252 @@ class Agent:
             except Exception as e:
                 return ToolResult(success=False, output="", error=str(e))
 
+        # New tool integrations
+        if name == "stripe":
+            try:
+                result = stripe_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "twilio":
+            try:
+                result = twilio_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "sendgrid":
+            try:
+                result = sendgrid_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "supabase":
+            try:
+                result = supabase_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "vercel":
+            try:
+                result = vercel_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "sentry":
+            try:
+                result = sentry_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "pagerduty":
+            try:
+                result = pagerduty_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "datadog":
+            try:
+                result = datadog_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "intercom":
+            try:
+                result = intercom_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "contentful":
+            try:
+                result = contentful_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "sanity":
+            try:
+                result = sanity_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "hubspot":
+            try:
+                result = hubspot_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "shopify":
+            try:
+                result = shopify_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "mailchimp":
+            try:
+                result = mailchimp_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "airtable":
+            try:
+                result = airtable_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "plaid":
+            try:
+                result = plaid_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "square":
+            try:
+                result = square_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "cloudinary":
+            try:
+                result = cloudinary_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "algolia":
+            try:
+                result = algolia_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "resend":
+            try:
+                result = resend_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "brevo":
+            try:
+                result = brevo_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "upstash":
+            try:
+                result = upstash_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "clerk":
+            try:
+                result = clerk_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "posthog":
+            try:
+                result = posthog_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "launchdarkly":
+            try:
+                result = launchdarkly_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "calendly":
+            try:
+                result = calendly_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "zoom":
+            try:
+                result = zoom_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "clickup":
+            try:
+                result = clickup_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "raycast":
+            try:
+                result = raycast_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "bitbucket":
+            try:
+                result = bitbucket_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "n8n":
+            try:
+                result = n8n_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "pipedream":
+            try:
+                result = pipedream_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "retool":
+            try:
+                result = retool_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "workato":
+            try:
+                result = workato_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "make":
+            try:
+                result = make_module.run(**args)
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
         for plugin in self.plugins:
             if plugin["name"] == name:
                 try:
@@ -502,7 +1237,20 @@ class Agent:
                 except Exception as e:
                     return ToolResult(success=False, output="", error=str(e))
 
-        return ToolResult(success=False, output="", error=f"Unknown tool: {name}")
+        return ToolResult(success=False, output="", error=f"Unknown tool: {name}. I can create this tool for you! Run `/tool add {name}` or describe the integration you need.")
+
+    def _propose_tool_creation(self, tool_name: str, args: dict) -> str:
+        """Propose creating a new tool when one doesn't exist."""
+        return (
+            f"I don't have a '{tool_name}' tool configured yet. I can create it for you!\n\n"
+            f"Options:\n"
+            f"1. Run `/tool add {tool_name}` to build it interactively\n"
+            f"2. Describe the integration you need and I'll create it\n"
+            f"3. Submit a feature request at github.com/aminoy77/HelloChusquis/issues\n\n"
+            f"Supported integrations I can build: Stripe, Twilio, SendGrid, Square, Plaid, "
+            f"Vercel, Supabase, Sentry, PagerDuty, Datadog, Shopify, HubSpot, "
+            f"Contentful, Sanity, Algolia, Cloudinary, n8n, Pipedream, Retool, and more."
+        )
 
     def _build_messages(self) -> list[dict]:
         system = (

@@ -641,7 +641,7 @@
     <ul class="nav-links">
         <li><a href="#features">Features</a></li>
         <li><a href="#integrations">Integrations</a></li>
-        <li><a href="#plugins"> Plugins</a></li>
+        <li><a href="#toolbuilder">Tool Builder</a></li>
         <li><a href="#providers">Providers</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="nav-cta">GitHub →</a></li>
@@ -650,7 +650,7 @@
 
 <!-- HERO -->
 <div class="hero">
-    <div class="hero-badge">v1.1.0 — Open Source — MIT License — 30+ Tools</div>
+    <div class="hero-badge">v2.0.0 — Open Source — MIT License — 60+ Tools</div>
 
     <h1 class="hero-title">Hello<span>Chusquis</span></h1>
     <p class="hero-sub">Terminal AI Agent · Python · Open Source</p>
@@ -715,11 +715,23 @@
 <!-- STATS -->
 <div class="stats-bar">
     <div class="stat">
-        <span class="stat-value">30+</span>
-        <span class="stat-label">Built-in Tools</span>
+<span class="stat-value">60+</span>
+        <span class="stat-label">Integrations</span>
     </div>
     <div class="stat">
-        <span class="stat-value">19+</span>
+        <span class="stat-value">35+</span>
+        <span class="stat-label">AI Providers</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value">Python</span>
+        <span class="stat-label">Pure Python</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value">v2.0.0</span>
+        <span class="stat-label">Latest Version</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value">32+</span>
         <span class="stat-label">AI Providers</span>
     </div>
     <div class="stat">
@@ -742,7 +754,7 @@
         <div class="feature-card">
             <div class="feature-icon">🔄</div>
             <div class="feature-title">Multi-Provider Fallback</div>
-            <div class="feature-desc">Automatically switches between 19+ AI providers when one fails or hits rate limits. Groq for speed, OpenRouter for tools, Ollama for local.</div>
+            <div class="feature-desc">Automatically switches between 35+ AI providers when one fails or hits rate limits. Groq for speed, OpenRouter for tools, Ollama for local.</div>
         </div>
         <div class="feature-card">
             <div class="feature-icon">🧩</div>
@@ -822,8 +834,8 @@
 <!-- INTEGRATIONS -->
 <section id="integrations">
     <p class="section-label reveal">Integrations</p>
-    <h2 class="section-title reveal">30+ tools.<br>Ready to use.</h2>
-    <p class="section-desc reveal">Native integrations for popular development and productivity tools. No configuration beyond API keys.</p>
+    <h2 class="section-title reveal">60+ tools.<br>Auto-build on demand.</h2>
+    <p class="section-desc reveal">Native integrations for popular tools. Missing one? Run `/tool add` to build it automatically.</p>
 
     <div class="features-grid reveal">
         <div class="feature-card">
@@ -1087,31 +1099,91 @@
 
 <hr class="divider">
 
+<!-- TOOL BUILDER -->
+<section id="toolbuilder">
+    <p class="section-label reveal">Auto-Tool Builder</p>
+    <h2 class="section-title reveal">Build integrations<br>on demand.</h2>
+    <p class="section-desc reveal">Need a new integration? HelloChusquis can build it for you automatically.</p>
+
+    <div class="features-grid reveal">
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">/tool add</div>
+            <div class="feature-desc">Create any integration interactively. Run `hellochusquis tool add stripe`.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-title">Smart Suggestions</div>
+            <div class="feature-desc">When you ask for a missing tool, HelloChusquis proposes to build it.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🧩</div>
+            <div class="feature-title">Skills</div>
+            <div class="feature-desc">Reusable workflows. Bundle commands into skills for automation.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔌</div>
+            <div class="feature-title">MCP Support</div>
+            <div class="feature-desc">Model Context Protocol for external AI tools and services.</div>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
 <!-- PROVIDERS -->
 <section id="providers">
     <p class="section-label reveal">AI Providers</p>
-    <h2 class="section-title reveal">19+ providers.<br>Automatic fallback.</h2>
+    <h2 class="section-title reveal">35+ providers.<br>Automatic fallback.</h2>
     <p class="section-desc reveal">Configure multiple providers. When one fails, HelloChusquis switches automatically. Free tiers supported on all major providers.</p>
 
     <div class="providers-grid reveal">
+        <!-- Major Providers -->
         <div class="provider-card"><div class="provider-dot"></div>OpenRouter</div>
-        <div class="provider-card"><div class="provider-dot"></div>Ollama Cloud</div>
         <div class="provider-card"><div class="provider-dot"></div>Groq</div>
+        <div class="provider-card"><div class="provider-dot"></div>Ollama Cloud</div>
         <div class="provider-card"><div class="provider-dot"></div>OpenAI</div>
         <div class="provider-card"><div class="provider-dot"></div>Anthropic</div>
         <div class="provider-card"><div class="provider-dot"></div>Google Gemini</div>
         <div class="provider-card"><div class="provider-dot"></div>xAI (Grok)</div>
         <div class="provider-card"><div class="provider-dot"></div>Perplexity</div>
-        <div class="provider-card"><div class="provider-dot"></div>Mistral</div>
-        <div class="provider-card"><div class="provider-dot"></div>DeepSeek</div>
+        
+        <!-- Chinese Providers -->
         <div class="provider-card"><div class="provider-dot"></div>Qwen / Alibaba</div>
         <div class="provider-card"><div class="provider-dot"></div>MiniMax</div>
+        <div class="provider-card"><div class="provider-dot"></div>Baichuan</div>
+        <div class="provider-card"><div class="provider-dot"></div>Zhipu (ChatGLM)</div>
+        <div class="provider-card"><div class="provider-dot"></div>Moonshot</div>
+        
+        <!-- European -->
+        <div class="provider-card"><div class="provider-dot"></div>Mistral</div>
+        <div class="provider-card"><div class="provider-dot"></div>DeepSeek</div>
+        <div class="provider-card"><div class="provider-dot"></div>Cohere</div>
+        
+        <!-- AI Platforms -->
         <div class="provider-card"><div class="provider-dot"></div>Together AI</div>
         <div class="provider-card"><div class="provider-dot"></div>Fireworks AI</div>
-        <div class="provider-card"><div class="provider-dot"></div>Cohere</div>
         <div class="provider-card"><div class="provider-dot"></div>Novita AI</div>
+        <div class="provider-card"><div class="provider-dot"></div>Lepton AI</div>
+        <div class="provider-card"><div class="provider-dot"></div>Hyperbolic</div>
+        <div class="provider-card"><div class="provider-dot"></div>SambaNova</div>
+        
+        <!-- Open Source -->
         <div class="provider-card"><div class="provider-dot"></div>Blackbox AI</div>
         <div class="provider-card"><div class="provider-dot"></div>Xiaomi MiMo</div>
+        <div class="provider-card"><div class="provider-dot"></div>Replicate</div>
+        <div class="provider-card"><div class="provider-dot"></div>HuggingFace</div>
+        <div class="provider-card"><div class="provider-dot"></div>Anyscale</div>
+        <div class="provider-card"><div class="provider-dot"></div>Beam</div>
+        
+        <!-- Enterprise -->
+        <div class="provider-card"><div class="provider-dot"></div>Azure OpenAI</div>
+        <div class="provider-card"><div class="provider-dot"></div>AWS Bedrock</div>
+        <div class="provider-card"><div class="provider-dot"></div>Vertex AI</div>
+        
+        <!-- Specialized -->
+        <div class="provider-card"><div class="provider-dot"></div>Writer</div>
+        <div class="provider-card"><div class="provider-dot"></div>Nomic</div>
         <div class="provider-card"><div class="provider-dot"></div>Custom / Other</div>
     </div>
 </section>
@@ -1180,7 +1252,7 @@
                     <span class="t-output">Provider #1</span>
                 </div>
                 <div class="t-line">
-                    <span class="t-output">  Pick a provider (1-19): <span class="t-cursor" style="width:6px;height:12px"></span></span>
+                    <span class="t-output">  Pick a provider (1-35): <span class="t-cursor" style="width:6px;height:12px"></span></span>
                 </div>
             </div>
         </div>
