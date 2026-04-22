@@ -65,7 +65,7 @@ def run(action: str, file: str = "", sheet: str = "", cell: str = "",
                 
                 result = []
                 for i, row in enumerate(data):
-                    result.append(" | ".join([str(v)[:20] for v in row])))
+                    result.append(" | ".join([str(v)[:20] for v in row]))
                 return "\n".join(result)
             
             # Read all
@@ -75,7 +75,7 @@ def run(action: str, file: str = "", sheet: str = "", cell: str = "",
             
             result = []
             for row in data:
-                result.append(" | ".join([str(v)[:20] for v in row if v])))
+                result.append(" | ".join([str(v)[:20] for v in row if v]))
             return "\n".join(result)
         
         elif action == "write" or action == "update_cell":

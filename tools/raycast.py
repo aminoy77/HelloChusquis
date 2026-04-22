@@ -21,7 +21,7 @@ class RaycastTool(Tool):
             if action == "list_extensions":
                 r = httpx.get(f"{base_url}/extensions", headers=headers, timeout=30)
                 data = r.json()
-                return ToolResult(success=True, data=data.get("extensions", [])})
+                return ToolResult(success=True, data=data.get("extensions", []))
 
             elif action == "launch_extension":
                 id = kwargs.get("id")

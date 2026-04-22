@@ -26,10 +26,10 @@ class NotionTool(Tool):
                 return ToolResult(success=True, data=data.get("results", []))
 
             elif action == "get_page":
-                id = kwargs.get("id")
-                if not id:
+                page_id = kwargs.get("id")
+                if not page_id:
                     return ToolResult(success=False, error="Page ID required")
-                r = httpx.get(f"{base_url}/pages/{id}", headers=headers, timeout=30)
+                r = httpx.get(f"{base_url}/pages/{page_id}", headers=headers, timeout=30)
                 return ToolResult(success=True, data=r.json())
 
             elif action == "create_page":
@@ -37,8 +37,9 @@ class NotionTool(Tool):
                 title = kwargs.get("title")
                 if not parent_id or not title:
                     return ToolResult(success=False, error="parent_id and title required")
-                payload = {"parent": {"page_id": parent_id}, "properties": {"title": {"title": [{"text": {"content": title}}]}}
-                r = httpx.post(f"{base_url}/pages", headers=headers, json=payload, timeout=30)
+                title_block = {"object": "block", "type": "heading_2", "heading_2": {"rich_text": [{"type": "text", "text": {"content": title}}]}}
+                payload = {"parent": {"page_id": parent_id}, "children": [title_block]}
+                r = httpx.post(f"{base_url}/blocks/{parent_id}/children", headers=headers, json=payload, timeout=30)
                 return ToolResult(success=True, data=r.json())
 
             elif action == "list_databases":
@@ -50,3 +51,8 @@ class NotionTool(Tool):
                 return ToolResult(success=False, error=f"Unknown action: {action}")
         except Exception as e:
             return ToolResult(success=False, error=str(e))
+
+
+def run(action: str = "list", **kwargs):
+    tool = NotionTool()
+    return tool.run(action, **kwargs)
