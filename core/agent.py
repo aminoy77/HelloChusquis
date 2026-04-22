@@ -8,6 +8,12 @@ from tools.shell import ShellTool
 from tools.files import FilesTool
 from tools.code import CodeTool
 from tools.websearch import WebSearchTool
+from tools.github import GitHubTool
+from tools.slack import SlackTool
+from tools.discord import DiscordTool
+from tools.docker import DockerTool
+from tools.notion import NotionTool
+from tools.aws import AWSTool
 from tools.base import ToolResult
 from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
@@ -63,6 +69,121 @@ def _build_tools_schema(plugins: list) -> list:
         {
             "type": "function",
             "function": {
+                "name": "github",
+                "description": "Interact with GitHub API - manage repos, issues, PRs",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_repos", "get_repo", "list_issues", "create_issue", "list_pulls", "create_pr", "get_user", "search_repos"]},
+                        "owner": {"type": "string"},
+                        "repo": {"type": "string"},
+                        "title": {"type": "string"},
+                        "body": {"type": "string"},
+                        "state": {"type": "string"},
+                        "base": {"type": "string"},
+                        "head": {"type": "string"},
+                        "query": {"type": "string"},
+                        "per_page": {"type": "number"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "slack",
+                "description": "Send messages to Slack channels and users",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["post_message", "list_channels", "get_channel", "list_users"]},
+                        "channel": {"type": "string"},
+                        "user": {"type": "string"},
+                        "text": {"type": "string"},
+                        "username": {"type": "string"},
+                        "icon_emoji": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "discord",
+                "description": "Send messages to Discord via webhooks",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["send_message", "send_embed"]},
+                        "webhook_url": {"type": "string"},
+                        "channel_id": {"type": "string"},
+                        "content": {"type": "string"},
+                        "username": {"type": "string"},
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "color": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "docker",
+                "description": "Manage Docker containers, images, and volumes",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_containers", "list_images", "list_volumes", "start_container", "stop_container", "remove_container", "container_logs", "docker_info"]},
+                        "container": {"type": "string"},
+                        "all": {"type": "boolean"},
+                        "tail": {"type": "number"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "notion",
+                "description": "Interact with Notion workspaces",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["create_page", "update_page", "query_database", "list_databases", "get_page"]},
+                        "page_id": {"type": "string"},
+                        "database_id": {"type": "string"},
+                        "title": {"type": "string"},
+                        "content": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "aws",
+                "description": "Interact with AWS services - EC2, S3, Lambda",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_ec2", "list_s3", "list_lambda", "invoke_lambda", "list_iam", "sts_caller"]},
+                        "resource": {"type": "string"},
+                        "region": {"type": "string"},
+                        "payload": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "files",
                 "description": "Read, write, delete, list files in the workspace",
                 "parameters": {
@@ -94,6 +215,11 @@ class Agent:
         self.files = FilesTool(config["settings"]["workspace_dirs"])
         self.code = CodeTool()
         self.websearch = WebSearchTool()
+        self.github = GitHubTool()
+        self.slack = SlackTool()
+        self.docker = DockerTool()
+        self.notion = NotionTool()
+        self.aws = AWSTool()
         self.system_prompt = config["agent"]["system_prompt"]
         self.workspace_dirs = config["settings"]["workspace_dirs"]
 
@@ -143,6 +269,24 @@ class Agent:
 
         if name == "web_search":
             return self.websearch.run(**args)
+
+        if name == "github":
+            return self.github.run(**args)
+
+        if name == "slack":
+            return self.slack.run(**args)
+
+        if name == "discord":
+            return self.discord.run(**args)
+
+        if name == "docker":
+            return self.docker.run(**args)
+
+        if name == "notion":
+            return self.notion.run(**args)
+
+        if name == "aws":
+            return self.aws.run(**args)
 
         if name == "files":
             path = args.get("path", "")
