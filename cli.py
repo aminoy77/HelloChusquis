@@ -10,6 +10,10 @@ def parse_args():
                         help='Choose configuration behavior mode')
     parser.add_argument('--unsafe-mode', action='store_true',
                         help='Disable advanced safety checks (expert use only)')
+    parser.add_argument('--port', type=int, default=8080,
+                        help='Port for API server')
+    parser.add_argument('--host', default='0.0.0.0',
+                        help='Host for API server')
     parser.add_argument('command', nargs='*', default=[], help='Subcommand and its arguments')
 
     return parser.parse_args()
@@ -69,6 +73,25 @@ def main():
         webbrowser.open("http://localhost:8000")
         from web.server import start
         start()
+        return
+
+    if args and args[0] == "api":
+        from core.setup import ensure_config
+        from rich.console import Console
+        console = Console()
+        ensure_config()
+        from api.main import start
+        parsed = parse_args()
+        start(host=parsed.host, port=parsed.port)
+        return
+
+    if args and args[0] == "cache":
+        from core.cache import clear_cache, get_cache_size
+        from rich.console import Console
+        console = Console()
+        size = get_cache_size()
+        cleared = clear_cache()
+        console.print(f"[green]Cache cleared! ({cleared} items, {size} bytes freed)[/green]")
         return
 
     from main import main as run
