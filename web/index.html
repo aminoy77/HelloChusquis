@@ -359,6 +359,12 @@
         .action-btn.dislike:hover { border-color: var(--red); color: var(--red); }
         .action-btn.copy:hover { border-color: var(--amber); color: var(--amber); }
 
+        .header-btn.active {
+            background: var(--amber);
+            color: var(--bg);
+            border-color: var(--amber);
+        }
+
         .message-bubble {
             padding: 12px 16px;
             font-size: 0.825rem;
@@ -539,6 +545,8 @@
         <div class="header-left">
             <div class="header-logo">HelloChusquis</div>
             <div class="header-actions">
+                <button class="header-btn" id="voice-input-btn" onclick="toggleVoiceInput()" title="Voice Input (V)">🎤</button>
+                <button class="header-btn" id="voice-output-btn" onclick="toggleVoiceOutput()" title="Voice Output (S)">🔊</button>
                 <button class="header-btn" id="toggle-sidebar" onclick="toggleSidebar()">☰ Sidebar</button>
                 <button class="header-btn" id="toggle-config" onclick="toggleConfig()">⚙ Config</button>
             </div>
@@ -850,6 +858,98 @@
 
         loadStatus();
         setInterval(loadStatus, 30000);
+
+        // Voice Input/Output
+        let voiceInputEnabled = false;
+        let voiceOutputEnabled = false;
+        let recognition = null;
+        let synthesis = window.speechSynthesis;
+
+        // Voice Input (Web Speech API)
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(r => r[0].transcript)
+                    .join('');
+                inputEl.value = transcript;
+            };
+
+            recognition.onerror = (e) => {
+                showToast('Voice error: ' + e.error);
+                voiceInputEnabled = false;
+                updateVoiceButtons();
+            };
+
+            recognition.onend = () => {
+                if (voiceInputEnabled) recognition.start();
+            };
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                showToast('Voice input not supported in this browser');
+                return;
+            }
+            voiceInputEnabled = !voiceInputEnabled;
+            if (voiceInputEnabled) {
+                try { recognition.start(); } catch(e) {}
+            } else {
+                try { recognition.stop(); } catch(e) {}
+            }
+            updateVoiceButtons();
+            showToast(voiceInputEnabled ? 'Voice input ON' : 'Voice input OFF');
+        }
+
+        function toggleVoiceOutput() {
+            voiceOutputEnabled = !voiceOutputEnabled;
+            updateVoiceButtons();
+            if (voiceOutputEnabled) {
+                showToast('Voice output ON - Agent will speak responses');
+            } else {
+                synthesis.cancel();
+                showToast('Voice output OFF');
+            }
+        }
+
+        function updateVoiceButtons() {
+            document.getElementById('voice-input-btn').classList.toggle('active', voiceInputEnabled);
+            document.getElementById('voice-output-btn').classList.toggle('active', voiceOutputEnabled);
+        }
+
+        function speakText(text) {
+            if (!voiceOutputEnabled || !synthesis) return;
+            synthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            synthesis.speak(utterance);
+        }
+
+        // Modify sendMessage to speak response
+        const originalSendMessage = sendMessage;
+        sendMessage = async function() {
+            await originalSendMessage();
+            if (voiceOutputEnabled) {
+                const lastMsg = document.querySelector('.message.assistant:last-child .message-bubble');
+                if (lastMsg) speakText(lastMsg.textContent);
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.key === 'v' && !inputEl.matches(':focus')) {
+                toggleVoiceInput();
+            }
+            if (e.key === 's' && !inputEl.matches(':focus')) {
+                toggleVoiceOutput();
+            }
+        });
     </script>
 </body>
 </html>
