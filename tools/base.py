@@ -12,10 +12,15 @@ class ToolResult:
 class BaseTool(ABC):
     name: str
     description: str
+    config: dict = {}
 
     @abstractmethod
-    def run(self, **kwargs) -> ToolResult:
+    def run(self, action: str = "list", **kwargs) -> ToolResult:
         pass
 
     def to_schema(self) -> dict:
         raise NotImplementedError
+
+
+# Backward compatibility alias
+Tool = BaseTool
