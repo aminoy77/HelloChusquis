@@ -14,6 +14,13 @@ from tools.discord import DiscordTool
 from tools.docker import DockerTool
 from tools.notion import NotionTool
 from tools.aws import AWSTool
+from tools.twitter import TwitterTool
+from tools.gmail import GmailTool
+from tools.jira import JiraTool
+from tools.postgresql import PostgreSQLTool
+from tools.mongodb import MongoDBTool
+from tools.google_calendar import GoogleCalendarTool
+from tools.spotify import SpotifyTool
 from tools.base import ToolResult
 from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
@@ -184,6 +191,121 @@ def _build_tools_schema(plugins: list) -> list:
         {
             "type": "function",
             "function": {
+                "name": "twitter",
+                "description": "Post tweets and interact with Twitter/X",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["post_tweet", "get_user", "search_tweets", "get_timeline", "get_mentions"]},
+                        "text": {"type": "string"},
+                        "username": {"type": "string"},
+                        "query": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "gmail",
+                "description": "Send emails and manage Gmail",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["send_email", "list_emails", "search_emails", "get_labels"]},
+                        "to": {"type": "string"},
+                        "subject": {"type": "string"},
+                        "body": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "jira",
+                "description": "Create and manage Jira issues",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["create_issue", "search_issues", "get_issue", "assign_issue", "list_projects"]},
+                        "project": {"type": "string"},
+                        "issue_key": {"type": "string"},
+                        "summary": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "postgresql",
+                "description": "Execute SQL queries on PostgreSQL",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["query", "execute", "list_tables"]},
+                        "sql": {"type": "string"},
+                        "database": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "mongodb",
+                "description": "Query and manipulate MongoDB",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["find", "insert", "update", "delete"]},
+                        "database": {"type": "string"},
+                        "collection": {"type": "string"},
+                        "filter": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "google_calendar",
+                "description": "Manage Google Calendar events",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list_events", "create_event"]},
+                        "title": {"type": "string"},
+                        "start_time": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "spotify",
+                "description": "Control Spotify playback",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["play", "pause", "next", "search"]},
+                        "query": {"type": "string"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "files",
                 "description": "Read, write, delete, list files in the workspace",
                 "parameters": {
@@ -220,6 +342,13 @@ class Agent:
         self.docker = DockerTool()
         self.notion = NotionTool()
         self.aws = AWSTool()
+        self.twitter = TwitterTool()
+        self.gmail = GmailTool()
+        self.jira = JiraTool()
+        self.postgresql = PostgreSQLTool()
+        self.mongodb = MongoDBTool()
+        self.google_calendar = GoogleCalendarTool()
+        self.spotify = SpotifyTool()
         self.system_prompt = config["agent"]["system_prompt"]
         self.workspace_dirs = config["settings"]["workspace_dirs"]
 
@@ -287,6 +416,27 @@ class Agent:
 
         if name == "aws":
             return self.aws.run(**args)
+
+        if name == "twitter":
+            return self.twitter.run(**args)
+
+        if name == "gmail":
+            return self.gmail.run(**args)
+
+        if name == "jira":
+            return self.jira.run(**args)
+
+        if name == "postgresql":
+            return self.postgresql.run(**args)
+
+        if name == "mongodb":
+            return self.mongodb.run(**args)
+
+        if name == "google_calendar":
+            return self.google_calendar.run(**args)
+
+        if name == "spotify":
+            return self.spotify.run(**args)
 
         if name == "files":
             path = args.get("path", "")
