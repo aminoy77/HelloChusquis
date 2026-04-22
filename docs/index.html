@@ -639,8 +639,9 @@
 <nav>
     <a href="#" class="nav-logo">HelloChusquis</a>
     <ul class="nav-links">
-        <li><a href="#features">Integrations</a></li>
-        <li><a href="#plugins">Plugins</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#integrations">Integrations</a></li>
+        <li><a href="#plugins"> Plugins</a></li>
         <li><a href="#providers">Providers</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="nav-cta">GitHub →</a></li>
@@ -718,7 +719,7 @@
         <span class="stat-label">Built-in Tools</span>
     </div>
     <div class="stat">
-        <span class="stat-value">20+</span>
+        <span class="stat-value">19+</span>
         <span class="stat-label">AI Providers</span>
     </div>
     <div class="stat">
@@ -730,28 +731,233 @@
         <span class="stat-label">Latest Version</span>
     </div>
 </div>
-    <div class="stat">
-        <span class="stat-value">20+</span>
-        <span class="stat-label">Plugins</span>
-    </div>
-    <div class="stat">
-        <span class="stat-value">Python</span>
-        <span class="stat-label">Pure Python</span>
-    </div>
-    <div class="stat">
-        <span class="stat-value">v0.9.0</span>
-        <span class="stat-label">Latest Version</span>
-    </div>
-</div>
 
-<!-- FEATURES -->
+<!-- FEATURES - Core Features -->
 <section id="features">
+    <p class="section-label reveal">Core Features</p>
+    <h2 class="section-title reveal">Everything you need.<br>Nothing you don't.</h2>
+    <p class="section-desc reveal">Built from scratch in Python. No bloat, no unnecessary dependencies. Just a fast, reliable AI agent that works.</p>
+
+    <div class="features-grid reveal">
+        <div class="feature-card">
+            <div class="feature-icon">🔄</div>
+            <div class="feature-title">Multi-Provider Fallback</div>
+            <div class="feature-desc">Automatically switches between 19+ AI providers when one fails or hits rate limits. Groq for speed, OpenRouter for tools, Ollama for local.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🧩</div>
+            <div class="feature-title">Plugin System</div>
+            <div class="feature-desc">Install plugins with one command. Build your own with the AI-powered plugin builder. Submit to the public registry.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <div class="feature-title">Persistent Memory</div>
+            <div class="feature-desc">Remembers past conversations. Learns from its mistakes. Gets better with every session through automatic feedback analysis.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📋</div>
+            <div class="feature-title">Task Planner</div>
+            <div class="feature-desc">Detects complex tasks automatically. Generates a step-by-step plan, shows it for confirmation, then executes each step autonomously.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <div class="feature-title">Web Interface</div>
+            <div class="feature-desc">Chat from your browser at localhost:8000. Sidebar shows provider status, installed plugins, memory stats, and learned patterns.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-title">Browser Control</div>
+            <div class="feature-desc">Open URLs, search the web via Brave Search, extract text from any page. Real browser automation with Playwright.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📄</div>
+            <div class="feature-title">Real File Generation</div>
+            <div class="feature-desc">Creates real PDF and Word documents — not text files with wrong extensions. Uses reportlab and python-docx under the hood.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <div class="feature-title">Real Stock Data</div>
+            <div class="feature-desc">Historical stock data, price analysis, volatility metrics, and moving averages via yfinance. No simulated data.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-title">Workspace Permissions</div>
+            <div class="feature-desc">The agent only accesses directories you explicitly allow. Runtime permission requests for new paths. Your files stay safe.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">Async Operations</div>
+            <div class="feature-desc">Non-blocking shell commands and file operations for improved responsiveness and performance.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">👁️</div>
+            <div class="feature-title">File Watcher</div>
+            <div class="feature-desc">Automatically monitor files and directories for changes and trigger actions.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <div class="feature-title">Security Evaluator</div>
+            <div class="feature-desc">AI-powered security checks prevent execution of potentially dangerous commands.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🗄️</div>
+            <div class="feature-title">Structured Memory</div>
+            <div class="feature-desc">Persistent memory storage using SQLite for better organization and querying.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎤</div>
+            <div class="feature-title">Voice Input</div>
+            <div class="feature-desc">Speech-to-text input. Speak directly to the agent.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔊</div>
+            <div class="feature-title">Voice Output</div>
+            <div class="feature-desc">Text-to-speech output. Agent can read responses aloud.</div>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
+<!-- INTEGRATIONS -->
+<section id="integrations">
     <p class="section-label reveal">Integrations</p>
-    <h2 class="section-title reveal">20+ tools.<br>Ready to use.</h2>
+    <h2 class="section-title reveal">30+ tools.<br>Ready to use.</h2>
     <p class="section-desc reveal">Native integrations for popular development and productivity tools. No configuration beyond API keys.</p>
 
     <div class="features-grid reveal">
         <div class="feature-card">
+            <div class="feature-icon">🐙</div>
+            <div class="feature-title">GitHub</div>
+            <div class="feature-desc">Repos, issues, PRs, search. Full API access.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">💬</div>
+            <div class="feature-title">Slack</div>
+            <div class="feature-desc">Post messages, list channels, manage users.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎮</div>
+            <div class="feature-title">Discord</div>
+            <div class="feature-desc">Webhooks for notifications and alerts.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🐦</div>
+            <div class="feature-title">Twitter/X</div>
+            <div class="feature-desc">Post tweets, search, timeline access.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📧</div>
+            <div class="feature-title">Gmail</div>
+            <div class="feature-desc">Send emails, manage inbox, labels.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📋</div>
+            <div class="feature-title">Jira</div>
+            <div class="feature-desc">Create issues, projects, workflows.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">Linear</div>
+            <div class="feature-desc">Project management, team issues.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🗄️</div>
+            <div class="feature-title">PostgreSQL</div>
+            <div class="feature-desc">Run queries, list tables, manage data.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🍃</div>
+            <div class="feature-title">MongoDB</div>
+            <div class="feature-desc">NoSQL queries, collections, documents.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🐳</div>
+            <div class="feature-title">Docker</div>
+            <div class="feature-desc">Containers, images, logs, management.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">☁️</div>
+            <div class="feature-title">AWS</div>
+            <div class="feature-desc">EC2, S3, Lambda, IAM operations.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📅</div>
+            <div class="feature-title">Google Calendar</div>
+            <div class="feature-desc">Create events, list schedules.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📓</div>
+            <div class="feature-title">Notion</div>
+            <div class="feature-desc">Pages, databases, content.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎵</div>
+            <div class="feature-title">Spotify</div>
+            <div class="feature-desc">Playback control, playlists.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-title">Code Analysis</div>
+            <div class="feature-desc">ESLint, Black, Ruff, MyPy integration.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <div class="feature-title">Web Search</div>
+            <div class="feature-desc">DuckDuckGo search inside terminal.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🖼️</div>
+            <div class="feature-title">Image Analysis</div>
+            <div class="feature-desc">OCR, describe images with AI.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">Excel/Sheets</div>
+            <div class="feature-desc">Read, write, analyze spreadsheets.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <div class="feature-title">Visualization</div>
+            <div class="feature-desc">Generate charts and graphs.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔐</div>
+            <div class="feature-title">Secret Scanner</div>
+            <div class="feature-desc">Detect API keys in code.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚙️</div>
+            <div class="feature-title">Kubernetes</div>
+            <div class="feature-desc">K8s pods, deployments, services.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🏗️</div>
+            <div class="feature-title">Terraform</div>
+            <div class="feature-desc">Infrastructure as Code.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <div class="feature-title">RAG</div>
+            <div class="feature-desc">Upload docs for context.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📝</div>
+            <div class="feature-title">Meeting AI</div>
+            <div class="feature-desc">Summarize meetings, extract actions.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📨</div>
+            <div class="feature-title">Webhook</div>
+            <div class="feature-desc">Send and receive webhooks.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">GraphQL</div>
+            <div class="feature-desc">Execute GraphQL queries.</div>
+        </div>
+    </div>
+</section>
             <div class="feature-icon">🐙</div>
             <div class="feature-title">GitHub</div>
             <div class="feature-desc">Repos, issues, PRs, search. Full API access.</div>
