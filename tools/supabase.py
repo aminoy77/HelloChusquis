@@ -1,57 +1,41 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class SupabaseTool(Tool):
-    name = "supabase"
-    description = "Supabase PostgreSQL database, auth, and realtime"
+async def create_project(name: str, slug: str, api_key: str) -> dict:
+    """Create Supabase project."""
+    url = "https://api.supabase.com/v1/projects"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"name": name, "slug": slug}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        url = self.config.get("url")
-        key = self.config.get("key")
 
-        if not url or not key:
-            return ToolResult(success=False, error="Supabase credentials not configured")
+async def get_project(ref: str, api_key: str) -> dict:
+    """Get Supabase project."""
+    url = f"https://api.supabase.com/v1/projects/{ref}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-        headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
-        try:
-            table = kwargs.get("table", "")
-            if not table:
-                return ToolResult(success=False, error="Table name required")
+async def query_table(ref: str, table: str, api_key: str) -> dict:
+    """Query Supabase table."""
+    url = f"https://{ref}.supabase.co/rest/v1/{table}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"apikey": api_key, "Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-            if action == "select":
-                r = httpx.get(f"{url}/rest/v1/{table}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "insert":
-                data = kwargs.get("data", {})
-                r = httpx.post(f"{url}/rest/v1/{table}", headers=headers, json=[data], timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def insert_row(ref: str, table: str, data: dict, api_key: str) -> dict:
+    """Insert row to Supabase."""
+    url = f"https://{ref}.supabase.co/rest/v1/{table}"
+    async with AsyncClient() as client:
+        r = await client.post(url, json=data, headers={"apikey": api_key, "Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-            elif action == "update":
-                data = kwargs.get("data", {})
-                pk = kwargs.get("id")
-                if not pk:
-                    return ToolResult(success=False, error="ID required for update")
-                r = httpx.patch(f"{url}/rest/v1/{table}?id=eq.{pk}", headers=headers, json=data, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "delete":
-                pk = kwargs.get("id")
-                if not pk:
-                    return ToolResult(success=False, error="ID required for delete")
-                r = httpx.delete(f"{url}/rest/v1/{table}?id=eq.{pk}", headers=headers, timeout=30)
-                return ToolResult(success=True, data={"deleted": True})
-
-            elif action == "list_tables":
-                r = httpx.get(f"{url}/rest/v1/", headers=headers, params={"select": "tablename"}, timeout=30)
-                return ToolResult(success=True, data=r.json())
-
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+async def run_sql(ref: str, sql: str, api_key: str) -> dict:
+    """Run SQL in Supabase."""
+    url = f"https://{ref}.supabase.co/rest/v1/rpc/exec_sql"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"query": sql}, headers={"apikey": api_key, "Authorization": f"Bearer {api_key}"})
+        return r.json()

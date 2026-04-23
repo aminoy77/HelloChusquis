@@ -1,48 +1,41 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class VercelTool(Tool):
-    name = "vercel"
-    description = "Vercel deployments and project management"
+async def deploy(project: str, branch: str = "main", api_key: str) -> dict:
+    """Deploy to Vercel."""
+    url = f"https://api.vercel.com/v6/deployments"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"name": project, "branch": branch}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="Vercel token not configured")
 
-        base_url = "https://api.vercel.com/v6"
-        headers = {"Authorization": f"Bearer {token}"}
+async def get_deployments(project: str, api_key: str, limit: int = 10) -> dict:
+    """Get Vercel deployments."""
+    url = f"https://api.vercel.com/v6/deployments?project={project}&limit={limit}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-        try:
-            if action == "list_deployments":
-                r = httpx.get(f"{base_url}/deployments", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("deployments", []))
 
-            elif action == "get_deployment":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Deployment ID required")
-                r = httpx.get(f"{base_url}/deployments/{id}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def get_deployment(id: str, api_key: str) -> dict:
+    """Get Vercel deployment."""
+    url = f"https://api.vercel.com/v6/deployments/{id}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-            elif action == "list_projects":
-                r = httpx.get(f"{base_url}/projects", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("projects", []))
 
-            elif action == "get_project":
-                name = kwargs.get("name")
-                if not name:
-                    return ToolResult(success=False, error="Project name required")
-                r = httpx.get(f"{base_url}/projects/{name}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def cancel_deployment(id: str, api_key: str) -> dict:
+    """Cancel Vercel deployment."""
+    url = f"https://api.vercel.com/v6/deployments/{id}/cancel"
+    async with AsyncClient() as client:
+        r = await client.post(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+async def get_project(project: str, api_key: str) -> dict:
+    """Get Vercel project."""
+    url = f"https://api.vercel.com/v6/projects/{project}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()

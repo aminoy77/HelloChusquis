@@ -1,51 +1,41 @@
-from __future__ import annotations
-
-import httpx
-import json
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class StripeTool(Tool):
-    name = "stripe"
-    description = "Stripe payment processing - customers, charges, subscriptions, invoices"
+async def create_invoice(customer: str, items: list, api_key: str) -> dict:
+    """Create Stripe invoice."""
+    url = "https://api.stripe.com/v1/invoices"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"customer": customer, "lines": items}, auth=(api_key, ""))
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        api_key = self.config.get("api_key")
-        if not api_key:
-            return ToolResult(success=False, error="Stripe API key not configured")
 
-        base_url = "https://api.stripe.com/v1"
-        headers = {"Authorization": f"Bearer {api_key}"}
+async def get_invoice(invoice_id: str, api_key: str) -> dict:
+    """Get Stripe invoice."""
+    url = f"https://api.stripe.com/v1/invoices/{invoice_id}"
+    async with AsyncClient() as client:
+        r = await client.get(url, auth=(api_key, ""))
+        return r.json()
 
-        try:
-            if action == "list_customers":
-                r = httpx.get(f"{base_url}/customers", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=[
-                    {"id": c.get("id"), "email": c.get("email"), "name": c.get("name")}
-                    for c in data.get("data", [])
-                ])
 
-            elif action == "create_customer":
-                r = httpx.post(f"{base_url}/customers", headers=headers, data=kwargs, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def list_invoices(api_key: str, limit: int = 10) -> dict:
+    """List Stripe invoices."""
+    url = f"https://api.stripe.com/v1/invoices?limit={limit}"
+    async with AsyncClient() as client:
+        r = await client.get(url, auth=(api_key, ""))
+        return r.json()
 
-            elif action == "create_charge":
-                r = httpx.post(f"{base_url}/charges", headers=headers, data=kwargs, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "list_invoices":
-                r = httpx.get(f"{base_url}/invoices", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", []))
+async def finalize_invoice(invoice_id: str, api_key: str) -> dict:
+    """Finalize Stripe invoice."""
+    url = f"https://api.stripe.com/v1/invoices/{invoice_id}/finalize"
+    async with AsyncClient() as client:
+        r = await client.post(url, auth=(api_key, ""))
+        return r.json()
 
-            elif action == "list_subscriptions":
-                r = httpx.get(f"{base_url}/subscriptions", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", []))
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+async def send_invoice(invoice_id: str, api_key: str) -> dict:
+    """Send Stripe invoice."""
+    url = f"https://api.stripe.com/v1/invoices/{invoice_id}/send"
+    async with AsyncClient() as client:
+        r = await client.post(url, auth=(api_key, ""))
+        return r.json()
