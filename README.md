@@ -1,4 +1,4 @@
-# HelloChusquis 🧠✨ v2.0
+# HelloChusquis 🧠✨ v1.3
 
 **HelloChusquis** is an advanced, self-improving AI terminal agent built in Python. With 60+ integrations, skill system, and auto-tool-builder.
 

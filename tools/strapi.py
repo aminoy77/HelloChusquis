@@ -2,20 +2,22 @@ from tools.base import BaseTool, ToolResult
 import httpx
 
 
-class CalendlyTool(BaseTool):
-    name = "calendly"
-    description = "Calendly meeting scheduling"
+class StrapiTool(BaseTool):
+    name = "strapi"
+    description = "Strapi - headless CMS"
 
     def run(self, action: str = "list", **kwargs) -> ToolResult:
+        url = self.config.get("url")
         token = self.config.get("token")
-        if not token:
-            return ToolResult(False, "", "Token required")
+        if not url:
+            return ToolResult(False, "", "Strapi URL required")
 
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
-            if action == "list_events":
-                r = httpx.get("https://api.calendly.com/scheduled_events", headers=headers, timeout=30)
+            if action == "list":
+                collection = kwargs.get("collection", "articles")
+                r = httpx.get(f"{url}/api/{collection}", headers=headers, timeout=30)
                 return ToolResult(True, str(r.json()))
             return ToolResult(False, "", f"Unknown: {action}")
         except Exception as e:
@@ -23,4 +25,4 @@ class CalendlyTool(BaseTool):
 
 
 def run(action: str = "list", **kwargs):
-    return CalendlyTool().run(action, **kwargs)
+    return StrapiTool().run(action, **kwargs)

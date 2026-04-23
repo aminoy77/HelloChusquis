@@ -2,25 +2,22 @@ from tools.base import BaseTool, ToolResult
 import httpx
 
 
-class CalendlyTool(BaseTool):
-    name = "calendly"
-    description = "Calendly meeting scheduling"
+class GhostTool(BaseTool):
+    name = "ghost"
+    description = "Ghost CMS publishing"
 
     def run(self, action: str = "list", **kwargs) -> ToolResult:
         token = self.config.get("token")
         if not token:
             return ToolResult(False, "", "Token required")
-
-        headers = {"Authorization": f"Bearer {token}"}
-
+        headers = {"Authorization": token}
         try:
-            if action == "list_events":
-                r = httpx.get("https://api.calendly.com/scheduled_events", headers=headers, timeout=30)
+            if action == "list_posts":
+                r = httpx.get("https://your-site.ghost.io/api/admin/posts", headers=headers, timeout=30)
                 return ToolResult(True, str(r.json()))
             return ToolResult(False, "", f"Unknown: {action}")
         except Exception as e:
             return ToolResult(False, "", str(e))
 
-
 def run(action: str = "list", **kwargs):
-    return CalendlyTool().run(action, **kwargs)
+    return GhostTool().run(action, **kwargs)
