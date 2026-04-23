@@ -652,16 +652,66 @@
     </header>
 
     <div class="config-panel" id="config-panel">
-        <div class="config-title">Configuration</div>
+        <div class="config-title">⚙ Configuration</div>
         
         <div class="config-section">
             <div class="config-label">Profile</div>
-            <div class="config-value" id="config-profile">default</div>
+            <input type="text" id="config-profile" class="config-value" value="default" style="width: 100%; color: var(--text);">
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">AI Provider</div>
+            <select id="config-provider" class="config-value" style="width: 100%; color: var(--text);" onchange="updateConfig('provider', this.value)">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="google">Google</option>
+                <option value="ollama">Ollama</option>
+            </select>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Model</div>
+            <select id="config-model" class="config-value" style="width: 100%; color: var(--text);" onchange="updateConfig('model', this.value)">
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            </select>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Temperature</div>
+            <input type="range" id="config-temperature" min="0" max="2" step="0.1" value="0.7" 
+                style="width: 100%;" oninput="updateConfig('temperature', this.value)">
+            <div style="font-size: 0.7rem; color: var(--text-muted); text-align: right;" id="temp-value">0.7</div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Max Tokens</div>
+            <input type="number" id="config-maxtokens" class="config-value" value="4096" 
+                style="width: 100%; color: var(--text);" onchange="updateConfig('max_tokens', this.value)">
         </div>
         
         <div class="config-section">
             <div class="config-label">Memory Retention</div>
-            <div class="config-value" id="config-memory">30 days</div>
+            <input type="number" id="config-memory" class="config-value" value="30" 
+                style="width: 100%; color: var(--text);" onchange="updateConfig('memory_days', this.value)">
+            <div style="font-size: 0.65rem; color: var(--text-dim); margin-top: 4px;">days</div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">System Prompt</div>
+            <textarea id="config-system" class="config-value" rows="3" 
+                style="width: 100%; color: var(--text); resize: vertical;" 
+                onchange="updateConfig('system_prompt', this.value)">You are HelloChusquis, a helpful AI assistant.</textarea>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Interface Theme</div>
+            <div class="config-toggle">
+                <div class="toggle-switch active" id="toggle-theme" onclick="toggleTheme()"></div>
+                <span>Dark Mode</span>
+            </div>
         </div>
         
         <div class="config-section">
@@ -680,8 +730,51 @@
             </div>
         </div>
         
+        <div class="config-section">
+            <div class="config-label">Stream Responses</div>
+            <div class="config-toggle">
+                <div class="toggle-switch" id="toggle-stream" onclick="toggleStream()"></div>
+                <span>Show typing in real-time</span>
+            </div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Execute Tools</div>
+            <div class="config-toggle">
+                <div class="toggle-switch active" id="toggle-tools" onclick="toggleTools()"></div>
+                <span>Allow tool execution</span>
+            </div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Web Search</div>
+            <div class="config-toggle">
+                <div class="toggle-switch active" id="toggle-search" onclick="toggleSearch()"></div>
+                <span>Enable web search</span>
+            </div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Code Interpreter</div>
+            <div class="config-toggle">
+                <div class="toggle-switch active" id="toggle-code" onclick="toggleCode()"></div>
+                <span>Enable code execution</span>
+            </div>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Image Generation</div>
+            <div class="config-toggle">
+                <div class="toggle-switch" id="toggle-images" onclick="toggleImages()"></div>
+                <span>Enable DALL-E</span>
+            </div>
+        </div>
+        
         <div class="config-section" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
-            <button class="header-btn" onclick="clearHistory()" style="width: 100%;">🗑 Clear History</button>
+            <button class="header-btn" onclick="exportConfig()" style="width: 48%;">📤 Export</button>
+            <button class="header-btn" onclick="importConfig()" style="width: 48%;">📥 Import</button>
+            <button class="header-btn" onclick="clearHistory()" style="width: 100%; margin-top: 8px;">🗑 Clear History</button>
+            <button class="header-btn" onclick="resetConfig()" style="width: 100%; margin-top: 8px; border-color: var(--red); color: var(--red);">🔄 Reset Defaults</button>
         </div>
     </div>
 
@@ -733,13 +826,172 @@
     <div class="toast" id="toast">Copied to clipboard!</div>
 
     <script>
+        // Configuration
+        let config = {
+            provider: 'openai',
+            model: 'gpt-4o',
+            temperature: 0.7,
+            max_tokens: 4096,
+            memory_days: 30,
+            system_prompt: 'You are HelloChusquis, a helpful AI assistant.',
+            dark_mode: true,
+            autosave: true,
+            sound: false,
+            stream: false,
+            tools_enabled: true,
+            web_search: true,
+            code_exec: true,
+            image_gen: false
+        };
+
         const messagesEl = document.getElementById('messages');
         const inputEl = document.getElementById('input');
         const sendBtn = document.getElementById('send-btn');
         let configVisible = false;
         let sidebarVisible = true;
-        let autosaveEnabled = true;
-        let soundEnabled = false;
+
+        // Load config from localStorage
+        function loadConfig() {
+            const saved = localStorage.getItem('hellochusquis_config');
+            if (saved) {
+                config = { ...config, ...JSON.parse(saved) };
+            }
+            applyConfig();
+        }
+
+        // Apply config to UI
+        function applyConfig() {
+            document.getElementById('config-provider').value = config.provider;
+            document.getElementById('config-model').value = config.model;
+            document.getElementById('config-temperature').value = config.temperature;
+            document.getElementById('temp-value').textContent = config.temperature;
+            document.getElementById('config-maxtokens').value = config.max_tokens;
+            document.getElementById('config-memory').value = config.memory_days;
+            document.getElementById('config-system').value = config.system_prompt;
+            document.getElementById('toggle-theme').classList.toggle('active', config.dark_mode);
+            document.getElementById('toggle-autosave').classList.toggle('active', config.autosave);
+            document.getElementById('toggle-sound').classList.toggle('active', config.sound);
+            document.getElementById('toggle-stream').classList.toggle('active', config.stream);
+            document.getElementById('toggle-tools').classList.toggle('active', config.tools_enabled);
+            document.getElementById('toggle-search').classList.toggle('active', config.web_search);
+            document.getElementById('toggle-code').classList.toggle('active', config.code_exec);
+            document.getElementById('toggle-images').classList.toggle('active', config.image_gen);
+        }
+
+        // Update config
+        function updateConfig(key, value) {
+            config[key] = value;
+            localStorage.setItem('hellochusquis_config', JSON.stringify(config));
+            showToast(key + ' updated');
+            
+            // Update temperature display
+            if (key === 'temperature') {
+                document.getElementById('temp-value').textContent = value;
+            }
+            
+            // Send to server
+            fetch('/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            }).catch(() => {});
+        }
+
+        // Toggle functions
+        function toggleTheme() {
+            config.dark_mode = !config.dark_mode;
+            updateConfig('dark_mode', config.dark_mode);
+        }
+
+        function toggleAutosave() {
+            config.autosave = !config.autosave;
+            updateConfig('autosave', config.autosave);
+        }
+
+        function toggleSound() {
+            config.sound = !config.sound;
+            updateConfig('sound', config.sound);
+        }
+
+        function toggleStream() {
+            config.stream = !config.stream;
+            updateConfig('stream', config.stream);
+        }
+
+        function toggleTools() {
+            config.tools_enabled = !config.tools_enabled;
+            updateConfig('tools_enabled', config.tools_enabled);
+        }
+
+        function toggleSearch() {
+            config.web_search = !config.web_search;
+            updateConfig('web_search', config.web_search);
+        }
+
+        function toggleCode() {
+            config.code_exec = !config.code_exec;
+            updateConfig('code_exec', config.code_exec);
+        }
+
+        function toggleImages() {
+            config.image_gen = !config.image_gen;
+            updateConfig('image_gen', config.image_gen);
+        }
+
+        // Export/Import config
+        function exportConfig() {
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hellochusquis-config.json';
+            a.click();
+            showToast('Config exported!');
+        }
+
+        function importConfig() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        config = JSON.parse(e.target.result);
+                        applyConfig();
+                        localStorage.setItem('hellochusquis_config', JSON.stringify(config));
+                        showToast('Config imported!');
+                    } catch {
+                        showToast('Invalid config file');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function resetConfig() {
+            config = {
+                provider: 'openai',
+                model: 'gpt-4o',
+                temperature: 0.7,
+                max_tokens: 4096,
+                memory_days: 30,
+                system_prompt: 'You are HelloChusquis, a helpful AI assistant.',
+                dark_mode: true,
+                autosave: true,
+                sound: false,
+                stream: false,
+                tools_enabled: true,
+                web_search: true,
+                code_exec: true,
+                image_gen: false
+            };
+            applyConfig();
+            localStorage.setItem('hellochusquis_config', JSON.stringify(config));
+            showToast('Config reset to defaults');
+        }
 
         function toggleSidebar() {
             sidebarVisible = !sidebarVisible;
@@ -752,16 +1004,6 @@
             configVisible = !configVisible;
             document.getElementById('config-panel').classList.toggle('visible', configVisible);
             document.getElementById('toggle-config').classList.toggle('active', configVisible);
-        }
-
-        function toggleAutosave() {
-            autosaveEnabled = !autosaveEnabled;
-            document.getElementById('toggle-autosave').classList.toggle('active', autosaveEnabled);
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            document.getElementById('toggle-sound').classList.toggle('active', soundEnabled);
         }
 
         function showToast(text) {
@@ -904,13 +1146,16 @@
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({ 
+                        message: text,
+                        config: config
+                    })
                 });
                 const data = await res.json();
                 thinking.remove();
                 addMessage('assistant', data.response, data.tool_calls || []);
                 
-                if (soundEnabled) {
+                if (config.sound) {
                     // Play notification sound
                     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleR4ORpXc27+5oxkPIEndpoints');
                     audio.volume = 0.1;
@@ -952,6 +1197,7 @@
 
         loadStatus();
         setInterval(loadStatus, 30000);
+        loadConfig();
 
         // Enhanced Voice Input/Output with multilingual support
         let voiceInputEnabled = false;
