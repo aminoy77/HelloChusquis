@@ -1,50 +1,41 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class ClerkTool(Tool):
-    name = "clerk"
-    description = "Clerk - authentication and user management"
+async def create_user(token: str, email: str, **kwargs) -> dict:
+    """Create Clerk user."""
+    url = "https://api.clerk.com/v1/users"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"email_address": [email], **kwargs}, headers={"Authorization": f"Bearer {token}"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        secret_key = self.config.get("secret_key")
-        if not secret_key:
-            return ToolResult(success=False, error="Clerk secret key not configured")
 
-        base_url = "https://api.clerk.com/v1"
-        headers = {"Authorization": f"Bearer {secret_key}", "Content-Type": "application/json"}
+async def get_user(token: str, user_id: str) -> dict:
+    """Get Clerk user."""
+    url = f"https://api.clerk.com/v1/users/{user_id}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+        return r.json()
 
-        try:
-            if action == "list_users":
-                r = httpx.get(f"{base_url}/users", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", []))
 
-            elif action == "get_user":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="User ID required")
-                r = httpx.get(f"{base_url}/users/{id}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def list_users(token: str, limit: int = 10) -> dict:
+    """List Clerk users."""
+    url = f"https://api.clerk.com/v1/users?limit={limit}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+        return r.json()
 
-            elif action == "create_user":
-                email = kwargs.get("email")
-                password = kwargs.get("password")
-                if not email or not password:
-                    return ToolResult(success=False, error="email and password required")
-                payload = {"email_addresses": [email], "password": password}
-                r = httpx.post(f"{base_url}/users", headers=headers, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "list_organizations":
-                r = httpx.get(f"{base_url}/organizations", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", []))
+async def update_user(token: str, user_id: str, **kwargs) -> dict:
+    """Update Clerk user."""
+    url = f"https://api.clerk.com/v1/users/{user_id}"
+    async with AsyncClient() as client:
+        r = await client.patch(url, json=kwargs, headers={"Authorization": f"Bearer {token}"})
+        return r.json()
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+async def create_organization(token: str, name: str) -> dict:
+    """Create Clerk organization."""
+    url = "https://api.clerk.com/v1/organizations"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"name": name}, headers={"Authorization": f"Bearer {token}"})
+        return r.json()

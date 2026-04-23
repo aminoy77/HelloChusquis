@@ -1,32 +1,25 @@
-from tools.base import BaseTool, ToolResult
-import httpx
+from httpx import AsyncClient
 
 
-class PipedriveTool(BaseTool):
-    name = "pipedrive"
-    description = "Pipedrive CRM - deals"
-
-    def run(self, action: str = "list", **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(False, "", "Pipedrive token required")
-
-        base_url = "https://api.pipedrive.com/v1"
-        headers = {"Authorization": f"Bearer {token}"}
-
-        try:
-            if action == "list_deals":
-                r = httpx.get(f"{base_url}/deals", headers=headers, timeout=30)
-                return ToolResult(True, str(r.json()))
-
-            if action == "list_persons":
-                r = httpx.get(f"{base_url}/persons", headers=headers, timeout=30)
-                return ToolResult(True, str(r.json()))
-
-            return ToolResult(False, "", f"Unknown: {action}")
-        except Exception as e:
-            return ToolResult(False, "", str(e))
+async def create_company(name: str, api_key: str, **kwargs) -> dict:
+    """Create Pipedrive company."""
+    url = "https://api.pipedrive.com/v1/companies"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"name": name, **kwargs}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
 
-def run(action: str = "list", **kwargs):
-    return PipedriveTool().run(action, **kwargs)
+async def get_deals(api_key: str, status: str = "open") -> dict:
+    """Get Pipedrive deals."""
+    url = f"https://api.pipedrive.com/v1/deals?status={status}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
+
+
+async def add_activity(api_key: str, subject: str, type: str, due_date: str) -> dict:
+    """Add Pipedrive activity."""
+    url = "https://api.pipedrive.com/v1/activities"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"subject": subject, "type": type, "due_date": due_date}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()

@@ -1,33 +1,43 @@
-from tools.base import BaseTool, ToolResult
-import httpx
+from httpx import AsyncClient, BASIC_AUTH
 
 
-class ZendeskTool(BaseTool):
-    name = "zendesk"
-    description = "Zendesk - support tickets"
-
-    def run(self, action: str = "list", **kwargs) -> ToolResult:
-        domain = self.config.get("domain")
-        token = self.config.get("token")
-        if not domain or not token:
-            return ToolResult(False, "", "Zendesk domain and token required")
-
-        base_url = f"https://{domain}.zendesk.com/api/v2"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-        try:
-            if action == "list_tickets":
-                r = httpx.get(f"{base_url}/tickets", headers=headers, timeout=30)
-                return ToolResult(True, str(r.json()))
-
-            if action == "create_ticket":
-                r = httpx.post(f"{base_url}/tickets", headers=headers, json=kwargs, timeout=30)
-                return ToolResult(True, str(r.json()))
-
-            return ToolResult(False, "", f"Unknown: {action}")
-        except Exception as e:
-            return ToolResult(False, "", str(e))
+async def create_ticket(api_key: str, subdomain: str, subject: str, description: str, requester: str, **kwargs) -> dict:
+    """Create Zendesk ticket."""
+    url = f"https://{subdomain}.zendesk.com/api/v2/tickets.json"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "ticket": {"subject": subject, "description": description, "requester": {"email": requester}, **kwargs}
+        }, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
 
-def run(action: str = "list", **kwargs):
-    return ZendeskTool().run(action, **kwargs)
+async def list_tickets(api_key: str, subdomain: str) -> dict:
+    """List Zendesk tickets."""
+    url = f"https://{subdomain}.zendesk.com/api/v2/tickets.json"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
+
+
+async def update_ticket(api_key: str, subdomain: str, ticket_id: str, **kwargs) -> dict:
+    """Update Zendesk ticket."""
+    url = f"https://{subdomain}.zendesk.com/api/v2/tickets/{ticket_id}.json"
+    async with AsyncClient() as client:
+        r = await client.put(url, json={"ticket": kwargs}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
+
+
+async def search_tickets(api_key: str, subdomain: str, query: str) -> dict:
+    """Search Zendesk tickets."""
+    url = f"https://{subdomain}.zendesk.com/api/v2/search.json?query={query}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
+
+
+async def add_comment(api_key: str, subdomain: str, ticket_id: str, body: str, author_id: str) -> dict:
+    """Add comment to Zendesk ticket."""
+    url = f"https://{subdomain}.zendesk.com/api/v2/tickets/{ticket_id}.json"
+    async with AsyncClient() as client:
+        r = await client.put(url, json={"ticket": {"comment": {"body": body, "author_id": author_id}}}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()

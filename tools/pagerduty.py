@@ -1,58 +1,63 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from  httpx import AsyncClient
+from  typing import Any
 
 
-class PagerDutyTool(Tool):
-    name = "pagerduty"
-    description = "PagerDuty incident management and on-call"
+class PagerDuty:
+    """PagerDuty API wrapper."""
+    
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://api.pagerduty.com"
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="PagerDuty token not configured")
 
-        base_url = "https://api.pagerduty.com"
-        headers = {"Authorization": f"Token token={token}", "Content-Type": "application/json", "Accept": "application/vnd.pagerduty+json;version=2"}
+async def create_incident(api_key: str, title: str, urgency: str = "high", service: str = None) -> dict:
+    """Create Pagerduty incident."""
+    url = "https://api.pagerduty.com/incidents"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "incident": {
+                "title": title,
+                "urgency": urgency,
+                "service": {"id": service} if service else None
+            }
+        }, headers={"Authorization": f"Token token={api_key}", "Content-Type": "application/json"})
+        return r.json()
 
-        try:
-            if action == "list_incidents":
-                r = httpx.get(f"{base_url}/incidents", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("incidents", []))
 
-            elif action == "get_incident":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Incident ID required")
-                r = httpx.get(f"{base_url}/incidents/{id}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def list_incidents(api_key: str, status: str = "triggered") -> dict:
+    """List pagerduty incidents."""
+    url = f"https://api.pagerduty.com/incidents?statuses[]={status}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Token token={api_key}"})
+        return r.json()
 
-            elif action == "list_services":
-                r = httpx.get(f"{base_url}/services", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("services", []))
 
-            elif action == "list_on_calls":
-                r = httpx.get(f"{base_url}/on_calls", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("on_calls", []))
+async def get_incident(api_key: str, incident_id: str) -> dict:
+    """Get pagerduty incident."""
+    url = f"https://api.pagerduty.com/incidents/{incident_id}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Token token={api_key}"})
+        return r.json()
 
-            elif action == "trigger_incident":
-                title = kwargs.get("title")
-                if not title:
-                    return ToolResult(success=False, error="Title required")
-                payload = {
-                    "routing_key": self.config.get("routing_key", ""),
-                    "event_action": "trigger",
-                    "payload": {"summary": title, "severity": kwargs.get("severity", "critical")}
-                }
-                r = httpx.post("https://events.pagerduty.com/v2/enqueue", json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+async def resolve_incident(api_key: str, incident_id: str) -> dict:
+    """Resolve pagerduty incident."""
+    url = f"https://api.pagerduty.com/incidents/{incident_id}"
+    async with AsyncClient() as client:
+        r = await client.put(url, json={"incident": {"type": "incident_reference", "status": "resolved"}}, headers={"Authorization": f"Token token={api_key}"})
+        return r.json()
+
+
+async def create_maintenance_window(api_key: str, service_id: str, start: str, end: str, description: str) -> dict:
+    """Create maintenance window."""
+    url = "https://api.pagerduty.com/maintenance_windows"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "maintenance_window": {
+                "service": {"id": service_id},
+                "start_time": start,
+                "end_time": end,
+                "description": description
+            }
+        }, headers={"Authorization": f"Token token={api_key}"})
+        return r.json()

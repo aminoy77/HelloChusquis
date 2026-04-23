@@ -1,50 +1,53 @@
-from __future__ import annotations
+from  httpx import AsyncClient
+from  json import dumps
+from  typing import Any
+from typing_extensions import TypedDict
 
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+
+class Mailchimp(TypedDict):
+    api_key: str
+    server: str
 
 
-class MailchimpTool(Tool):
-    name = "mailchimp"
-    description = "Mailchimp email marketing and automation"
+async def add_subscriber(api_key: str, server: str, list_id: str, email: str, **kwargs) -> dict:
+    """Add subscriber to Mailchimp list."""
+    url = f"https://{server}.api.mailchimp.com/3.0/lists/{list_id}/members"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "email_address": email,
+            "status": "subscribed",
+            **kwargs
+        }, headers={"Authorization": f"apikey {api_key}"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        api_key = self.config.get("api_key")
-        if not api_key:
-            return ToolResult(success=False, error="Mailchimp API key not configured")
 
-        dc = api_key.split("-")[-1]
-        base_url = f"https://{dc}.api.mailchimp.com/3.0"
-        auth = ("anystring", api_key)
+async def remove_subscriber(api_key: str, server: str, list_id: str, email: str) -> dict:
+    """Remove subscriber from Mailchimp list."""
+    url = f"https://{server}.api.mailchimp.com/3.0/lists/{list_id}/members/{hash(email)}"
+    async with AsyncClient() as client:
+        r = await client.delete(url, headers={"Authorization": f"apikey {api_key}"})
+        return {"status": "deleted"}
 
-        try:
-            if action == "list_campaigns":
-                r = httpx.get(f"{base_url}/campaigns", auth=auth, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("campaigns", []))
 
-            elif action == "create_campaign":
-                subject = kwargs.get("subject")
-                if not subject:
-                    return ToolResult(success=False, error="Subject required")
-                payload = {"type": "regular", "recipients": {"list_id": kwargs.get("list_id", "")}, "settings": {"subject_line": subject}}
-                r = httpx.post(f"{base_url}/campaigns", auth=auth, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def get_lists(api_key: str, server: str) -> dict:
+    """Get Mailchimp lists."""
+    url = f"https://{server}.api.mailchimp.com/3.0/lists"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"apikey {api_key}"})
+        return r.json()
 
-            elif action == "send_campaign":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Campaign ID required")
-                r = httpx.post(f"{base_url}/campaigns/{id}/actions/send", auth=auth, timeout=30)
-                return ToolResult(success=True, data={"sent": True})
 
-            elif action == "list_lists":
-                r = httpx.get(f"{base_url}/lists", auth=auth, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("lists", []))
+async def get_campaigns(api_key: str, server: str) -> dict:
+    """Get Mailchimp campaigns."""
+    url = f"https://{server}.api.mailchimp.com/3.0/campaigns"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"apikey {api_key}"})
+        return r.json()
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+async def send_campaign(api_key: str, server: str, campaign_id: str) -> dict:
+    """Send Mailchimp campaign."""
+    url = f"https://{server}.api.mailchimp.com/3.0/campaigns/{campaign_id}/actions/send"
+    async with AsyncClient() as client:
+        r = await client.post(url, headers={"Authorization": f"apikey {api_key}"})
+        return {"status": "sent"}

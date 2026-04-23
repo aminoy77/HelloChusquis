@@ -1,58 +1,52 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class ResendTool(Tool):
-    name = "resend"
-    description = "Resend - modern email delivery"
+async def send_email(key: str, to: str, subject: str, html: str, from_: str) -> dict:
+    """Send email via Resend."""
+    url = "https://api.resend.com/emails"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "from": from_,
+            "to": [to],
+            "subject": subject,
+            "html": html
+        }, headers={"Authorization": f"Bearer {key}"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        api_key = self.config.get("api_key")
-        from_email = self.config.get("from_email", "noreply@example.com")
 
-        if not api_key:
-            return ToolResult(success=False, error="Resend API key not configured")
+async def batch_send(key: str, emails: list) -> dict:
+    """Batch send emails via Resend."""
+    url = "https://api.resend.com/emails/batch"
+    async with AsyncClient() as client:
+        r = await client.post(url, json=emails, headers={"Authorization": f"Bearer {key}"})
+        return r.json()
 
-        base_url = "https://api.resend.com"
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-        try:
-            if action == "send":
-                to = kwargs.get("to")
-                subject = kwargs.get("subject")
-                html = kwargs.get("html", "")
-                text = kwargs.get("text", "")
+async def create_template(key: str, name: str, html: str) -> dict:
+    """Create Resend template."""
+    url = "https://api.resend.com/templates"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"name": name, "html": html}, headers={"Authorization": f"Bearer {key}"})
+        return r.json()
 
-                if not to or not subject:
-                    return ToolResult(success=False, error="to and subject required")
 
-                payload = {
-                    "from": from_email,
-                    "to": [to],
-                    "subject": subject,
-                    "html": html,
-                    "text": text
-                }
+async def send_template(key: str, template_id: str, to: str, params: dict = {}) -> dict:
+    """Send template via Resend."""
+    url = f"https://api.resend.com/emails"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "from": "onboarding@resend.dev",
+            "to": [to],
+            "subject": "Template",
+            "template_id": template_id,
+            "params": params
+        }, headers={"Authorization": f"Bearer {key}"})
+        return r.json()
 
-                r = httpx.post(f"{base_url}/email", headers=headers, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "batch":
-                emails = kwargs.get("emails", [])
-                if not emails:
-                    return ToolResult(success=False, error="Emails array required")
-                r = httpx.post(f"{base_url}/emails/batch", headers=headers, json={"emails": emails}, timeout=30)
-                return ToolResult(success=True, data=r.json())
-
-            elif action == "list":
-                r = httpx.get(f"{base_url}/emails", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", []))
-
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+async def get_domains(key: str) -> dict:
+    """Get Resend domains."""
+    url = "https://api.resend.com/domains"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {key}"})
+        return r.json()

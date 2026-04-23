@@ -1,60 +1,50 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class BrevoTool(Tool):
-    name = "brevo"
-    description = "Brevo (Sendinblue) - email marketing and SMS"
+async def send_email(api_key: str, to: str, subject: str, html: str, from_email: str) -> dict:
+    """Send email via Brevo (Sendinblue)."""
+    url = "https://api.brevo.com/v3/smtp/email"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "sender": {"email": from_email},
+            "to": [{"email": to}],
+            "subject": subject,
+            "htmlContent": html
+        }, headers={"api-key": api_key})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        api_key = self.config.get("api_key")
-        if not api_key:
-            return ToolResult(success=False, error="Brevo API key not configured")
 
-        base_url = "https://api.brevo.com/v3"
-        headers = {"api-key": api_key, "Content-Type": "application/json"}
+async def create_template(api_key: str, name: str, html: str, subject: str) -> dict:
+    """Create Brevo template."""
+    url = "https://api.brevo.com/v3/smtp/templates"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "name": name,
+            "htmlContent": html,
+            "subject": subject
+        }, headers={"api-key": api_key})
+        return r.json()
 
-        try:
-            if action == "send_email":
-                to = kwargs.get("to")
-                subject = kwargs.get("subject")
-                html = kwargs.get("html", "")
 
-                if not to or not subject:
-                    return ToolResult(success=False, error="to and subject required")
+async def send_template(api_key: str, template_id: int, to: str) -> dict:
+    """Send template via Brevo."""
+    url = "https://api.brevo.com/v3/smtp/templates/" + str(template_id) + "/send"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"email": to}, headers={"api-key": api_key})
+        return r.json()
 
-                payload = {
-                    "sender": {"email": "noreply@example.com"},
-                    "to": [{"email": to}],
-                    "subject": subject,
-                    "htmlContent": html
-                }
 
-                r = httpx.post(f"{base_url}/smtp/email", headers=headers, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def get_stats(api_key: str, days: int = 7) -> dict:
+    """Get Brevo stats."""
+    url = f"https://api.brevo.com/v3/smtp/statistics?days={days}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"api-key": api_key})
+        return r.json()
 
-            elif action == "list_contacts":
-                r = httpx.get(f"{base_url}/contacts", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("contacts", []))
 
-            elif action == "create_contact":
-                email = kwargs.get("email")
-                if not email:
-                    return ToolResult(success=False, error="Email required")
-                payload = {"email": email, "attributes": kwargs.get("attributes", {})}
-                r = httpx.post(f"{base_url}/contacts", headers=headers, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
-
-            elif action == "list_campaigns":
-                r = httpx.get(f"{base_url}/emailCampaigns", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("campaigns", []))
-
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+async def import_contacts(api_key: str, contacts: list) -> dict:
+    """Import contacts to Brevo."""
+    url = "https://api.brevo.com/v3/contacts/import"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"contacts": contacts}, headers={"api-key": api_key})
+        return r.json()

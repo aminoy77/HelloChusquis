@@ -1,49 +1,33 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class HubSpotTool(Tool):
-    name = "hubspot"
-    description = "HubSpot CRM - contacts, deals, companies"
+async def create_lead(email: str, first_name: str, last_name: str, api_key: str) -> dict:
+    """Create HubSpot lead."""
+    url = "https://api.hubapi.com/crm/v3/objects/contacts"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"properties": {"email": email, "firstname": first_name, "lastname": last_name}}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="HubSpot token not configured")
 
-        base_url = "https://api.hubapi.com"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+async def get_lead(email: str, api_key: str) -> dict:
+    """Get HubSpot contact."""
+    url = f"https://api.hubapi.com/crm/v3/objects/contacts/{email}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-        try:
-            if action == "list_contacts":
-                r = httpx.get(f"{base_url}/crm/v3/objects/contacts", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("results", []))
 
-            elif action == "create_contact":
-                email = kwargs.get("email")
-                first_name = kwargs.get("first_name", "")
-                last_name = kwargs.get("last_name", "")
-                if not email:
-                    return ToolResult(success=False, error="Email required")
-                payload = {"properties": {"email": email, "firstname": first_name, "lastname": last_name}}
-                r = httpx.post(f"{base_url}/crm/v3/objects/contacts", headers=headers, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def create_deal(name: str, amount: str, stage: str, api_key: str) -> dict:
+    """Create HubSpot deal."""
+    url = "https://api.hubapi.com/crm/v3/objects/deals"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"properties": {"dealname": name, "amount": amount, "dealstage": stage}}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-            elif action == "list_deals":
-                r = httpx.get(f"{base_url}/crm/v3/objects/deals", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("results", []))
 
-            elif action == "list_companies":
-                r = httpx.get(f"{base_url}/crm/v3/objects/companies", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("results", []))
-
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+async def create_company(domain: str, name: str, api_key: str) -> dict:
+    """Create HubSpot company."""
+    url = "https://api.hubapi.com/crm/v3/objects/companies"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"properties": {"domain": domain, "name": name}}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()

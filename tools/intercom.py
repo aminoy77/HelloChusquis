@@ -1,55 +1,44 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class IntercomTool(Tool):
-    name = "intercom"
-    description = "Intercom customer messaging and support"
+async def create_conversation(token: str, from_: str, body: str, **kwargs) -> dict:
+    """Create Intercom conversation."""
+    url = "https://api.intercom.io/conversations"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "from": {"type": "user", "email": from_},
+            "body": body, **kwargs
+        }, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="Intercom token not configured")
 
-        base_url = "https://api.intercom.io"
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+async def list_conversations(token: str, state: str = "open") -> dict:
+    """List Intercom conversations."""
+    url = f"https://api.intercom.io/conversations?state={state}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+        return r.json()
 
-        try:
-            if action == "list_conversations":
-                r = httpx.get(f"{base_url}/conversations", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("conversations", []))
 
-            elif action == "get_conversation":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Conversation ID required")
-                r = httpx.get(f"{base_url}/conversations/{id}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def get_conversation(token: str, conversation_id: str) -> dict:
+    """Get Intercom conversation."""
+    url = f"https://api.intercom.io/conversations/{conversation_id}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+        return r.json()
 
-            elif action == "list_contacts":
-                r = httpx.get(f"{base_url}/contacts", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", []))
 
-            elif action == "send_message":
-                user_id = kwargs.get("user_id")
-                message = kwargs.get("message")
-                if not user_id or not message:
-                    return ToolResult(success=False, error="user_id and message required")
-                payload = {
-                    "message_type": "comment",
-                    "type": "user",
-                    "user_id": user_id,
-                    "body": message
-                }
-                r = httpx.post(f"{base_url}/conversations", headers=headers, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def reply_conversation(token: str, conversation_id: str, message_type: str, body: str) -> dict:
+    """Reply to Intercom conversation."""
+    url = f"https://api.intercom.io/conversations/{conversation_id}/reply"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"message_type": message_type, "type": "user", "body": body}, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+        return r.json()
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+async def update_conversation(token: str, conversation_id: str, **kwargs) -> dict:
+    """Update Intercom conversation."""
+    url = f"https://api.intercom.io/conversations/{conversation_id}"
+    async with AsyncClient() as client:
+        r = await client.put(url, json=kwargs, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+        return r.json()

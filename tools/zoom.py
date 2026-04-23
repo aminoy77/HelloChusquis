@@ -1,49 +1,47 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class ZoomTool(Tool):
-    name = "zoom"
-    description = "Zoom - video meetings and recordings"
+async def create_zoom_meeting(topic: str, start_time: str, duration: int, api_key: str, secret: str) -> dict:
+    """Create Zoom meeting."""
+    url = "https://api.zoom.us/v2/users/me/meetings"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "topic": topic,
+            "type": 2,
+            "start_time": start_time,
+            "duration": duration
+        }, headers=headers)
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="Zoom token not configured")
 
-        base_url = "https://api.zoom.us/v2"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+async def list_meetings(api_key: str, secret: str) -> dict:
+    """List Zoom meetings."""
+    url = "https://api.zoom.us/v2/users/me/meetings"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-        try:
-            if action == "list_meetings":
-                r = httpx.get(f"{base_url}/users/me/meetings", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("meetings", []))
 
-            elif action == "create_meeting":
-                topic = kwargs.get("topic")
-                if not topic:
-                    return ToolResult(success=False, error="Topic required")
-                payload = {"topic": topic, "type": kwargs.get("type", 2), "duration": kwargs.get("duration", 60)}
-                r = httpx.post(f"{base_url}/users/me/meetings", headers=headers, json=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def get_meeting(api_key: str, meeting_id: str) -> dict:
+    """Get Zoom meeting details."""
+    url = f"https://api.zoom.us/v2/meetings/{meeting_id}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-            elif action == "get_meeting":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Meeting ID required")
-                r = httpx.get(f"{base_url}/meetings/{id}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "list_recordings":
-                r = httpx.get(f"{base_url}/users/me/recordings", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("meetings", []))
+async def delete_meeting(api_key: str, meeting_id: str) -> dict:
+    """Delete Zoom meeting."""
+    url = f"https://api.zoom.us/v2/meetings/{meeting_id}"
+    async with AsyncClient() as client:
+        r = await client.delete(url, headers={"Authorization": f"Bearer {api_key}"})
+        return {"status": "deleted"}
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+async def get_recordings(api_key: str, meeting_id: str) -> dict:
+    """Get Zoom meeting recordings."""
+    url = f"https://api.zoom.us/v2/meetings/{meeting_id}/recordings"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()

@@ -1,53 +1,43 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class DatadogTool(Tool):
-    name = "datadog"
-    description = "Datadog monitoring, metrics, and APM"
+async def send_metric(key: str, metric: str, value: float, tags: dict = {}) -> dict:
+    """Send metric to DataDog."""
+    url = "https://api.datadoghq.com/api/v1/series"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={
+            "series": [{"metric": metric, "points": [[__import__('time').time(), value]], "type": "gauge", "tags": [f"{k}:{v}" for k, v in tags.items()]}]
+        }, headers={"DD-API-KEY": key})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        api_key = self.config.get("api_key")
-        app_key = self.config.get("app_key")
-        if not api_key or not app_key:
-            return ToolResult(success=False, error="Datadog credentials not configured")
 
-        base_url = "https://api.datadoghq.com/api"
-        headers = {"DD-API-KEY": api_key, "DD-APPLICATION-KEY": app_key}
+async def get_metrics(key: str, query: str, from_: int = None) -> dict:
+    """Query DataDog metrics."""
+    url = f"https://api.datadoghq.com/api/v1/query?query={query}"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"DD-API-KEY": key})
+        return r.json()
 
-        try:
-            if action == "query_metrics":
-                query = kwargs.get("query")
-                if not query:
-                    return ToolResult(success=False, error="Query required")
-                r = httpx.get(
-                    f"{base_url}/v1/query",
-                    headers=headers,
-                    params={"query": query},
-                    timeout=30
-                )
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "list_hosts":
-                r = httpx.get(f"{base_url}/v1/hosts", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def create_dashboard(key: str, title: str, widgets: list) -> dict:
+    """Create DataDog dashboard."""
+    url = "https://api.datadoghq.com/api/v1/dashboard"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"title": title, "widgets": widgets}, headers={"DD-API-KEY": key})
+        return r.json()
 
-            elif action == "get_services":
-                r = httpx.get(f"{base_url}/v1/services", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "list_monitors":
-                r = httpx.get(f"{base_url}/v1/monitor", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=[
-                    {"id": m.get("id"), "name": m.get("name"), "state": m.get("state")}
-                    for m in data
-                ])
+async def get_incidents(key: str) -> dict:
+    """Get DataDog incidents."""
+    url = "https://api.datadoghq.com/api/v1/incidents"
+    async with AsyncClient() as client:
+        r = await client.get(url, headers={"DD-API-KEY": key})
+        return r.json()
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+async def create_monitor(key: str, name: str, query: str, message: str) -> dict:
+    """Create DataDog monitor."""
+    url = "https://api.datadoghq.com/api/v1/monitor"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"name": name, "query": query, "message": message, "type": "query alert"}, headers={"DD-API-KEY": key})
+        return r.json()
