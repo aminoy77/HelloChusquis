@@ -90,6 +90,28 @@ async def status():
     }
 
 
+class ProviderUpdate(BaseModel):
+    name: str
+    key: str = ""
+    base: str = ""
+    model: str = ""
+
+
+@app.post("/update-provider")
+async def update_provider(data: ProviderUpdate):
+    """Update provider configuration."""
+    try:
+        if data.key:
+            agent.pool.update_api_key(data.name, data.key)
+        if data.base:
+            agent.pool.update_base_url(data.name, data.base)
+        if data.model:
+            agent.pool.update_model(data.name, data.model)
+        return {"status": "ok", "provider": data.name}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 def start():
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
 

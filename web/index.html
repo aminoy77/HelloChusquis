@@ -802,13 +802,20 @@
             <input type="text" id="config-profile" class="config-value" value="default" style="width: 100%; color: var(--text);">
         </div>
         
+        <!-- PROVIDERS SECTION -->
+        <div class="config-section" style="padding-top: 12px; border-top: 1px solid var(--border);">
+            <div class="config-label">🤖 Providers</div>
+            <div id="providers-config"></div>
+        </div>
+        
         <div class="config-section">
-            <div class="config-label">AI Provider</div>
+            <div class="config-label">Active Provider</div>
             <select id="config-provider" class="config-value" style="width: 100%; color: var(--text);" onchange="updateConfig('provider', this.value)">
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
                 <option value="google">Google</option>
                 <option value="ollama">Ollama</option>
+                <option value="openrouter">OpenRouter</option>
             </select>
         </div>
         
@@ -1203,6 +1210,9 @@
                     </div>
                 `).join('');
 
+                // Render providers config panel
+                renderProvidersConfig(data.providers);
+
                 document.getElementById('plugins-list').innerHTML = data.plugins.length
                     ? data.plugins.map(p => `
                         <div class="sidebar-item">
@@ -1222,6 +1232,88 @@
                     <div class="memory-stat">Rules: <span>${data.learnings.improvements}</span></div>
                 `;
             } catch(e) {}
+        }
+
+        function renderProvidersConfig(providers) {
+            const container = document.getElementById('providers-config');
+            const providerOptions = ['openai', 'anthropic', 'google', 'ollama', 'openrouter', 'groq', 'mistral', 'cohere', 'bedrock'];
+            
+            container.innerHTML = providers.map(p => `
+                <div style="margin-bottom: 12px; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.75rem; color: var(--amber); font-weight: 700;">${p.name.toUpperCase()}</span>
+                        <span class="indicator ${p.status}" style="width: 8px; height: 8px;"></span>
+                    </div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 8px;">
+                        ${p.status === 'ready' ? '✓ Ready' : '✗ Error'}
+                    </div>
+                    <div style="margin-bottom: 6px;">
+                        <input type="password" id="key-${p.name}" placeholder="API Key" 
+                            class="config-value" style="width: 100%; font-size: 0.7rem;" 
+                            value="${localStorage.getItem('key_' + p.name) || ''}"
+                            onchange="saveProviderKey('${p.name}', this.value)">
+                    </div>
+                    ${p.name !== 'mock' ? `
+                    <div style="margin-bottom: 6px;">
+                        <input type="text" id="base-${p.name}" placeholder="Base URL (optional)" 
+                            class="config-value" style="width: 100%; font-size: 0.7rem;"
+                            value="${localStorage.getItem('base_' + p.name) || ''}"
+                            onchange="saveProviderBase('${p.name}', this.value)">
+                    </div>
+                    ` : ''}
+                    ${p.name !== 'mock' ? `
+                    <div style="margin-bottom: 6px;">
+                        <select id="model-${p.name}" class="config-value" style="width: 100%; font-size: 0.7rem;" onchange="saveProviderModel('${p.name}', this.value)">
+                            ${getModelOptions(p.name).map(m => `<option value="${m}">${m}</option>`).join('')}
+                        </select>
+                    </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function getModelOptions(provider) {
+            const models = {
+                openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+                anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-opus', 'claude-3-haiku'],
+                google: ['gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+                ollama: ['llama3.1', 'llama3', 'mistral', 'codellama', 'mixtral'],
+                openrouter: ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'google/gemini-2.0-flash'],
+                groq: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'],
+                mistral: ['mistral-large-2411', 'mistral-small', 'codestral'],
+                cohere: ['command-r-plus', 'command-r', 'command'],
+                bedrock: ['anthropic.claude-3-5-sonnet', 'amazon.nova-pro']
+            };
+            return models[provider] || ['default'];
+        }
+
+        function saveProviderKey(name, key) {
+            localStorage.setItem('key_' + name, key);
+            showToast('API key saved for ' + name);
+            fetch('/update-provider', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, key})
+            }).catch(() => {});
+        }
+
+        function saveProviderBase(name, base) {
+            localStorage.setItem('base_' + name, base);
+            fetch('/update-provider', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, base})
+            }).catch(() => {});
+        }
+
+        function saveProviderModel(name, model) {
+            localStorage.setItem('model_' + name, model);
+            showToast('Model: ' + model);
+            fetch('/update-provider', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, model})
+            }).catch(() => {});
         }
 
         function addMessage(role, content, toolCalls = []) {
