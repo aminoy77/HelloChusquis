@@ -39,5 +39,5 @@ async def update_contact_field(api_key: str, email: str, field: str, value: str)
     """Update contact field in ActiveCampaign."""
     url = "https://api.activecampaign.com/api/3/field/sync"
     async with AsyncClient() as client:
-        r = await client.post(url, json={"contact": {"email": email, "fieldValues": [{"field": field, "value": value}]}, headers={"Api-Key": api_key}})
+        r = await client.post(url, json={"contact": {"email": email, "fieldValues": [{"field": field, "value": value}]}}, headers={"Api-Key": api_key})
         return r.json()

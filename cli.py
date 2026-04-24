@@ -46,10 +46,17 @@ def main():
     if args and args[0] == "build":
         from core.setup import ensure_config
         from core.provider import ProviderPool
+        from rich.console import Console
+        from rich.prompt import Prompt
         ensure_config()
         pool = ProviderPool()
+        console = Console()
+        console.print("\n[bold cyan]🔧 HelloChusquis Plugin Builder[/bold cyan]\n")
+        topic = Prompt.ask("[cyan]What do you want to build?[/cyan]", default="a simple weather plugin")
+        plugin_name = Prompt.ask("[cyan]Plugin name[/cyan]", default=topic.lower().replace(" ", "_").replace("-", "_")[:20])
         from core.builder import build_plugin
-        build_plugin(pool)
+        result = build_plugin(topic, plugin_name, pool)
+        console.print(result)
         return
 
     if args and args[0] == "learn":

@@ -618,6 +618,146 @@
             transform: translateX(-50%) translateY(0);
             opacity: 1;
         }
+
+        /* THEMES */
+        body.theme-light {
+            --bg: #ffffff;
+            --surface: #f5f5f5;
+            --surface2: #ebebeb;
+            --amber: #d97706;
+            --text: #1f1f1f;
+            --text-muted: #6b7280;
+            --text-dim: #9ca3af;
+            --border: #e5e7eb;
+        }
+
+        body.theme-minimal {
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --surface2: #1a1a1a;
+            --amber: #22d3ee;
+            --text: #fafafa;
+            --text-muted: #64748b;
+            --text-dim: #334155;
+            --border: #27272a;
+        }
+
+        /* EMOJI PICKER */
+        .emoji-picker {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+            z-index: 300;
+            max-width: 300px;
+        }
+
+        .emoji-picker.show { display: block; }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+        }
+
+        .emoji-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .emoji-btn:hover { background: var(--surface2); border-radius: 4px; }
+
+        /* SHORTCUTS HELP */
+        .shortcuts-panel {
+            position: fixed;
+            top: 60px;
+            left: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            z-index: 300;
+            min-width: 280px;
+        }
+
+        .shortcuts-panel.show { display: block; }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .shortcut-key {
+            background: var(--bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: var(--amber);
+        }
+
+        /* EXPORT MENU */
+        .export-menu {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+            z-index: 300;
+        }
+
+        .export-menu.show { display: block; }
+
+        .export-option {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .export-option:hover { background: var(--surface2); }
+
+        /* PRESETS */
+        .preset-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--amber);
+            color: var(--bg);
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .message-bubble pre {
+            background: var(--bg);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+
+        .message-bubble code {
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .message-bubble pre code {
+            background: none;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -629,6 +769,9 @@
                 <button class="header-btn voice-btn" id="voice-output-btn" onclick="showVoiceMenu('output')" title="Voice Output">🔊</button>
                 <button class="header-btn" id="toggle-sidebar" onclick="toggleSidebar()">☰ Sidebar</button>
                 <button class="header-btn" id="toggle-config" onclick="toggleConfig()">⚙ Config</button>
+                <button class="header-btn" onclick="toggleShortcuts()" title="Keyboard Shortcuts">⌨️</button>
+                <button class="header-btn" onclick="toggleExportMenu()" title="Export Chat">📤</button>
+                <button class="header-btn" onclick="toggleEmojiPicker()" title="Emoji">😀</button>
             </div>
             <select id="language-select" class="language-selector" onchange="changeLanguage(this.value)">
                 <option value="auto">🌐 Auto</option>
@@ -731,11 +874,21 @@
         </div>
         
         <div class="config-section">
-            <div class="config-label">Stream Responses</div>
-            <div class="config-toggle">
-                <div class="toggle-switch" id="toggle-stream" onclick="toggleStream()"></div>
-                <span>Show typing in real-time</span>
-            </div>
+            <div class="config-label">Theme</div>
+            <select id="config-theme" class="config-value" style="width: 100%; color: var(--text);" onchange="setTheme(this.value)">
+                <option value="dark">🌙 Dark</option>
+                <option value="light">☀️ Light</option>
+                <option value="minimal">⚫ Minimal</option>
+            </select>
+        </div>
+        
+        <div class="config-section">
+            <div class="config-label">Font Size</div>
+            <select id="config-fontsize" class="config-value" style="width: 100%; color: var(--text);" onchange="setFontSize(this.value)">
+                <option value="0.75rem">Small</option>
+                <option value="0.825rem" selected>Medium</option>
+                <option value="1rem">Large</option>
+            </select>
         </div>
         
         <div class="config-section">
@@ -776,6 +929,31 @@
             <button class="header-btn" onclick="clearHistory()" style="width: 100%; margin-top: 8px;">🗑 Clear History</button>
             <button class="header-btn" onclick="resetConfig()" style="width: 100%; margin-top: 8px; border-color: var(--red); color: var(--red);">🔄 Reset Defaults</button>
         </div>
+    </div>
+
+    <!-- Shortcuts Panel -->
+    <div class="shortcuts-panel" id="shortcuts-panel">
+        <div class="config-title">⌨️ Keyboard Shortcuts</div>
+        <div class="shortcut-item"><span>Send message</span><span class="shortcut-key">Enter</span></div>
+        <div class="shortcut-item"><span>Voice input</span><span class="shortcut-key">V</span></div>
+        <div class="shortcut-item"><span>Voice output</span><span class="shortcut-key">S</span></div>
+        <div class="shortcut-item"><span>Toggle sidebar</span><span class="shortcut-key">Tab</span></div>
+        <div class="shortcut-item"><span>Config panel</span><span class="shortcut-key">C</span></div>
+        <div class="shortcut-item"><span>Clear input</span><span class="shortcut-key">Esc</span></div>
+        <div class="shortcut-item"><span>Shortcuts help</span><span class="shortcut-key">?</span></div>
+    </div>
+
+    <!-- Emoji Picker -->
+    <div class="emoji-picker" id="emoji-picker">
+        <div class="emoji-grid" id="emoji-grid"></div>
+    </div>
+
+    <!-- Export Menu -->
+    <div class="export-menu" id="export-menu">
+        <div class="export-option" onclick="exportChat('json')">📄 Export as JSON</div>
+        <div class="export-option" onclick="exportChat('md')">📝 Export as Markdown</div>
+        <div class="export-option" onclick="exportChat('html')">🌐 Export as HTML</div>
+        <div class="export-option" onclick="exportChat('pdf')">📑 Save as PDF</div>
     </div>
 
     <div class="main">
@@ -1397,6 +1575,105 @@
             if (!inputEl.matches(':focus')) {
                 if (e.key === 'v') toggleVoiceInput();
                 if (e.key === 's') toggleVoiceOutput();
+                if (e.key === 'Tab') { e.preventDefault(); toggleSidebar(); }
+                if (e.key === 'c') toggleConfig();
+                if (e.key === '?') toggleShortcuts();
+            }
+            if (e.key === 'Escape') { inputEl.value = ''; }
+        });
+
+        // Shortcuts Panel
+        function toggleShortcuts() {
+            const panel = document.getElementById('shortcuts-panel');
+            panel.classList.toggle('show');
+        }
+
+        // Emoji Picker
+        const emojis = ['😀','😃','😄','😁','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😎','🤔','😐','😑','😶','🙄','😬','😔','😷','🤒','👍','👎','❤️','🧠','⚡','🔥','✨','🌟','💡','🎉','🎯','✅','❌','⚠️'];
+        
+        function toggleEmojiPicker() {
+            const picker = document.getElementById('emoji-picker');
+            if (!picker.classList.contains('show')) {
+                const grid = document.getElementById('emoji-grid');
+                grid.innerHTML = emojis.map(e => `<button class="emoji-btn" onclick="insertEmoji('${e}')">${e}</button>`).join('');
+            }
+            picker.classList.toggle('show');
+        }
+
+        function insertEmoji(emoji) {
+            inputEl.value += emoji;
+            inputEl.focus();
+            document.getElementById('emoji-picker').classList.remove('show');
+        }
+
+        // Export Menu
+        function toggleExportMenu() {
+            const menu = document.getElementById('export-menu');
+            menu.classList.toggle('show');
+        }
+
+        function exportChat(format) {
+            const messages = document.querySelectorAll('.message');
+            let content = '';
+            
+            if (format === 'json') {
+                const data = Array.from(messages).map(m => ({
+                    role: m.classList.contains('user') ? 'user' : 'assistant',
+                    content: m.querySelector('.message-bubble').textContent
+                }));
+                content = JSON.stringify(data, null, 2);
+            } else if (format === 'md') {
+                messages.forEach(m => {
+                    const role = m.classList.contains('user') ? '**You**' : '**HelloChusquis**';
+                    content += `${role}: ${m.querySelector('.message-bubble').textContent}\n\n`;
+                });
+            } else if (format === 'html') {
+                content = '<html><body>';
+                messages.forEach(m => {
+                    const cls = m.classList.contains('user') ? 'user' : 'assistant';
+                    content += `<div class="${cls}">${m.querySelector('.message-bubble').innerHTML}</div>`;
+                });
+                content += '</body></html>';
+            }
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hellochusquis-chat.${format}`;
+            a.click();
+            showToast(`Exported as ${format.toUpperCase()}`);
+            document.getElementById('export-menu').classList.remove('show');
+        }
+
+        // Theme
+        function setTheme(theme) {
+            document.body.className = theme === 'dark' ? '' : `theme-${theme}`;
+            localStorage.setItem('theme', theme);
+        }
+
+        function setFontSize(size) {
+            document.querySelectorAll('.message-bubble').forEach(b => b.style.fontSize = size);
+            localStorage.setItem('fontsize', size);
+        }
+
+        // Load saved preferences
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) setTheme(savedTheme);
+        
+        const savedFontSize = localStorage.getItem('fontsize');
+        if (savedFontSize) setFontSize(savedFontSize);
+
+        // Close panels on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.emoji-picker') && !e.target.closest('button[onclick*="toggleEmoji"]')) {
+                document.getElementById('emoji-picker')?.classList.remove('show');
+            }
+            if (!e.target.closest('.export-menu') && !e.target.closest('button[onclick*="toggleExport"]')) {
+                document.getElementById('export-menu')?.classList.remove('show');
+            }
+            if (!e.target.closest('.shortcuts-panel') && !e.target.closest('button[onclick*="toggleShortcuts"]')) {
+                document.getElementById('shortcuts-panel')?.classList.remove('show');
             }
         });
     </script>

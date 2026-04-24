@@ -1,55 +1,42 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class LinearTool(Tool):
-    name = "linear"
-    description = "Linear - issue tracking"
+async def create_workspace(name: str, api_key: str) -> dict:
+    """Create Linear workspace."""
+    url = "https://api.linear.app/graphql"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"query": f'mmutation {{ createWorkspace(input: {{ name: "{name}" }}) {{ id }} }}'}, headers={"Authorization": api_key})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="Linear token not configured")
 
-        base_url = "https://api.linear.app/graphql"
-        headers = {"Authorization": token, "Content-Type": "application/json"}
+async def list_issues(api_key: str, team_id: str = None) -> dict:
+    """List Linear issues."""
+    url = "https://api.linear.app/graphql"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"query": "{ issues { nodes { id title state } } }"}, headers={"Authorization": api_key})
+        return r.json()
 
-        try:
-            if action == "list_issues":
-                query = """
-                query { issues(first: 20) { nodes { id title state { name } } } }
-                """
-                r = httpx.post(base_url, headers=headers, json={"query": query}, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", {}).get("issues", {}).get("nodes", []))
 
-            elif action == "create_issue":
-                title = kwargs.get("title")
-                if not title:
-                    return ToolResult(success=False, error="Title required")
-                query = "mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { success } }"
-                variables = {"input": {"title": title}}
-                r = httpx.post(base_url, headers=headers, json={"query": query, "variables": variables}, timeout=30)
-                return ToolResult(success=True, data=r.json())
+async def create_issue(api_key: str, title: str, team_id: str, **kwargs) -> dict:
+    """Create Linear issue."""
+    url = "https://api.linear.app/graphql"
+    query = f'mutation {{ createIssue(input: {{ title: "{title}", teamId: "{team_id}" }}) {{ id }} }}'
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"query": query}, headers={"Authorization": api_key})
+        return r.json()
 
-            elif action == "get_issue":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Issue ID required")
-                query = "query GetIssue($id: String!) { issue(id: $id) { id title description } }"
-                r = httpx.post(base_url, headers=headers, json={"query": query, "variables": {"id": id}}, timeout=30)
-                return ToolResult(success=True, data=r.json())
 
-            elif action == "list_teams":
-                query = "{ teams { nodes { id name key } } }"
-                r = httpx.post(base_url, headers=headers, json={"query": query}, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("data", {}).get("teams", {}).get("nodes", []))
+async def get_issue(api_key: str, issue_id: str) -> dict:
+    """Get Linear issue."""
+    url = "https://api.linear.app/graphql"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"query": f'{{ issue(id: "{issue_id}") {{ id title description }} }}'}, headers={"Authorization": api_key})
+        return r.json()
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+async def update_issue(api_key: str, issue_id: str, **kwargs) -> dict:
+    """Update Linear issue."""
+    url = "https://api.linear.app/graphql"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"query": f'mutation {{ updateIssue(id: "{issue_id}") {{ id }} }}'}, headers={"Authorization": api_key})
+        return r.json()

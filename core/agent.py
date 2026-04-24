@@ -1237,14 +1237,14 @@ class Agent:
                 except Exception as e:
                     return ToolResult(success=False, output="", error=str(e))
 
-        return ToolResult(success=False, output="", error=f"Unknown tool: {name}. I can create this tool for you! Run `/tool add {name}` or describe the integration you need.")
+        return ToolResult(success=False, output="", error=f"Unknown tool: {name}. I can create this tool for you! Run `hellochusquis build` to create it with AI.")
 
     def _propose_tool_creation(self, tool_name: str, args: dict) -> str:
         """Propose creating a new tool when one doesn't exist."""
         return (
             f"I don't have a '{tool_name}' tool configured yet. I can create it for you!\n\n"
             f"Options:\n"
-            f"1. Run `/tool add {tool_name}` to build it interactively\n"
+            f"1. Run `hellochusquis build` to build it with AI\n"
             f"2. Describe the integration you need and I'll create it\n"
             f"3. Submit a feature request at github.com/aminoy77/HelloChusquis/issues\n\n"
             f"Supported integrations I can build: Stripe, Twilio, SendGrid, Square, Plaid, "

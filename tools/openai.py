@@ -13,7 +13,7 @@ async def chat_completion(model: str, messages: list, api_key: str, **kwargs) ->
         return r.json()
 
 
-async def embeddings(text: str, model: str = "text-embedding-3-small", api_key: str) -> dict:
+async def embeddings(api_key: str, text: str, model: str = "text-embedding-3-small") -> dict:
     """OpenAI Embeddings."""
     url = "https://api.openai.com/v1/embeddings"
     async with AsyncClient() as client:

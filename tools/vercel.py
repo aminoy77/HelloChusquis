@@ -1,7 +1,7 @@
 from httpx import AsyncClient
 
 
-async def deploy(project: str, branch: str = "main", api_key: str) -> dict:
+async def deploy(api_key: str, project: str, branch: str = "main") -> dict:
     """Deploy to Vercel."""
     url = f"https://api.vercel.com/v6/deployments"
     async with AsyncClient() as client:

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hellochusquis"
-version = "1.3.0"
-description = "A powerful terminal AI agent with 60+ integrations, skill system, and auto-tool-builder"
+version = "1.4.3"
+description = "A powerful terminal AI agent with 120+ integrations, voice, web UI, and auto-tool-builder"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [

@@ -6,7 +6,7 @@
 
 - **120+ Integrations** - Every popular API and service
 - **Voice I/O** - Speak and listen in the web interface (12+ languages)
-- **Auto-Tool-Builder** - Create integrations on-the-fly with `/tool add`
+- **Auto-Tool-Builder** - Create integrations on-the-fly with `hellochusquis build`
 - **Smart Suggestions** - When you ask for a missing tool, it offers to build it
 
 ## ⚡ Quick Start
@@ -37,7 +37,7 @@ Then open http://localhost:8000
 hellochusquis              # Start interactive chat
 hellochusquis web          # Open web interface
 hellochusquis api --port 8080  # Start REST API
-hellochusquis tool add <name>  # Build new integration
+hellochusquis build        # Build new plugin/integration with AI
 hellochusquis install <plugin> # Install plugin
 hellochusquis plugins          # List installed plugins
 hellochusquis cache           # Clear cache
@@ -49,6 +49,20 @@ hellochusquis cache           # Clear cache
 /status    # Show provider status
 /help      # Show available tools
 ```
+
+## 🛠️ Build Custom Plugins
+
+Create new plugins/integrations on-the-fly with AI:
+
+```bash
+hellochusquis build
+```
+
+The builder will ask you:
+1. What do you want to build? (e.g., "Telegram bot", "Dropbox integration")
+2. Plugin name
+
+It will research the API, generate the code, test it, and save it to `~/.hellochusquis/plugins/`
 
 ## 🔌 REST API
 
@@ -135,17 +149,17 @@ n8n, Pipedream, Make, Zapier, Workato, Retool
 
 ## 🔧 Auto-Tool Builder
 
-Create new integrations instantly:
+Create new integrations instantly with AI:
 
 ```bash
-hellochusquis tool add stripe
+hellochusquis build
 ```
 
-The tool builder will ask for:
-- Integration name
-- Description
-- API type (REST, GraphQL, etc.)
-- Actions available
+The builder will ask for:
+- What you want to build (e.g., "Telegram bot", "Dropbox integration")
+- Plugin name
+
+It will research the API, generate code, test it, and save it.
 
 ## 📚 Documentation
 
