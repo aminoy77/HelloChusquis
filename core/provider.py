@@ -278,3 +278,46 @@ class ProviderPool:
                 }
             )
         return summary
+
+    def update_api_key(self, name: str, api_key: str):
+        """Update API key for a provider."""
+        for p in self.providers:
+            if p.name == name:
+                p.api_key = api_key
+                logger.info("Updated API key for %s", name)
+                return True
+        return False
+
+    def update_base_url(self, name: str, base_url: str):
+        """Update base URL for a provider."""
+        for p in self.providers:
+            if p.name == name:
+                p.base_url = base_url
+                logger.info("Updated base URL for %s", name)
+                return True
+        return False
+
+    def update_model(self, name: str, model: str):
+        """Update model for a provider."""
+        for p in self.providers:
+            if p.name == name:
+                p.model = model
+                logger.info("Updated model for %s to %s", name, model)
+                return True
+        return False
+
+    def add_provider(self, name: str, api_key: str, base_url: str, model: str, priority: int = 1):
+        """Add a new provider."""
+        provider = Provider(name=name, api_key=api_key, base_url=base_url, model=model, priority=priority)
+        self.providers.append(provider)
+        logger.info("Added provider %s", name)
+        return True
+
+    def remove_provider(self, name: str):
+        """Remove a provider."""
+        original = len(self.providers)
+        self.providers = [p for p in self.providers if p.name != name]
+        if len(self.providers) < original:
+            logger.info("Removed provider %s", name)
+            return True
+        return False
