@@ -1,45 +1,35 @@
-from __future__ import annotations
-
-import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+from httpx import AsyncClient
 
 
-class SanityTool(Tool):
-    name = "sanity"
-    description = "Sanity CMS - structured content management"
+async def create_workspace(name: str, api_key: str) -> dict:
+    """Create Sanity project."""
+    url = "https://api.sanity.io/v2021-10-04/projects"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"name": name}, headers={"Authorization": f"Bearer {api_key}"})
+        return r.json()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        project_id = self.config.get("project_id")
-        dataset = self.config.get("dataset", "production")
-        token = self.config.get("token")
 
-        if not project_id or not token:
-            return ToolResult(success=False, error="Sanity credentials not configured")
+async def create_document(project_id: str, dataset: str, doc_id: str, doc: dict, token: str) -> dict:
+    """Create Sanity document."""
+    url = f"https://{project_id}.api.sanity.io/v2021-10-04/data/mutate/{dataset}"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"mutations": [{"createOrReplace": {"_id": doc_id, **doc}}]},
+            headers={"Authorization": f"Bearer {token}"})
+        return r.json()
 
-        base_url = f"https://{project_id}.api.sanity.io/v2021-10-21/data/query/{dataset}"
-        headers = {"Authorization": f"Bearer {token}"}
 
-        try:
-            if action == "fetch":
-                query = kwargs.get("query", "*[_type == \"document\"]")
-                r = httpx.get(base_url, headers=headers, params={"query": query}, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("result", []))
+async def query(project_id: str, dataset: str, query: str, token: str) -> dict:
+    """Query Sanity."""
+    url = f"https://{project_id}.api.sanity.io/v2021-10-04/data/query/{dataset}"
+    async with AsyncClient() as client:
+        r = await client.get(url, params={"query": query}, headers={"Authorization": f"Bearer {token}"})
+        return r.json()
 
-            elif action == "mutate":
-                mutations = kwargs.get("mutations", [])
-                if not mutations:
-                    return ToolResult(success=False, error="Mutations required")
-                r = httpx.post(
-                    f"https://{project_id}.api.sanity.io/v2021-10-21/data/mutate/{dataset}",
-                    headers=headers,
-                    json={"mutations": mutations},
-                    timeout=30
-                )
-                return ToolResult(success=True, data=r.json())
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+async def delete_document(project_id: str, dataset: str, doc_id: str, token: str) -> dict:
+    """Delete Sanity document."""
+    url = f"https://{project_id}.api.sanity.io/v2021-10-04/data/mutate/{dataset}"
+    async with AsyncClient() as client:
+        r = await client.post(url, json={"mutations": [{"delete": {"id": doc_id}}]},
+            headers={"Authorization": f"Bearer {token}"})
+        return r.json()
