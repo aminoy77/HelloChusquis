@@ -677,27 +677,36 @@
                 <span class="t-cmd">pip install hellochusquis</span>
             </div>
             <div class="t-line">
-                <span class="t-output">✓ Successfully installed hellochusquis-0.6.0</span>
+                <span class="t-output">✓ Successfully installed hellochusquis-1.5.1</span>
             </div>
             <div class="t-line" style="margin-top:8px">
                 <span class="t-prompt">$</span>
                 <span class="t-cmd">hellochusquis</span>
             </div>
             <div class="t-line">
-                <span class="t-output">✓ Plugin loaded: weather</span>
+                <span class="t-output">✓ Plugin loaded: weather · stocks · browser · wikipedia</span>
             </div>
             <div class="t-line">
-                <span class="t-output">✓ Plugin loaded: stocks</span>
+                <span class="t-output">✓ Loaded 4 providers from config.yaml</span>
             </div>
             <div class="t-line" style="margin-top:8px">
                 <span class="t-prompt t-comment">You:</span>
-                <span class="t-cmd">qué tiempo hace en Barcelona?</span>
+                <span class="t-cmd">haz un informe de las acciones de Apple de los últimos 6 meses y envíalo por email</span>
             </div>
             <div class="t-line">
-                <span class="t-output">→ weather(city='Barcelona')</span>
+                <span class="t-output" style="color:var(--amber-dim)">→ stocks(symbol='AAPL', period='6mo')</span>
             </div>
             <div class="t-line">
-                <span class="t-output">Barcelona: ⛅ +22°C</span>
+                <span class="t-output" style="color:var(--amber-dim)">→ websearch(query='AAPL stock news 2024')</span>
+            </div>
+            <div class="t-line">
+                <span class="t-output" style="color:var(--amber-dim)">→ send_email(to='boss@company.com', subject='AAPL Report')</span>
+            </div>
+            <div class="t-line">
+                <span class="t-output">✓ Email sent successfully</span>
+            </div>
+            <div class="t-line">
+                <span class="t-output">→ weather(city='Madrid')</span>
             </div>
             <div class="t-line" style="margin-top:8px">
                 <span class="t-prompt t-comment">You:</span>
