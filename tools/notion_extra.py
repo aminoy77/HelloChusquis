@@ -2,7 +2,7 @@ from httpx import AsyncClient
 import json
 
 
-async def create_workspace(name: str, plan: str = "free", email: str) -> dict:
+async def create_workspace(name: str, email: str, plan: str = "free") -> dict:
     """Create Notion workspace."""
     url = "https://api.notion.com/v1/users"
     headers = {"Notion-Version": "2022-06-28"}

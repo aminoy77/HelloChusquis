@@ -1,13 +1,15 @@
-# HelloChusquis 🧠✨ v1.3
+# HelloChusquis 🧠✨ v1.5
 
-**HelloChusquis** is an advanced AI terminal agent with 120+ integrations, voice support, and auto-tool-builder.
+**HelloChusquis** is an advanced AI terminal agent with 150+ integrations, voice support, auto-tool-builder, and 100+ built-in functions.
 
-## 🚀 What's New in v1.3
+## 🚀 What's New in v1.5
 
-- **120+ Integrations** - Every popular API and service
-- **Voice I/O** - Speak and listen in the web interface (12+ languages)
-- **Auto-Tool-Builder** - Create integrations on-the-fly with `hellochusquis build`
-- **Smart Suggestions** - When you ask for a missing tool, it offers to build it
+- **150+ Integrations** - Every popular API and service
+- **Voice I/O** - Speak and listen in web interface (12+ languages)
+- **Auto-Tool-Builder** - Create integrations with `hellochusquis build`
+- **100+ Built-in Functions** - Time, hash, files, JSON, CSV, images, QR
+- **5 Themes** - Dark, Light, Minimal, Ocean, Forest
+- **Provider Config** - Configure API keys directly in web UI
 
 ## ⚡ Quick Start
 
@@ -25,10 +27,10 @@ hellochusquis web
 Then open http://localhost:8000
 
 ### Voice Controls:
-- 🎤 Click to enable **voice input** - speaks and converts to text
-- 🔊 Click to enable **voice output** - agent speaks responses
-- 🌐 Select language from dropdown (Auto-detect, English, Spanish, French, etc.)
-- Press **V** for voice input, **S** for voice output
+- 🎤 Click to enable **voice input**
+- 🔊 Click to enable **voice output**
+- 🌐 Select language (12+ options)
+- Press **V** for voice input, **S** for output
 
 ## 🔧 Command Reference
 
@@ -37,10 +39,10 @@ Then open http://localhost:8000
 hellochusquis              # Start interactive chat
 hellochusquis web          # Open web interface
 hellochusquis api --port 8080  # Start REST API
-hellochusquis build        # Build new plugin/integration with AI
-hellochusquis install <plugin> # Install plugin
-hellochusquis plugins          # List installed plugins
-hellochusquis cache           # Clear cache
+hellochusquis build        # Build new plugin with AI
+hellochusquis install     # Install plugin
+hellochusquis plugins     # List plugins
+hellochusquis cache       # Clear cache
 ```
 
 ### In-Chat Commands:
@@ -48,6 +50,96 @@ hellochusquis cache           # Clear cache
 /clear      # Clear conversation history
 /status    # Show provider status
 /help      # Show available tools
+```
+
+## 🎨 Web UI Themes
+
+- 🌙 Dark (default)
+- ☀️ Light
+- ⚫ Minimal
+- 🌊 Ocean
+- 🌲 Forest
+
+### Web UI Features:
+- ⚙️ Config panel with provider settings
+- 😀 Emoji picker
+- ⌨️ Keyboard shortcuts (Tab, C, ?, Esc)
+- 📤 Export chat (JSON, Markdown, HTML)
+
+## 📦 Integrations (150+)
+
+### Payments & Banking
+Stripe, Square, Plaid, PayPal, Braintree, Adyen, GoCardless
+
+### Communication
+Twilio, SendGrid, Resend, Brevo, Mailgun, Postmark, Intercom, Front
+
+### CRM & Marketing
+HubSpot, Salesforce, Pipedrive, Close, ActiveCampaign, Mailchimp, ConvertKit
+
+### DevOps & Cloud
+Vercel, Supabase, AWS, DigitalOcean, Cloudflare, Netlify, Railway, Render
+
+### Social
+GitHub, Discord, Slack, Telegram, LinkedIn, Twitter, Instagram, Facebook
+
+### Productivity
+Trello, Notion, Airtable, Asana, Linear, Monday, ClickUp, Google Sheets/Calendar
+
+### Storage
+Dropbox, Google Drive, Box, S3, Backblaze, Wasabi, Cloudflare R2
+
+## ⚡ Built-in Functions (100+)
+
+### Time & Date
+`get_current_time`, `get_timestamp`, `calculate_date`, `date_add`
+
+### Hash & Encode
+`hash_string`, `base64_encode`, `url_encode`
+
+### Files
+`file_exists`, `file_size`, `list_directory`, `read_json`, `write_json`
+
+### Data
+`csv_to_json`, `json_to_csv`, `filter_json`, `sort_json`, `group_by`
+
+### Images
+`image_info`, `image_resize`, `image_thumbnail` (PIL)
+
+### Web
+`download_file`, `scrape_html`, `scrape_json`, `check_website`
+
+### Utilities
+`generate_password`, `password_strength`, `qr_code`, `random_string`, `uuid`
+
+## 🛠️ Build Custom Plugins
+
+```bash
+hellochusquis build
+```
+
+Describe what you want to build, and AI will generate the integration!
+
+## REST API
+
+```bash
+hellochusquis api --port 8080
+
+# Chat endpoint
+curl -X POST http://localhost:8080/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello!"}'
+```
+
+Endpoints:
+- `POST /chat` - Send message
+- `GET /status` - Provider status
+- `POST /clear` - Clear history
+
+## 📚 Documentation
+
+- [README](README.md) - This file
+- [docs/index.html](../docs/index.html) - Landing page
 ```
 
 ## 🛠️ Build Custom Plugins
