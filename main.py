@@ -3,7 +3,10 @@ from ui.terminal import print_assistant, print_banner, get_input, print_status
 from core.agent import Agent
 from core.planner import generate_plan, confirm_plan, execute_plan
 from core.learning import add_feedback
+from core.command_palette import open_palette
 from rich.console import Console
+import threading
+import sys
 
 console = Console()
 
@@ -59,6 +62,18 @@ def handle_feedback(user_input: str, history):
     return False
 
 
+def handle_command_palette(agent):
+    """Open command palette."""
+    try:
+        from core.command_palette import open_palette
+        console.print("\n[dim]Opening command palette... (Ctrl+C to exit)[/dim]\n")
+        open_palette(agent)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        console.print(f"[red]Command palette error: {e}[/red]")
+
+
 def main():
     config = ensure_config()
     agent = Agent(config)
@@ -79,6 +94,7 @@ def main():
 
 [bold]Chat:[/bold]
   /help      — Show this help
+  /palette  — Open command palette (Ctrl+P)
   /status    — Provider status
   /clear     — Clear history
   /plan      — Force plan: /plan <task>
@@ -106,6 +122,9 @@ def main():
             elif user_input == "/clear":
                 agent.history.clear()
                 console.print("[dim]History cleared.[/dim]")
+
+            elif user_input == "/palette":
+                handle_command_palette(agent)
 
             elif user_input.startswith("/plan "):
                 task = user_input[6:].strip()
