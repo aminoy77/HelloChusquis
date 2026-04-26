@@ -1,9 +1,10 @@
-# HelloChusquis 🧠✨ v1.5
+# HelloChusquis 🧠✨ v1.6
 
-**HelloChusquis** is an advanced AI terminal agent with 150+ integrations, voice support, auto-tool-builder, and 100+ built-in functions.
+**HelloChusquis** is an advanced AI terminal agent with 150+ integrations, voice support, auto-tool-builder, browser automation, and 100+ built-in functions.
 
-## 🚀 What's New in v1.5
+## 🚀 What's New in v1.6
 
+- **Browser Automation** - Control a real browser with human-like mouse movements
 - **150+ Integrations** - Every popular API and service
 - **Voice I/O** - Speak and listen in web interface (12+ languages)
 - **Auto-Tool-Builder** - Create integrations with `hellochusquis build`
@@ -109,8 +110,44 @@ Dropbox, Google Drive, Box, S3, Backblaze, Wasabi, Cloudflare R2
 ### Web
 `download_file`, `scrape_html`, `scrape_json`, `check_website`
 
+### Browser Automation
+`browser_open`, `browser_click`, `browser_type`, `browser_scroll`, `browser_screenshot`, `browser_search`, `browser_explore`
+
 ### Utilities
 `generate_password`, `password_strength`, `qr_code`, `random_string`, `uuid`
+
+## 🌐 Browser Automation
+
+HelloChusquis can control a real browser with human-like mouse movements:
+
+```bash
+hellochusquis
+# Then ask: "Open Chrome and search for Python tutorials"
+```
+
+### Browser Functions:
+- **browser_open(url)** - Navigate to URL
+- **browser_click(text="Submit")** - Click by text or CSS selector
+- **browser_type(text, selector)** - Type into input fields
+- **browser_scroll(direction, amount)** - Scroll up/down
+- **browser_screenshot(path)** - Take screenshot
+- **browser_search(query, engine)** - Search the web
+- **browser_explore(url, task)** - Explore website for information
+
+### Human-Like Mouse Movement:
+The browser agent uses realistic mouse movements with:
+- Non-linear paths with wobbles
+- Occasional circular micro-movements
+- Small jumps/bumps
+- Variable speed and pauses
+- Natural click timing
+
+Perfect for:
+- Filling surveys
+- Automating web forms
+- Research and data gathering
+- Price comparisons
+- Job applications
 
 ## 🛠️ Build Custom Plugins
 

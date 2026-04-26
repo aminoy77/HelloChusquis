@@ -650,7 +650,7 @@
 
 <!-- HERO -->
 <div class="hero">
-    <div class="hero-badge">v1.5.1 — Open Source — MIT License — 150+ Tools — 100+ Functions</div>
+    <div class="hero-badge">v1.6 — Open Source — MIT License — 150+ Tools — Browser Automation</div>
 
     <h1 class="hero-title">Hello<span>Chusquis</span></h1>
     <p class="hero-sub">Terminal AI Agent · Python · Open Source</p>
@@ -677,11 +677,14 @@
                 <span class="t-cmd">pip install hellochusquis</span>
             </div>
             <div class="t-line">
-                <span class="t-output">✓ Successfully installed hellochusquis-1.5.1</span>
+                <span class="t-output">✓ Successfully installed hellochusquis-1.6.0</span>
             </div>
             <div class="t-line" style="margin-top:8px">
                 <span class="t-prompt">$</span>
                 <span class="t-cmd">hellochusquis</span>
+            </div>
+            <div class="t-line">
+                <span class="t-output">✓ Browser automation ready (human-like mouse)</span>
             </div>
             <div class="t-line">
                 <span class="t-output">✓ Plugin loaded: weather · stocks · browser · wikipedia</span>
@@ -691,22 +694,19 @@
             </div>
             <div class="t-line" style="margin-top:8px">
                 <span class="t-prompt t-comment">You:</span>
-                <span class="t-cmd">haz un informe de las acciones de Apple de los últimos 6 meses y envíalo por email</span>
+                <span class="t-cmd">busca las mejores ofertas de vuelos a Tokio y reserva el más barato</span>
             </div>
             <div class="t-line">
-                <span class="t-output" style="color:var(--amber-dim)">→ stocks(symbol='AAPL', period='6mo')</span>
+                <span class="t-output" style="color:var(--amber-dim)">→ browser_open(url='https://skyscanner.com')</span>
             </div>
             <div class="t-line">
-                <span class="t-output" style="color:var(--amber-dim)">→ websearch(query='AAPL stock news 2024')</span>
+                <span class="t-output" style="color:var(--amber-dim)">→ browser_type(text='Madrid → Tokio')</span>
             </div>
             <div class="t-line">
-                <span class="t-output" style="color:var(--amber-dim)">→ send_email(to='boss@company.com', subject='AAPL Report')</span>
+                <span class="t-output" style="color:var(--amber-dim)">→ browser_click(text='Search')</span>
             </div>
             <div class="t-line">
-                <span class="t-output">✓ Email sent successfully</span>
-            </div>
-            <div class="t-line">
-                <span class="t-output">→ weather(city='Madrid')</span>
+                <span class="t-output">✓ Found 47 flights, best price: €420</span>
             </div>
             <div class="t-line" style="margin-top:8px">
                 <span class="t-prompt t-comment">You:</span>
@@ -788,7 +788,7 @@
         <div class="feature-card">
             <div class="feature-icon">🔍</div>
             <div class="feature-title">Browser Control</div>
-            <div class="feature-desc">Open URLs, search the web via Brave Search, extract text from any page. Real browser automation with Playwright.</div>
+            <div class="feature-desc">Open URLs, search the web, click buttons, fill forms. Real browser automation with human-like mouse movements (wobbles, bumps, variable speed).</div>
         </div>
         <div class="feature-card">
             <div class="feature-icon">📄</div>

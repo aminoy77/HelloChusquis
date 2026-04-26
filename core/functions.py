@@ -261,3 +261,81 @@ def extract_emails(text: str) -> dict:
     pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
     emails = re.findall(pattern, text)
     return {"emails": emails, "count": len(emails)}
+
+
+# Browser automation functions
+def browser_open(url: str) -> dict:
+    """Open a URL in the browser and start automation."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_navigate(url)
+
+
+def browser_click(selector: str = None, text: str = None) -> dict:
+    """Click an element on the page by selector or text."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_click(selector, text)
+
+
+def browser_type(text: str, selector: str = None) -> dict:
+    """Type text into an input field."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_type(text, selector)
+
+
+def browser_scroll(direction: str = 'down', amount: int = 3) -> dict:
+    """Scroll the page up or down."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_scroll(direction, amount)
+
+
+def browser_screenshot(path: str = None, full_page: bool = False) -> dict:
+    """Take a screenshot of the current page."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_screenshot(path, full_page)
+
+
+def browser_get_text(selector: str = None) -> dict:
+    """Get text content from the page or an element."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_get_text(selector)
+
+
+def browser_search(query: str, engine: str = 'google') -> dict:
+    """Search the web using a search engine."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_search(query, engine)
+
+
+def browser_find(pattern: str) -> dict:
+    """Find elements on the page matching a pattern."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_find(pattern)
+
+
+def browser_fill_form(form_data: dict) -> dict:
+    """Fill a form with field-value pairs."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_fill_form(form_data)
+
+
+def browser_close() -> dict:
+    """Close the browser."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_close()
+
+
+def browser_explore(start_url: str, task: str) -> dict:
+    """Explore a website and gather information based on a task."""
+    from tools.browser import get_browser_tools
+    tools = get_browser_tools()
+    return tools.browser_explore(start_url, task)
