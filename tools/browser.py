@@ -42,8 +42,15 @@ class PersistentBrowser:
             asyncio.set_event_loop(self._loop)
 
             async def init():
-                self._agent = await create_browser_agent(headless=False, slow=True, debug=True)
-                print('[PersistentBrowser] Started')
+                agent = create_browser_agent(headless=False, slow=True, debug=True)
+                success = await agent.start()
+                if success:
+                    self._agent = agent
+                    print('[PersistentBrowser] Started')
+                else:
+                    print('[PersistentBrowser] Failed to start')
+                    self._result_queue.put({'success': False, 'error': 'Failed to start browser'})
+                    return
 
                 while True:
                     try:

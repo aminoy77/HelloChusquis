@@ -748,6 +748,118 @@
 
         .export-option:hover { background: var(--surface2); }
 
+        /* COMMAND PALETTE (Ctrl+P) */
+        .command-palette {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--surface);
+            border: 1px solid var(--amber);
+            border-radius: 12px;
+            width: 560px;
+            max-height: 70vh;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .command-palette.show { display: block; }
+
+        .command-palette-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: var(--surface);
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .command-palette-input::placeholder { color: var(--text-dim); }
+
+        .command-palette-section {
+            padding: 8px 0;
+        }
+
+        .command-palette-section-title {
+            padding: 8px 20px 4px;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .command-palette-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .command-palette-item:hover, .command-palette-item.selected {
+            background: var(--surface2);
+        }
+
+        .command-palette-item-icon {
+            font-size: 1.2rem;
+            width: 28px;
+            text-align: center;
+        }
+
+        .command-palette-item-text {
+            flex: 1;
+        }
+
+        .command-palette-item-title {
+            font-size: 0.85rem;
+            color: var(--text);
+        }
+
+        .command-palette-item-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .command-palette-item-shortcut {
+            font-size: 0.65rem;
+            color: var(--amber);
+            background: var(--bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .command-palette-footer {
+            display: flex;
+            gap: 16px;
+            padding: 10px 20px;
+            border-top: 1px solid var(--border);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+        }
+
+        .command-palette-footer span { display: flex; gap: 4px; align-items: center; }
+        .command-palette-footer kbd {
+            background: var(--bg);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+        }
+
+        .command-palette-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
+        }
+        .command-palette-overlay.show { display: block; }
+
         /* PRESETS */
         .preset-badge {
             display: inline-block;
@@ -959,10 +1071,24 @@
         <div class="shortcut-item"><span>Send message</span><span class="shortcut-key">Enter</span></div>
         <div class="shortcut-item"><span>Voice input</span><span class="shortcut-key">V</span></div>
         <div class="shortcut-item"><span>Voice output</span><span class="shortcut-key">S</span></div>
+        <div class="shortcut-item"><span>Command Palette</span><span class="shortcut-key">Ctrl+P</span></div>
         <div class="shortcut-item"><span>Toggle sidebar</span><span class="shortcut-key">Tab</span></div>
         <div class="shortcut-item"><span>Config panel</span><span class="shortcut-key">C</span></div>
         <div class="shortcut-item"><span>Clear input</span><span class="shortcut-key">Esc</span></div>
         <div class="shortcut-item"><span>Shortcuts help</span><span class="shortcut-key">?</span></div>
+    </div>
+
+    <!-- Command Palette -->
+    <div class="command-palette-overlay" id="command-palette-overlay" onclick="closeCommandPalette()"></div>
+    <div class="command-palette" id="command-palette">
+        <input type="text" class="command-palette-input" id="command-palette-input" 
+               placeholder="Type a command..." autocomplete="off">
+        <div id="command-palette-results"></div>
+        <div class="command-palette-footer">
+            <span><kbd>↑↓</kbd> Navigate</span>
+            <span><kbd>Enter</kbd> Select</span>
+            <span><kbd>Esc</kbd> Close</span>
+        </div>
     </div>
 
     <!-- Emoji Picker -->
@@ -1679,6 +1805,11 @@
 
         // Shortcuts
         document.addEventListener('keydown', e => {
+            // Command Palette Ctrl+P
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                openCommandPalette();
+            }
             if (!inputEl.matches(':focus')) {
                 if (e.key === 'v') toggleVoiceInput();
                 if (e.key === 's') toggleVoiceOutput();
@@ -1686,8 +1817,174 @@
                 if (e.key === 'c') toggleConfig();
                 if (e.key === '?') toggleShortcuts();
             }
-            if (e.key === 'Escape') { inputEl.value = ''; }
+            if (e.key === 'Escape') { 
+                closeCommandPalette();
+                inputEl.value = ''; 
+            }
         });
+
+        // Command Palette
+        const defaultCommands = [
+            // Sessions
+            { section: 'Session', icon: '💬', title: 'New Chat', desc: 'Start a new conversation', action: () => newChat() },
+            { section: 'Session', icon: '🗑️', title: 'Clear Chat', desc: 'Clear conversation', action: () => clearChat() },
+            // Models (dynamic from providers)
+            { section: 'Models', icon: '🤖', title: 'GPT-4o', desc: 'OpenAI flagship model', provider: 'openai', action: () => selectModel('openai', 'gpt-4o') },
+            { section: 'Models', icon: '🤖', title: 'GPT-4o Mini', desc: 'Fast and cheap', provider: 'openai', action: () => selectModel('openai', 'gpt-4o-mini') },
+            { section: 'Models', icon: '🤖', title: 'Claude 3.5 Sonnet', desc: 'Anthropic best model', provider: 'anthropic', action: () => selectModel('anthropic', 'claude-3-5-sonnet') },
+            { section: 'Models', icon: '🤖', title: 'Gemini 2.0 Flash', desc: 'Google fast model', provider: 'google', action: () => selectModel('google', 'gemini-2.0-flash') },
+            { section: 'Models', icon: '🤖', title: 'Ollama', desc: 'Local model', provider: 'ollama', action: () => selectModel('ollama', 'llama3') },
+            // Themes
+            { section: 'Appearance', icon: '🌙', title: 'Dark Theme', desc: 'Default dark mode', action: () => setTheme('dark') },
+            { section: 'Appearance', icon: '☀️', title: 'Light Theme', desc: 'Light mode', action: () => setTheme('light') },
+            { section: 'Appearance', icon: '🌊', title: 'Ocean Theme', desc: 'Blue ocean colors', action: () => setTheme('ocean') },
+            { section: 'Appearance', icon: '🌲', title: 'Forest Theme', desc: 'Green forest colors', action: () => setTheme('forest') },
+            // Settings
+            { section: 'Settings', icon: '📝', title: 'Toggle Sidebar', desc: 'Show/hide sidebar', action: () => toggleSidebar() },
+            { section: 'Settings', icon: '⚙️', title: 'Open Config', desc: 'Configuration panel', action: () => toggleConfig() },
+            { section: 'Settings', icon: '🎤', title: 'Voice Input', desc: 'Enable voice input', action: () => toggleVoiceInput() },
+            { section: 'Settings', icon: '🔊', title: 'Voice Output', desc: 'Enable voice output', action: () => toggleVoiceOutput() },
+            // Tools
+            { section: 'Tools', icon: '🌐', title: 'Web Search', desc: 'Toggle web search', action: () => toggleWebSearch() },
+            { section: 'Tools', icon: '📄', title: 'Open Browser', desc: 'Control browser', action: () => openBrowser() },
+            { section: 'Tools', icon: '🖥️', title: 'Code Interpreter', desc: 'Run code', action: () => toggleCodeExec() },
+            // Help
+            { section: 'Help', icon: '⌨️', title: 'Keyboard Shortcuts', desc: 'View all shortcuts', action: () => toggleShortcuts() },
+            { section: 'Help', icon: '📖', title: 'Documentation', desc: 'GitHub docs', action: () => window.open('https://github.com/aminoy77/HelloChusquis', '_blank') },
+        ];
+
+        // Merge dynamic provider commands
+        function getCommands() {
+            const commands = [...defaultCommands];
+            
+            // Add provider-specific models from localStorage
+            const savedProviders = localStorage.getItem('providers_config');
+            if (savedProviders) {
+                try {
+                    const providers = JSON.parse(savedProviders);
+                    Object.entries(providers).forEach(([name, settings]) => {
+                        if (settings.models && settings.models.length > 0) {
+                            settings.models.forEach(model => {
+                                const alreadyExists = commands.some(c => c.title === model);
+                                if (!alreadyExists) {
+                                    commands.push({
+                                        section: 'Models',
+                                        icon: '🤖',
+                                        title: model,
+                                        desc: `Use ${model} with ${name}`,
+                                        provider: name,
+                                        action: () => selectModel(name, model)
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } catch (e) {}
+            }
+            
+            return commands;
+        }
+
+        let commands = getCommands();
+
+        let paletteSelectedIndex = 0;
+        let filteredCommands = [...commands];
+
+        function openCommandPalette() {
+            document.getElementById('command-palette').classList.add('show');
+            document.getElementById('command-palette-overlay').classList.add('show');
+            document.getElementById('command-palette-input').value = '';
+            commands = getCommands();
+            filteredCommands = [...commands];
+            paletteSelectedIndex = 0;
+            renderPaletteResults();
+            document.getElementById('command-palette-input').focus();
+        }
+
+        function closeCommandPalette() {
+            document.getElementById('command-palette').classList.remove('show');
+            document.getElementById('command-palette-overlay').classList.remove('show');
+        }
+
+        function renderPaletteResults() {
+            const container = document.getElementById('command-palette-results');
+            let html = '';
+            let currentSection = '';
+            
+            filteredCommands.forEach((cmd, i) => {
+                if (cmd.section !== currentSection) {
+                    currentSection = cmd.section;
+                    html += `<div class="command-palette-section-title">${currentSection}</div>`;
+                }
+                const selected = i === paletteSelectedIndex ? 'selected' : '';
+                html += `<div class="command-palette-item ${selected}" onclick="executeCommand(${i})">
+                    <span class="command-palette-item-icon">${cmd.icon}</span>
+                    <div class="command-palette-item-text">
+                        <div class="command-palette-item-title">${cmd.title}</div>
+                        <div class="command-palette-item-desc">${cmd.desc}</div>
+                    </div>
+                    ${cmd.shortcut ? `<span class="command-palette-item-shortcut">${cmd.shortcut}</span>` : ''}
+                </div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function executeCommand(index) {
+            const cmd = filteredCommands[index];
+            if (cmd && cmd.action) {
+                cmd.action();
+                closeCommandPalette();
+            }
+        }
+
+        // Palette input handler
+        document.getElementById('command-palette-input').addEventListener('input', e => {
+            const query = e.target.value.toLowerCase();
+            filteredCommands = query ? commands.filter(c => 
+                c.title.toLowerCase().includes(query) || 
+                c.desc.toLowerCase().includes(query) ||
+                c.section.toLowerCase().includes(query)
+            ) : [...commands];
+            paletteSelectedIndex = 0;
+            renderPaletteResults();
+        });
+
+        document.getElementById('command-palette-input').addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                paletteSelectedIndex = Math.min(paletteSelectedIndex + 1, filteredCommands.length - 1);
+                renderPaletteResults();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                paletteSelectedIndex = Math.max(paletteSelectedIndex - 1, 0);
+                renderPaletteResults();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                executeCommand(paletteSelectedIndex);
+            }
+        });
+
+        // Helper functions
+        function setProvider(p) { updateConfig('provider', p); showToast(`Provider: ${p}`); }
+        
+        function selectModel(provider, model) {
+            updateConfig('provider', provider);
+            updateConfig('model', model);
+            showToast(`${model} selected (${provider})`);
+        }
+        
+        function newChat() { clearChat(); showToast('New chat started'); }
+        function clearChat() { document.getElementById('chat-container').innerHTML = ''; }
+        function toggleWebSearch() { toggleSwitch('toggle-search'); }
+        function toggleCodeExec() { toggleSwitch('toggle-code'); }
+        function openBrowser() { 
+            const url = prompt('Enter URL:', 'https://example.com');
+            if (url) {
+                addMessage('user', `Open browser and navigate to: ${url}`);
+                setTimeout(() => sendMessage(), 100);
+            }
+        }
 
         // Shortcuts Panel
         function toggleShortcuts() {

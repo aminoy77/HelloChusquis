@@ -5,9 +5,7 @@ Controls a browser instance for web exploration.
 
 import asyncio
 import base64
-import io
 import json
-import os
 import random
 import re
 import time
@@ -29,7 +27,7 @@ class BrowserConfig:
     user_agent: str = None
     accept_downloads: bool = False
     slow_mo: int = 0
-    stealth: bool = True  # Avoid detection
+    stealth: bool = True
 
     @classmethod
     def default(cls):
@@ -50,8 +48,6 @@ class BrowserState:
 class BrowserAgent:
     """
     Browser automation agent with human-like mouse movements.
-
-    Can explore websites, fill forms, click elements, scroll, and gather information.
     """
 
     def __init__(
@@ -88,7 +84,6 @@ class BrowserAgent:
                     ] if self.config.stealth else []
                 )
 
-            # Create context with appropriate settings
             context_options = {
                 'viewport': {'width': self.config.window_width, 'height': self.config.window_height},
             }
@@ -102,9 +97,9 @@ class BrowserAgent:
             self.context = await self.browser.new_context(**context_options)
             self.context.set_default_timeout(30000)
 
-            # Inject stealth scripts
-            if self.config.stealth:
-                await self._inject_stealth_scripts()
+            # Disable stealth for testing (causes issues with some sites)
+            # if self.config.stealth:
+            #     await self._inject_stealth_scripts()
 
             self.page = await self.context.new_page()
             await self.page.set_viewport_size({
@@ -112,7 +107,6 @@ class BrowserAgent:
                 'height': self.config.window_height
             })
 
-            # Track state changes
             self.page.on('load', self._on_page_load)
             self.page.on('crash', self._on_page_crash)
 
@@ -141,7 +135,6 @@ class BrowserAgent:
     async def navigate(self, url: str, wait_until: str = "networkidle") -> bool:
         """Navigate to URL with human-like behavior."""
         try:
-            # Simulate human typing URL if no scheme
             if not url.startswith(('http://', 'https://')):
                 url = 'https://' + url
 
@@ -149,12 +142,8 @@ class BrowserAgent:
                 print(f"[BrowserAgent] Navigating to: {url}")
 
             response = await self.page.goto(url, wait_until=wait_until, timeout=30000)
-
-            # Update state
             self.state.url = url
             self.state.title = await self.page.title()
-
-            # Small delay to simulate reading
             await asyncio.sleep(random.uniform(0.5, 1.5))
 
             return response is not None
@@ -164,7 +153,7 @@ class BrowserAgent:
                 print(f"[BrowserAgent] Navigation failed: {e}")
             return False
 
-async def click_element(
+    async def click_element(
         self,
         selector: str = None,
         xpath: str = None,
@@ -188,9 +177,7 @@ async def click_element(
                     print(f"[BrowserAgent] Element not found")
                 return False
 
-            # Get the element handle
-            element = await locator.nth(index)
-
+            element = locator.nth(index)
             box = await element.bounding_box()
             if not box:
                 return False
@@ -201,15 +188,11 @@ async def click_element(
             if human:
                 current_pos = await self._get_current_mouse_position()
                 await self._human_move_to(current_pos['x'], current_pos['y'], click_x, click_y)
-
-                # Human-like pause before click
                 await asyncio.sleep(random.uniform(0.1, 0.3))
-
                 await self.page.mouse.click(click_x, click_y)
             else:
                 await self.page.mouse.click(click_x, click_y)
 
-            # Small delay after click
             await asyncio.sleep(random.uniform(0.2, 0.5))
 
             if self.debug:
@@ -232,19 +215,17 @@ async def click_element(
         """Type text with human-like timing."""
         try:
             if selector:
-                element = await self.page.query_selector(selector)
-                if element:
-                    await element.click()
-                    if clear_first:
-                        await element.fill('')
+                element = self.page.locator(selector)
+                await element.click()
+                if clear_first:
+                    await element.fill('')
 
             if human:
-                # Type with variable delays
                 for char in text:
                     await self.page.keyboard.type(char)
                     delay = random.uniform(0.03, 0.12)
                     if random.random() < 0.05:
-                        delay += random.uniform(0.1, 0.3)  # Occasional pause
+                        delay += random.uniform(0.1, 0.3)
                     await asyncio.sleep(delay)
             else:
                 await self.page.keyboard.type(text)
@@ -271,12 +252,8 @@ async def click_element(
                 scroll_amount = random.randint(300, 600) if direction == "down" else random.randint(-600, -300)
 
                 if human:
-                    # Add slight horizontal drift
                     drift = random.uniform(-50, 50)
-                    await self.page.evaluate(f"""
-                        window.scrollBy({drift}, {scroll_amount})
-                    """)
-                    # Variable delay between scrolls
+                    await self.page.evaluate(f"window.scrollBy({drift}, {scroll_amount})")
                     await asyncio.sleep(random.uniform(0.1, 0.4))
                 else:
                     await self.page.evaluate(f"window.scrollBy(0, {scroll_amount})")
@@ -296,9 +273,9 @@ async def click_element(
         try:
             element = None
             if selector:
-                element = await self.page.query_selector(selector)
+                element = self.page.locator(selector)
             elif xpath:
-                element = await self.page.query_selector(f'xpath={xpath}')
+                element = self.page.locator(f'xpath={xpath}')
 
             if not element:
                 return False
@@ -312,8 +289,6 @@ async def click_element(
 
             current_pos = await self._get_current_mouse_position()
             await self._human_move_to(current_pos['x'], current_pos['y'], x, y)
-
-            # Human-like hover duration
             await asyncio.sleep(random.uniform(0.3, 0.8))
 
             return True
@@ -330,7 +305,6 @@ async def click_element(
                 return await self.page.screenshot(full_page=True)
             else:
                 return await self.page.screenshot()
-
         except Exception as e:
             if self.debug:
                 print(f"[BrowserAgent] Screenshot failed: {e}")
@@ -362,9 +336,8 @@ async def click_element(
         """Get text content from page or element."""
         try:
             if selector:
-                element = await self.page.query_selector(selector)
-                if element:
-                    return await element.inner_text()
+                element = self.page.locator(selector)
+                return await element.inner_text()
             return await self.page.inner_text('body')
         except Exception:
             return ""
@@ -372,7 +345,6 @@ async def click_element(
     async def find_elements(self, pattern: str, case_sensitive: bool = False) -> List[Dict]:
         """Find elements matching a pattern (text or attribute)."""
         try:
-            # Use JavaScript to find elements
             js = f"""
             (function() {{
                 const pattern = /{re.escape(pattern)}/{'i' if not case_sensitive else ''};
@@ -412,11 +384,6 @@ async def click_element(
                 print(f"[BrowserAgent] Find failed: {e}")
             return []
 
-    async def search_google(self, query: str) -> bool:
-        """Search Google with the query."""
-        query_encoded = requests.utils.quote(query)
-        return await self.navigate(f"https://www.google.com/search?q={query_encoded}")
-
     async def search(self, search_engine: str, query: str) -> bool:
         """Search using specified engine."""
         query_encoded = requests.utils.quote(query)
@@ -435,7 +402,6 @@ async def click_element(
         """Fill a form with data."""
         try:
             for field_name, value in form_data.items():
-                # Try different selectors
                 selectors = [
                     f'[name="{field_name}"]',
                     f'#id_{field_name}',
@@ -446,14 +412,16 @@ async def click_element(
 
                 element = None
                 for selector in selectors:
-                    element = await self.page.query_selector(selector)
-                    if element:
-                        break
+                    try:
+                        element = self.page.locator(selector)
+                        if await element.count() > 0:
+                            break
+                    except:
+                        pass
 
                 if element:
                     await element.click()
                     await element.fill(value)
-                    # Variable typing speed
                     await asyncio.sleep(random.uniform(0.1, 0.3))
                 else:
                     if self.debug:
@@ -469,14 +437,12 @@ async def click_element(
     async def submit_form(self, selector: str = "form") -> bool:
         """Submit a form."""
         try:
-            form = await self.page.query_selector(selector)
-            if form:
+            form = self.page.locator(selector)
+            if await form.count() > 0:
                 await form.evaluate('form => form.submit()')
                 return True
 
-            # Try finding submit button
-            return await self.click_element('button[type="submit"]') or \
-                   await self.click_element('input[type="submit"]')
+            return await self.click_element('button[type="submit"]') or await self.click_element('input[type="submit"]')
 
         except Exception as e:
             if self.debug:
@@ -499,28 +465,6 @@ async def click_element(
         except Exception:
             return False
 
-    async def get_cookies(self) -> List[Dict]:
-        """Get current page cookies."""
-        try:
-            return await self.context.cookies()
-        except Exception:
-            return []
-
-    async def set_cookies(self, cookies: List[Dict]):
-        """Set cookies."""
-        try:
-            await self.context.add_cookies(cookies)
-        except Exception:
-            pass
-
-    async def get_local_storage(self, key: str = None) -> Dict:
-        """Get localStorage data."""
-        if key:
-            result = await self.page.evaluate(f"return localStorage.getItem('{key}')")
-            return result
-        else:
-            return await self.page.evaluate("return Object.assign({}, localStorage)")
-
     async def execute_script(self, script: str) -> Any:
         """Execute JavaScript on the page."""
         try:
@@ -530,7 +474,6 @@ async def click_element(
                 print(f"[BrowserAgent] Script failed: {e}")
             return None
 
-    # Helper methods
     async def _get_current_mouse_position(self) -> Dict[str, int]:
         """Get current mouse position."""
         return await self.page.evaluate("""
@@ -542,7 +485,6 @@ async def click_element(
 
     async def _human_move_to(self, from_x: int, from_y: int, to_x: int, to_y: int):
         """Move mouse with human-like behavior."""
-        # Convert async to sync for the human mouse
         self.human_mouse.move_to(
             (from_x, from_y),
             (to_x, to_y),
@@ -550,7 +492,6 @@ async def click_element(
                 self.page.mouse.move(x, y)
             )
         )
-        # Actually move
         await self.page.mouse.move(int(to_x), int(to_y))
 
     async def _on_page_load(self, page):
@@ -584,54 +525,7 @@ async def click_element(
         await self.close()
 
 
-class BrowserSurvey(BrowserAgent):
-    """
-    Specialized browser agent for filling out surveys and forms.
-    """
-
-    async def fill_survey(self, answers: Dict[str, Any]) -> Dict[str, bool]:
-        """Fill a survey with answers."""
-        results = {}
-
-        for question, answer in answers.items():
-            try:
-                # Try to find the question/field
-                found = await self.find_elements(question)
-
-                if found:
-                    element_info = found[0]
-                    x = element_info['x'] + element_info['width'] / 2
-                    y = element_info['y'] + element_info['height'] / 2
-
-                    await self._human_move_to(0, 0, x, y)
-                    await asyncio.sleep(0.3)
-                    await self.page.mouse.click(x, y)
-
-                    if isinstance(answer, str):
-                        await self.type_text(answer)
-                    elif isinstance(answer, bool):
-                        # Check/uncheck
-                        await self.page.keyboard.press('Space')
-                    elif isinstance(answer, int):
-                        # Option selection
-                        for _ in range(answer):
-                            await self.page.keyboard.press('ArrowDown')
-                        await self.page.keyboard.press('Enter')
-
-                    results[question] = True
-                else:
-                    results[question] = False
-
-            except Exception as e:
-                results[question] = False
-                if self.debug:
-                    print(f"Failed to answer: {question} - {e}")
-
-        return results
-
-
-# Utility functions
-async def create_browser_agent(
+def create_browser_agent(
     headless: bool = False,
     slow: bool = True,
     debug: bool = False
@@ -647,5 +541,5 @@ async def create_browser_agent(
     mouse = get_cautious_human_mouse() if slow else get_human_mouse()
 
     agent = BrowserAgent(config=config, human_mouse=mouse, debug=debug)
-    await agent.start()
+    # Note: caller must call agent.start() and await it
     return agent
