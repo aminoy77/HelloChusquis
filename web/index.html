@@ -934,23 +934,6 @@
         </div>
         
         <div class="config-section">
-            <div class="config-label">Active Provider</div>
-            <select id="config-provider" class="config-value" style="width: 100%; color: var(--text);" onchange="onProviderChange(this.value)">
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="google">Google</option>
-                <option value="ollama">Ollama</option>
-                <option value="openrouter">OpenRouter</option>
-            </select>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Model</div>
-            <select id="config-model" class="config-value" style="width: 100%; color: var(--text);" onchange="updateConfig('model', this.value)">
-            </select>
-        </div>
-        
-        <div class="config-section">
             <div class="config-label">Temperature</div>
             <input type="range" id="config-temperature" min="0" max="2" step="0.1" value="0.7" 
                 style="width: 100%;" oninput="updateConfig('temperature', this.value)">
@@ -1183,8 +1166,6 @@
 
         // Apply config to UI
         function applyConfig() {
-            document.getElementById('config-provider').value = config.provider;
-            document.getElementById('config-model').value = config.model;
             document.getElementById('config-temperature').value = config.temperature;
             document.getElementById('temp-value').textContent = config.temperature;
             document.getElementById('config-maxtokens').value = config.max_tokens;
@@ -1201,59 +1182,6 @@
         }
 
         // Update config
-        function onProviderChange(provider) {
-            updateConfig('provider', provider);
-            
-            const modelSelect = document.getElementById('config-model');
-            modelSelect.innerHTML = '';
-            
-            const modelsByProvider = {
-                'openai': [
-                    {value: 'gpt-4o', label: 'GPT-4o'},
-                    {value: 'gpt-4o-mini', label: 'GPT-4o Mini'},
-                    {value: 'gpt-4-turbo', label: 'GPT-4 Turbo'},
-                    {value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo'},
-                ],
-                'anthropic': [
-                    {value: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet'},
-                    {value: 'claude-3-5-haiku', label: 'Claude 3.5 Haiku'},
-                    {value: 'claude-3-opus', label: 'Claude 3 Opus'},
-                    {value: 'claude-3-haiku', label: 'Claude 3 Haiku'},
-                ],
-                'google': [
-                    {value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash'},
-                    {value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro'},
-                    {value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash'},
-                ],
-                'ollama': [
-                    {value: 'llama3', label: 'Llama 3'},
-                    {value: 'llama3.1', label: 'Llama 3.1'},
-                    {value: 'mistral', label: 'Mistral'},
-                    {value: 'codellama', label: 'CodeLlama'},
-                    {value: 'phi3', label: 'Phi-3'},
-                ],
-                'openrouter': [
-                    {value: 'openai/gpt-4o', label: 'GPT-4o (OpenRouter)'},
-                    {value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 (OpenRouter)'},
-                    {value: 'google/gemini-2.0-flash', label: 'Gemini 2.0 (OpenRouter)'},
-                    {value: 'meta-llama/llama-3.1-70b', label: 'Llama 3.1 70B'},
-                ],
-            };
-            
-            const models = modelsByProvider[provider] || [];
-            models.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.value;
-                opt.textContent = m.label;
-                modelSelect.appendChild(opt);
-            });
-            
-            if (models.length > 0) {
-                modelSelect.value = models[0].value;
-                updateConfig('model', models[0].value);
-            }
-        }
-
         function updateConfig(key, value) {
             config[key] = value;
             localStorage.setItem('hellochusquis_config', JSON.stringify(config));
