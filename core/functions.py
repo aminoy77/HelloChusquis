@@ -265,77 +265,85 @@ def extract_emails(text: str) -> dict:
 
 # Browser automation functions
 def browser_open(url: str) -> dict:
-    """Open a URL in the browser and start automation."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_navigate(url)
+    """Open a URL in the browser and keep it open."""
+    from tools.browser import browser_open as _browser_open
+    return _browser_open(url)
 
 
 def browser_click(selector: str = None, text: str = None) -> dict:
     """Click an element on the page by selector or text."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_click(selector, text)
+    from tools.browser import browser_click as _browser_click
+    return _browser_click(selector, text)
 
 
 def browser_type(text: str, selector: str = None) -> dict:
     """Type text into an input field."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_type(text, selector)
+    from tools.browser import browser_type as _browser_type
+    return _browser_type(text, selector)
 
 
 def browser_scroll(direction: str = 'down', amount: int = 3) -> dict:
     """Scroll the page up or down."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_scroll(direction, amount)
+    from tools.browser import browser_scroll as _browser_scroll
+    return _browser_scroll(direction, amount)
 
 
 def browser_screenshot(path: str = None, full_page: bool = False) -> dict:
     """Take a screenshot of the current page."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_screenshot(path, full_page)
+    from tools.browser import browser_screenshot as _browser_screenshot
+    return _browser_screenshot(path)
 
 
 def browser_get_text(selector: str = None) -> dict:
     """Get text content from the page or an element."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_get_text(selector)
+    from tools.browser import browser_get_text as _browser_get_text
+    return _browser_get_text(selector)
 
 
 def browser_search(query: str, engine: str = 'google') -> dict:
     """Search the web using a search engine."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_search(query, engine)
+    from tools.browser import browser_search as _browser_search
+    return _browser_search(query, engine)
 
 
 def browser_find(pattern: str) -> dict:
     """Find elements on the page matching a pattern."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_find(pattern)
+    from tools.browser import browser_find as _browser_find
+    return _browser_find(pattern)
 
 
 def browser_fill_form(form_data: dict) -> dict:
     """Fill a form with field-value pairs."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_fill_form(form_data)
+    return {'error': 'Use browser_click and browser_type to fill forms manually'}
 
 
 def browser_close() -> dict:
     """Close the browser."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_close()
+    from tools.browser import browser_close as _browser_close
+    return _browser_close()
 
 
 def browser_explore(start_url: str, task: str) -> dict:
     """Explore a website and gather information based on a task."""
-    from tools.browser import get_browser_tools
-    tools = get_browser_tools()
-    return tools.browser_explore(start_url, task)
+    from tools.browser import browser_find
+    from tools.browser import browser_get_text
+
+    # Open the URL
+    result = browser_open(start_url)
+    if not result.get('success'):
+        return result
+
+    # Find elements matching task
+    find_result = browser_find(task)
+
+    # Get page text
+    text_result = browser_get_text()
+
+    return {
+        'success': True,
+        'url': result.get('url'),
+        'title': result.get('title'),
+        'found_count': find_result.get('count', 0),
+        'elements': find_result.get('elements', []),
+        'text': text_result.get('text', '')[:2000]
+    }
