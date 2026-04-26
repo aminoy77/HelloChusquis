@@ -791,7 +791,6 @@
                 <button class="header-btn" id="toggle-config" onclick="toggleConfig()">⚙ Config</button>
                 <button class="header-btn" onclick="toggleShortcuts()" title="Keyboard Shortcuts">⌨️</button>
                 <button class="header-btn" onclick="toggleExportMenu()" title="Export Chat">📤</button>
-                <button class="header-btn" onclick="toggleEmojiPicker()" title="Emoji">😀</button>
             </div>
             <select id="language-select" class="language-selector" onchange="changeLanguage(this.value)">
                 <option value="auto">🌐 Auto</option>
@@ -820,12 +819,6 @@
         <div class="config-section">
             <div class="config-label">Profile</div>
             <input type="text" id="config-profile" class="config-value" value="default" style="width: 100%; color: var(--text);">
-        </div>
-        
-        <!-- PROVIDERS SECTION -->
-        <div class="config-section" style="padding-top: 12px; border-top: 1px solid var(--border);">
-            <div class="config-label">🤖 Providers</div>
-            <div id="providers-config"></div>
         </div>
         
         <div class="config-section">

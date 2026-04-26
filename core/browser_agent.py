@@ -164,7 +164,7 @@ class BrowserAgent:
                 print(f"[BrowserAgent] Navigation failed: {e}")
             return False
 
-    async def click_element(
+async def click_element(
         self,
         selector: str = None,
         xpath: str = None,
@@ -174,23 +174,22 @@ class BrowserAgent:
     ) -> bool:
         """Click an element with human-like mouse movement."""
         try:
-            element = None
+            locator = None
 
             if selector:
-                elements = await self.page.query_selector_all(selector)
-                if elements:
-                    element = elements[index] if index < len(elements) else elements[0]
+                locator = self.page.locator(selector)
             elif xpath:
-                elements = await self.page.query_selector_all(f'xpath={xpath}')
-                if elements:
-                    element = elements[index] if index < len(elements) else elements[0]
+                locator = self.page.locator(f'xpath={xpath}')
             elif text:
-                element = await self.page.get_by_text(text, exact=False).first
+                locator = self.page.get_by_text(text, exact=False)
 
-            if not element:
+            if not locator:
                 if self.debug:
                     print(f"[BrowserAgent] Element not found")
                 return False
+
+            # Get the element handle
+            element = await locator.nth(index)
 
             box = await element.bounding_box()
             if not box:
