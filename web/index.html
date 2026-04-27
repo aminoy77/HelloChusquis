@@ -983,6 +983,14 @@
                 <span>Play sound on response</span>
             </div>
         </div>
+
+        <div class="config-section">
+            <div class="config-label">Streaming</div>
+            <div class="config-toggle">
+                <div class="toggle-switch" id="toggle-stream" onclick="toggleStream()"></div>
+                <span>Stream responses</span>
+            </div>
+        </div>
         
         <div class="config-section">
             <div class="config-label">Theme</div>
@@ -1328,9 +1336,7 @@
                     </div>
                 `).join('');
 
-                // Render providers config panel
-                renderProvidersConfig(data.providers);
-
+                // Render plugins list
                 document.getElementById('plugins-list').innerHTML = data.plugins.length
                     ? data.plugins.map(p => `
                         <div class="sidebar-item">
@@ -1952,7 +1958,7 @@
         }
         
         function newChat() { clearChat(); showToast('New chat started'); }
-        function clearChat() { document.getElementById('chat-container').innerHTML = ''; }
+        function clearChat() { document.getElementById('messages').innerHTML = ''; }
         function toggleWebSearch() { toggleSwitch('toggle-search'); }
         function toggleCodeExec() { toggleSwitch('toggle-code'); }
         function openBrowser() { 

@@ -12,7 +12,7 @@ from tools.base import ToolResult
 from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
 from core.security_evaluator import evaluate_command_safety
-from ui.terminal import print_tool_call, print_tool_result
+from ui.terminal import print_tool_call, print_tool_result, console
 
 # Import tool modules directly (they provide run functions)
 import tools.github as github_module
@@ -878,9 +878,6 @@ class Agent:
 
         if name == "web_search":
             return self.websearch.run(**args)
-
-        if name == "github":
-            return self.github.run(**args)
 
         if name == "files":
             path = args.get("path", "")
