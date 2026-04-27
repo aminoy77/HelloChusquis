@@ -4,3 +4,20 @@ __pycache__/
 *.egg-info/
 .DS_Store
 ~/.openmanolo/
+
+# Flutter/Android/MacOS (not HelloChusquis)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+android/
+lib/
+macos/
+build/
+pubspec.lock
+pubspec.yaml
+l10n.yaml
+.metadata
+analysis_options.yaml
+study_flow.iml
+.idea/
+.cli.py

@@ -31,14 +31,13 @@ def is_complex(text: str) -> bool:
     if lower in FORCE_SIMPLE_KEYWORDS:
         return False
 
-    if len(text.split()) <= 5:
-        return False
-
     for kw in FORCE_PLAN_KEYWORDS:
         if kw in lower:
             return True
 
-    # Solo llama al LLM si tiene más de 10 palabras y no es claramente simple
+    if len(text.split()) <= 5:
+        return False
+
     if len(text.split()) > 10:
         return True
 
