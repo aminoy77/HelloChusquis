@@ -1,0 +1,188 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.studyflow.study_flow"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+9        android:targetSdkVersion="34" />
+10    <!--
+11         The INTERNET permission is required for development. Specifically,
+12         the Flutter tool needs it to communicate with the running application
+13         to allow setting breakpoints, to provide hot reload, etc.
+14    -->
+15    <uses-permission android:name="android.permission.INTERNET" />
+15-->/Users/Arni/Desktop/HelloChusquis/android/app/src/debug/AndroidManifest.xml:6:5-66
+15-->/Users/Arni/Desktop/HelloChusquis/android/app/src/debug/AndroidManifest.xml:6:22-64
+16    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+16-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:2:5-80
+16-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:2:22-78
+17    <uses-permission android:name="android.permission.VIBRATE" />
+17-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:3:5-66
+17-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:3:22-63
+18    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+18-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:4:5-76
+18-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:4:22-74
+19    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+19-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:5:5-79
+19-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:5:22-76
+20    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+20-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:6:5-74
+20-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:6:22-71
+21
+22    <queries>
+22-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:45:5-50:15
+23        <intent>
+23-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:46:9-49:18
+24            <action android:name="android.intent.action.PROCESS_TEXT" />
+24-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:47:13-72
+24-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:47:21-70
+25
+26            <data android:mimeType="text/plain" />
+26-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:48:13-50
+26-->/Users/Arni/Desktop/HelloChusquis/android/app/src/main/AndroidManifest.xml:48:19-48
+27        </intent>
+28    </queries>
+29
+30    <permission
+30-->[androidx.core:core:1.13.1] /Users/Arni/.gradle/caches/transforms-3/224f0fbc26251264e5f0e899abc2f06c/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+31        android:name="com.studyflow.study_flow.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+31-->[androidx.core:core:1.13.1] /Users/Arni/.gradle/caches/transforms-3/224f0fbc26251264e5f0e899abc2f06c/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+32        android:protectionLevel="signature" />
+32-->[androidx.core:core:1.13.1] /Users/Arni/.gradle/caches/transforms-3/224f0fbc26251264e5f0e899abc2f06c/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+33
+34    <uses-permission android:name="com.studyflow.study_flow.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+34-->[androidx.core:core:1.13.1] /Users/Arni/.gradle/caches/transforms-3/224f0fbc26251264e5f0e899abc2f06c/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+34-->[androidx.core:core:1.13.1] /Users/Arni/.gradle/caches/transforms-3/224f0fbc26251264e5f0e899abc2f06c/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+35
+36    <application
+37        android:name="android.app.Application"
+38        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+38-->[androidx.core:core:1.13.1] /Users/Arni/.gradle/caches/transforms-3/224f0fbc26251264e5f0e899abc2f06c/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
+39        android:debuggable="true"
+40        android:extractNativeLibs="true"
+41        android:icon="@mipmap/ic_launcher"
+42        android:label="StudyFlow" >
+43        <activity
+44            android:name="com.studyflow.study_flow.MainActivity"
+45            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+46            android:exported="true"
+47            android:hardwareAccelerated="true"
+48            android:launchMode="singleTop"
+49            android:taskAffinity=""
+50            android:theme="@style/LaunchTheme"
+51            android:windowSoftInputMode="adjustResize" >
+52            <meta-data
+53                android:name="io.flutter.embedding.android.NormalTheme"
+54                android:resource="@style/NormalTheme" />
+55
+56            <intent-filter>
+57                <action android:name="android.intent.action.MAIN" />
+58
+59                <category android:name="android.intent.category.LAUNCHER" />
+60            </intent-filter>
+61        </activity>
+62
+63        <receiver
+64            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+65            android:exported="false" />
+66        <receiver
+67            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+68            android:exported="false" >
+69            <intent-filter>
+70                <action android:name="android.intent.action.BOOT_COMPLETED" />
+71                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+72                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+73                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+74            </intent-filter>
+75        </receiver>
+76
+77        <meta-data
+78            android:name="flutterEmbedding"
+79            android:value="2" />
+80
+81        <activity
+81-->[:url_launcher_android] /Users/Arni/Desktop/HelloChusquis/build/url_launcher_android/intermediates/merged_manifest/debug/AndroidManifest.xml:8:9-11:74
+82            android:name="io.flutter.plugins.urllauncher.WebViewActivity"
+82-->[:url_launcher_android] /Users/Arni/Desktop/HelloChusquis/build/url_launcher_android/intermediates/merged_manifest/debug/AndroidManifest.xml:9:13-74
+83            android:exported="false"
+83-->[:url_launcher_android] /Users/Arni/Desktop/HelloChusquis/build/url_launcher_android/intermediates/merged_manifest/debug/AndroidManifest.xml:10:13-37
+84            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
+84-->[:url_launcher_android] /Users/Arni/Desktop/HelloChusquis/build/url_launcher_android/intermediates/merged_manifest/debug/AndroidManifest.xml:11:13-71
+85
+86        <uses-library
+86-->[androidx.window:window:1.2.0] /Users/Arni/.gradle/caches/transforms-3/3b4b00cec8638ce4abd40fb7f7c3b32f/transformed/jetified-window-1.2.0/AndroidManifest.xml:23:9-25:40
+87            android:name="androidx.window.extensions"
+87-->[androidx.window:window:1.2.0] /Users/Arni/.gradle/caches/transforms-3/3b4b00cec8638ce4abd40fb7f7c3b32f/transformed/jetified-window-1.2.0/AndroidManifest.xml:24:13-54
+88            android:required="false" />
+88-->[androidx.window:window:1.2.0] /Users/Arni/.gradle/caches/transforms-3/3b4b00cec8638ce4abd40fb7f7c3b32f/transformed/jetified-window-1.2.0/AndroidManifest.xml:25:13-37
+89        <uses-library
+89-->[androidx.window:window:1.2.0] /Users/Arni/.gradle/caches/transforms-3/3b4b00cec8638ce4abd40fb7f7c3b32f/transformed/jetified-window-1.2.0/AndroidManifest.xml:26:9-28:40
+90            android:name="androidx.window.sidecar"
+90-->[androidx.window:window:1.2.0] /Users/Arni/.gradle/caches/transforms-3/3b4b00cec8638ce4abd40fb7f7c3b32f/transformed/jetified-window-1.2.0/AndroidManifest.xml:27:13-51
+91            android:required="false" />
+91-->[androidx.window:window:1.2.0] /Users/Arni/.gradle/caches/transforms-3/3b4b00cec8638ce4abd40fb7f7c3b32f/transformed/jetified-window-1.2.0/AndroidManifest.xml:28:13-37
+92
+93        <provider
+93-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/Arni/.gradle/caches/transforms-3/df9ebbbd3a977e022842e6dc84125e20/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
+94            android:name="androidx.startup.InitializationProvider"
+94-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/Arni/.gradle/caches/transforms-3/df9ebbbd3a977e022842e6dc84125e20/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:25:13-67
+95            android:authorities="com.studyflow.study_flow.androidx-startup"
+95-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/Arni/.gradle/caches/transforms-3/df9ebbbd3a977e022842e6dc84125e20/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:26:13-68
+96            android:exported="false" >
+96-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/Arni/.gradle/caches/transforms-3/df9ebbbd3a977e022842e6dc84125e20/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:27:13-37
+97            <meta-data
+97-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/Arni/.gradle/caches/transforms-3/df9ebbbd3a977e022842e6dc84125e20/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+98                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+98-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/Arni/.gradle/caches/transforms-3/df9ebbbd3a977e022842e6dc84125e20/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+99                android:value="androidx.startup" />
+99-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/Arni/.gradle/caches/transforms-3/df9ebbbd3a977e022842e6dc84125e20/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+100            <meta-data
+100-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+101                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+101-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+102                android:value="androidx.startup" />
+102-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+103        </provider>
+104
+105        <receiver
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+106            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+107            android:directBootAware="false"
+107-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+108            android:enabled="true"
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+109            android:exported="true"
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+110            android:permission="android.permission.DUMP" >
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+111            <intent-filter>
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+112                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+113            </intent-filter>
+114            <intent-filter>
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+115                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+116            </intent-filter>
+117            <intent-filter>
+117-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+118                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+119            </intent-filter>
+120            <intent-filter>
+120-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+121                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/Arni/.gradle/caches/transforms-3/a54fddec96efaf6ce994e81b54232816/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+122            </intent-filter>
+123        </receiver>
+124    </application>
+125
+126</manifest>
