@@ -1,8 +1,8 @@
-# HelloChusquis 🧠✨ v1.6
+# HelloChusquis 🧠✨ v1.0.0
 
 **HelloChusquis** is an advanced AI terminal agent with 150+ integrations, voice support, auto-tool-builder, browser automation, and 100+ built-in functions.
 
-## 🚀 What's New in v1.6
+## 🚀 What's New in v1.0.0
 
 - **Browser Automation** - Control a real browser with human-like mouse movements
 - **150+ Integrations** - Every popular API and service
