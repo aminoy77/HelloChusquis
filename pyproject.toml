@@ -27,10 +27,15 @@ dependencies = [
 Homepage = "https://github.com/aminoy77/HelloChusquis"
 
 [project.scripts]
-hellochusquis = "main:main"
+hellochusquis = "cli:main"
+
+[tool.setuptools]
+py-modules = ["main", "cli"]
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["core*", "tools*", "ui*", "web*", "api*", "workspace*"]
+exclude = ["tests*", "docs*"]
 
 [tool.setuptools.package-data]
 "web" = ["*.html"]
