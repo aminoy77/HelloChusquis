@@ -212,7 +212,6 @@ class ProviderPool:
                 continue
             except (httpx.TimeoutException, httpx.ConnectError) as e:
                 provider.failed_calls += 1
-                console.print(f"[yellow]↻ {provider.name} {e.__class__.__name__}[/yellow]")
                 logger.debug("%s error for provider %s: %s", e.__class__.__name__, provider.name, e)
                 last_error = e
                 continue
@@ -225,6 +224,7 @@ class ProviderPool:
         """Log and mark the provider based on HTTP status codes.
 
         The provider is marked *exhausted* for rate-limit, quota, or auth errors.
+        Silently skips without showing errors to the user.
         """
         status = error.response.status_code
         try:
@@ -232,31 +232,20 @@ class ProviderPool:
         except Exception:
             error_msg = ""
 
-        if status == 429:
-            console.print(f"[yellow]↻ {provider.name} rate limited[/yellow]")
-            provider.exhausted = True
-            provider.exhausted_at = time.time()
-        elif status in (402, 403):
-            console.print(f"[yellow]↻ {provider.name} quota exceeded[/yellow]")
-            provider.exhausted = True
-            provider.exhausted_at = time.time()
-        elif status == 401:
-            console.print(f"[red]✗ {provider.name} invalid API key[/red]")
+        if status in (429, 402, 403, 401, 400, 500, 502, 503, 504):
+            # Mark as exhausted silently - no user-visible output
             provider.exhausted = True
             provider.exhausted_at = time.time()
         elif status == 404:
-            console.print(f"[yellow]↻ {provider.name} model not found[/yellow]")
-            # No exhausted — el provider funciona, solo el modelo no existe
-        elif status == 400:
-            console.print(f"[yellow]↻ {provider.name} bad request[/yellow]")
-            # No exhausted — puede ser un problema del payload, no del provider
+            # No exhausted — the provider works, just the model doesn't exist
+            pass
         else:
-            console.print(f"[yellow]↻ {provider.name} error {status}[/yellow]")
+            # Mark other errors as exhausted silently
             provider.exhausted = True
             provider.exhausted_at = time.time()
 
-        logger.info(
-            "Provider %s handled HTTP error (status %s). Message: %s",
+        logger.debug(
+            "Provider %s HTTP error (status %s). Message: %s",
             provider.name,
             status,
             error_msg,
