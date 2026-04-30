@@ -118,6 +118,13 @@ def main():
                 else:
                     console.print("[red]Could not generate plan.[/red]")
 
+            elif user_input == "/web" or user_input == "web":
+                console.print("[dim]Starting web interface...[/dim]")
+                from web.server import app
+                import uvicorn
+                uvicorn.run(app, host="127.0.0.1", port=8000)
+                return
+
             elif user_input.strip() == "":
                 pass
 
