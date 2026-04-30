@@ -38,6 +38,13 @@ def show_plan(steps: list[str]) -> None:
 
 
 def confirm_plan(steps: list[str], pool, user_input: str) -> list[str] | None:
+    # Auto-confirm in non-interactive mode (when stdin is not a tty)
+    import sys
+    if not sys.stdin.isatty():
+        show_plan(steps)
+        console.print("\n[dim]Auto-confirming in non-interactive mode[/dim]")
+        return steps
+    
     while True:
         show_plan(steps)
         console.print("\n[dim]s = execute · n = cancel · e = edit[/dim]")

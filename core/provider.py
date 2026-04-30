@@ -65,11 +65,45 @@ class ProviderPool:
         yaml.YAMLError
             If the YAML cannot be parsed.
         """
-        if not config_path.is_file():
-            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+        from pathlib import Path as PathLib
 
-        with config_path.open() as f:
-            config: Dict[str, Any] = yaml.safe_load(f) or {}
+        def load_config(path):
+            """Load config from path, return (config_dict, provider_count) or (None, 0)."""
+            if not path.is_file():
+                return None, 0
+            with path.open() as f:
+                config = yaml.safe_load(f) or {}
+            providers_list = config.get("providers", [])
+            if isinstance(providers_list, dict):
+                providers_list = list(providers_list.values())
+            # Count providers with valid API keys
+            valid_count = sum(1 for p in providers_list if p.get("api_key", "").strip())
+            return config, valid_count
+
+        # Check multiple locations for config, preferring ones with valid API keys
+        possible_paths = [
+            PathLib.home() / "config.yaml",
+            PathLib.home() / ".hellochusquis" / "config.yaml",
+            config_path,  # Current directory last (often has empty placeholder)
+        ]
+
+        best_config = None
+        best_valid_count = 0
+        best_path = None
+
+        for path in possible_paths:
+            config, valid_count = load_config(path)
+            if config is not None and valid_count > best_valid_count:
+                best_config = config
+                best_valid_count = valid_count
+                best_path = path
+                if valid_count >= 2:  # Found a config with at least 2 valid providers
+                    break
+
+        if best_config is None:
+            raise FileNotFoundError(f"Configuration file not found. Searched: {[str(p) for p in possible_paths]}")
+
+        config = best_config
 
         settings = config.get("settings", {})
         self.reset_after_seconds = settings.get("provider_reset_hours", 1) * 3600

@@ -809,6 +809,7 @@ class Agent:
     def __init__(self, config: dict):
         self.pool = ProviderPool()
         self.history = History()
+        self._pending_tool_results = []
         self.workspace = WorkspaceManager(config["settings"]["workspace_dirs"])
         self.shell = ShellTool()
         self.files = FilesTool(config["settings"]["workspace_dirs"])
@@ -1266,7 +1267,21 @@ class Agent:
     def run(self, user_input: str) -> str:
         self.history.add("user", user_input)
         messages = self._build_messages()
-        messages = self.history.optimize_context(max_tokens=4000)
+
+        # Preserve tool results across turns - don't optimize history during execution
+        # This ensures tool responses from previous steps remain available
+        self._pending_tool_results = getattr(self, '_pending_tool_results', [])
+        
+        # Add any pending tool results to the messages
+        for tr in self._pending_tool_results:
+            messages.append(tr)
+        
+        # Only optimize if we have too many messages (not during multi-step execution)
+        if self.history.get_token_count(messages) > 4000:
+            messages = self.history.optimize_context(max_tokens=4000)
+            # Re-add tool results after optimization
+            for tr in self._pending_tool_results:
+                messages.append(tr)
 
         while True:
             response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
@@ -1275,9 +1290,12 @@ class Agent:
             if not message.get("tool_calls"):
                 content = message.get("content") or ""
                 self.history.add("assistant", content)
+                # Clear pending tool results on successful completion
+                self._pending_tool_results = []
                 return content
 
             messages.append(message)
+            step_tool_results = []
 
             for tc in message["tool_calls"]:
                 tool_name = tc["function"]["name"]
@@ -1287,11 +1305,16 @@ class Agent:
                 result = self._dispatch_tool(tool_name, tool_args)
                 print_tool_result(result.success, result.output)
 
-                messages.append({
+                tool_msg = {
                     "role": "tool",
                     "tool_call_id": tc["id"],
                     "content": result.output if result.success else f"ERROR: {result.error}"
-                })
+                }
+                messages.append(tool_msg)
+                step_tool_results.append(tool_msg)
+            
+            # Keep all tool results for this turn for next turn
+            self._pending_tool_results.extend(step_tool_results)
 
     def summarize_and_save(self, retention_days: int = 30):
         messages = self.history.get()
