@@ -379,3 +379,126 @@ def ensure_config() -> dict:
 
     console.print("[yellow]No config found. Running setup...[/yellow]\n")
     return run_setup()
+
+
+def edit_config(section: str = None):
+    """Edit configuration interactively."""
+    config = ensure_config()
+    
+    console.print(Panel(
+        "[bold #f5a623]HelloChusquis Config[/bold #f5a623]\n"
+        "[dim]Update your configuration[/dim]",
+        expand=False
+    ))
+    
+    if section == "providers" or section is None:
+        console.print("\n[bold cyan]Providers Configuration[/bold cyan]")
+        providers = config.get("providers", [])
+        
+        # Edit each provider
+        for i, p in enumerate(providers):
+            console.print(f"\n[bold]Provider #{i+1}: {p['name']}[/bold]")
+            
+            name = Prompt.ask(f"  Name [{p.get('name', '')}]", default=p.get("name", ""))
+            base_url = Prompt.ask(f"  Base URL [{p.get('base_url', '')}]", default=p.get("base_url", ""))
+            current_key = p.get("api_key", "")
+            api_key_label = "***" + current_key[-4:] if current_key else ""
+            api_key = Prompt.ask(f"  API Key [{api_key_label}]", default="")
+            if not api_key:
+                api_key = current_key
+            model = Prompt.ask(f"  Model [{p.get('model', '')}]", default=p.get("model", ""))
+            
+            providers[i] = {
+                "name": name,
+                "base_url": base_url,
+                "api_key": api_key,
+                "model": model,
+                "priority": p.get("priority", i + 1),
+            }
+        
+        # Add new provider
+        add_new = Confirm.ask("\n  Add another provider?", default=False)
+        priority = len(providers) + 1
+        while add_new:
+            provider_info = pick_provider()
+            api_key = Prompt.ask("  API Key", password=True)
+            model = pick_model(provider_info["base_url"], api_key)
+            providers.append({
+                "name": f"{provider_info['name']}-{priority}",
+                "base_url": provider_info["base_url"],
+                "api_key": api_key,
+                "model": model,
+                "priority": priority,
+            })
+            priority += 1
+            add_new = Confirm.ask("  Add another?", default=False)
+        
+        config["providers"] = providers
+    
+    if section == "api-keys" or section is None:
+        console.print("\n[bold cyan]API Keys[/bold cyan]")
+        providers = config.get("providers", [])
+        for i, p in enumerate(providers):
+            current_key = p.get("api_key", "")
+            api_key_label = "***" + current_key[-4:] if current_key else ""
+            new_key = Prompt.ask(f"  {p['name']} API Key [{api_key_label}]", default="")
+            if new_key and new_key != "***" + current_key[-4:]:
+                providers[i]["api_key"] = new_key
+        config["providers"] = providers
+    
+    if section == "settings" or section is None:
+        console.print("\n[bold cyan]Settings[/bold cyan]")
+        settings = config.get("settings", {})
+        
+        reset_hours = IntPrompt.ask(
+            "  Reset exhausted providers after how many hours?",
+            default=settings.get("provider_reset_hours", 1)
+        )
+        
+        retention_days = IntPrompt.ask(
+            "  Delete old sessions after how many days?",
+            default=settings.get("memory_retention_days", 30)
+        )
+        
+        workspace = Prompt.ask(
+            "  Default workspace directory",
+            default=settings.get("workspace_dirs", [str(Path.home() / "workspace")])[0]
+        )
+        
+        config["settings"] = {
+            "provider_reset_hours": reset_hours,
+            "max_retries": 3,
+            "timeout_seconds": 15,
+            "workspace_dirs": [workspace],
+            "memory_retention_days": retention_days,
+        }
+    
+    CONFIG_PATH.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
+    console.print(f"\n[#5eb97e]✓ Config saved to {CONFIG_PATH}[/#5eb97e]")
+    return config
+
+
+def show_config():
+    """Show current configuration with masked API keys."""
+    config = ensure_config()
+    
+    console.print(Panel(
+        "[bold #f5a623]HelloChusquis Configuration[/bold #f5a623]",
+        expand=False
+    ))
+    
+    providers = config.get("providers", [])
+    console.print("\n[bold cyan]Providers:[/bold cyan]")
+    for p in providers:
+        api_key = p.get("api_key", "")
+        masked_key = "***" + api_key[-4:] if len(api_key) > 4 else "***"
+        console.print(f"  • {p.get('name', 'Unknown')}")
+        console.print(f"    Model: {p.get('model', 'N/A')}")
+        console.print(f"    API Key: {masked_key}")
+    
+    settings = config.get("settings", {})
+    console.print("\n[bold cyan]Settings:[/bold cyan]")
+    console.print(f"  • Reset after: {settings.get('provider_reset_hours', 1)} hours")
+    console.print(f"  • Memory retention: {settings.get('memory_retention_days', 30)} days")
+    console.print(f"  • Workspace: {settings.get('workspace_dirs', ['N/A'])[0]}")
+    console.print(f"  • Timeout: {settings.get('timeout_seconds', 15)} seconds")

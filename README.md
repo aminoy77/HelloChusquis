@@ -1,9 +1,10 @@
-# HelloChusquis 🧠✨ v1.0.0
+# HelloChusquis 🧠✨ v1.1.0
 
 **HelloChusquis** is an advanced AI terminal agent with 150+ integrations, voice support, auto-tool-builder, browser automation, and 100+ built-in functions.
 
-## 🚀 What's New in v1.0.0
+## 🚀 What's New in v1.1.0
 
+- **Config Command** - `hellochusquis config` reopens setup wizard anytime
 - **Browser Automation** - Control a real browser with human-like mouse movements
 - **150+ Integrations** - Every popular API and service
 - **Voice I/O** - Speak and listen in web interface (12+ languages)
@@ -40,6 +41,10 @@ Then open http://localhost:8000
 hellochusquis              # Start interactive chat
 hellochusquis web          # Open web interface
 hellochusquis api --port 8080  # Start REST API
+hellochusquis config       # Reopen setup wizard
+hellochusquis config --show  # Show current config (masked keys)
+hellochusquis config --api-keys  # Edit only API keys
+hellochusquis config --providers  # Edit only providers
 hellochusquis build        # Build new plugin with AI
 hellochusquis install     # Install plugin
 hellochusquis plugins     # List plugins
