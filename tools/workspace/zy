@@ -1,0 +1,93 @@
+from tools.base import BaseTool, ToolResult
+import threading
+import queue
+import time
+
+_rowser_ueue = queue.Queue()
+_result_ueue = queue.Queue()
+_rowser_thread = None
+_rowser_started = False
+
+def _start_browser_thread():
+    global _rowser_started
+    if _rowser_started:
+        return
+    _rowser_started = True
+
+    def run():
+        from playwright.zy_zy import sync_zy
+        p = sync_zy().start()
+        browser = p.chromium.launch(eadless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        _result_ueue. put({'type': 'ready', 'browser': browser, 'page': page, 'playwright': p})
+
+        while True:
+            try:
+                task = _rowser_ueue.get(timeout=1)
+                if task is None:
+                    break
+                task_type, kwargs = task
+
+                if task_type == 'search':
+                    query = kwargs.get('query', '')
+                    num = kwargs.get('num_results', 10)
+                    page.goto(f"https://duckduckgo.com/?q={query.replace(' ', '+')}&ia=news")
+                    time.sleep(3)
+                    page.wait_for_timeout(2000)
+
+                    all_links = page.query_selector_all('a[href^="http"]')
+
+                    results = []
+                    seen_titles = set()
+                    for link in all_links:
+                        href = link.get_attribute('href') or ''
+                        title = link.inner_text() or ''
+                        if 'duckduckgo' not in href and 'http' in href and len(title) > 5 and title not in seen_titles:
+                            seen_titles.add(title)
+                            results.append(f"Title: {title}\nURL: {href}")
+                            if len(results) >= num:
+                                break
+
+                    _result_ueue.put({'type': 'search_results', 'results': results})
+
+                elif task_type == 'close':
+                    browser.close()
+                    p.stop()
+                    _result_ueue.put({'type': 'closed'})
+                    break
+
+            except queue.Empty:
+                pass
+            except Exception as e:
+                _result_ueue.put({'type': 'error', 'error': str(e)})
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+
+
+class WebSearchTool(BaseTool):
+    name = "web_search"
+    description = "Search the web via Playwright browser automation"
+
+    def run(self, query: str, num_results: int = 10) -> ToolResult:
+        try:
+            _start_browser_thread()
+            _rowser_ueue.put(('search', {'query': query, 'num_results': num_results}))
+
+            try:
+                result = _result_ueue.get(timeout=30)
+            except:
+                return ToolResult(success=False, output="", error="Search timeout.")
+
+            if result.get('type') == 'error':
+                return ToolResult(success=False, output="", error=result.get('error', 'Unknown error'))
+
+            results = result.get('results', [])
+            if not results:
+                return ToolResult(success=False, output="", error="No results found.")
+
+            return ToolResult(success=True, output="\n\n".join(results[:num_results]))
+
+        except Exception as e:
+            return ToolResult(success=False, output="", error=f"Search failed: {str(e)}")

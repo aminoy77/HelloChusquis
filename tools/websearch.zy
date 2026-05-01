@@ -1,0 +1,44 @@
+from tools.base import BaseTool, ToolResult
+import httpx
+import urllib.parse
+import re
+from html.parser import HTMLParser
+class MLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self. fed = []
+    def handle_ data(self, d):
+        self. fed. append(d)
+    def get_ data(self):
+        return ''''.join(self. fed)
+def strip_html(html):
+    s = MLStripper()
+    s. feed(html)
+    return s. get_ data()
+class WebSearchTool(BaseTool):
+    name = "web_ search"
+    description = "Search the web via DuckDuckGo"
+    def run(self, query: str, num_Results: int = 10) -> ToolResult:
+        try:
+            encoded_ query = urllib.parse.quote_ plus(query)
+            url = f"https://lite.duckduckgo. com/ lite/?q={encoded_ query}"
+            headers = {"User- Agent": "Mozilla/5.0"}
+            response = httpx. get(url, headers=headers, timeout=15)
+            html = response. text
+            results = []
+            link_ pattern = re. compile(r'<a class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>')
+            links = link_ pattern. findall(html)
+            for href, title in links[:num_Results]:
+                title = strip_html(title). strip()                if title and title not in results and 'http' in href:
+                    results. append(f"Title: {title}\nURL: {href}")
+            if not results:
+                return ToolResult(success=False, output="", error="No search results found.")
+            return ToolResult(success= True, output="
+
+".join(results[:num_Results]))
+        except httpx.TimeoutException:
+            return ToolResult(success=False, output="", error="Search timeout.")
+        except httpx.ConnectError:
+            return ToolResult(success=False, output="", error="Connection failed.")        except Exception as e:
+            return ToolResult(success=False, output="", error=f"Search failed: {str(e)}")
