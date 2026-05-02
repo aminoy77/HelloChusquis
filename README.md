@@ -1,8 +1,10 @@
-# HelloChusquis v1.1
+# HelloChusquis v1.2.0
 
-**HelloChusquis** is an AI terminal agent with chat interface, web search, file management, code execution, and multiple AI integrations.
+**HelloChusquis** is an AI terminal agent with chat interface, web search, file management, code execution, and multiple AI integrations. 
 
-## What's New in v1.1
+![HelloChusquis Demo](demo.gif)
+
+## What's New in v1.2.0
 
 - **Config Command** - `hellochusquis config` reopens setup wizard anytime
 - **Tool Context Fix** - Multi-step plans now work correctly

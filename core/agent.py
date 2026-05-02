@@ -1254,13 +1254,15 @@ class Agent:
         system = (
             self.system_prompt
             + f"\n\nWorkspace directories: {', '.join(self.workspace_dirs)}. "
-            "Always use absolute paths when calling file tools. "
-            "Only use tools when strictly necessary. "
-            "Never use shell or code tools just to print or display text.\n\n"
+            "ALWAYS use the available tools to complete tasks - do NOT respond with text explanations when tools can do the work. "
+            "For file operations, use the 'files' tool. "
+            "For running commands, use the 'shell' tool. "
+            "For executing code, use the 'code' tool. "
+            "NEVER say 'I cannot' or 'I don't have' - use the tools instead.\n\n"
             "You must follow this thought process for every turn:\n"
-            "1. <thought>: Analyze the current state and decide the next best action.\n"
-            "2. <call>: Execute the tool if needed.\n"
-            "3. <verify>: Check if the tool output solves the user's request.\n"
+            "1. <thought>: Analyze what tool is needed.\n"
+            "2. <call>: Execute the tool immediately.\n"
+            "3. <verify>: Check if the result solves the request.\n"
         )
         return [{"role": "system", "content": system}, *self.history.get()]
 
