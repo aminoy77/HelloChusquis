@@ -13,7 +13,7 @@ KNOWN_PROVIDERS = [
     # Major Providers
     {"name": "Groq",            "base_url": "https://api.groq.com/openai/v1",                          "docs": "console.groq.com/keys"},
     {"name": "OpenRouter",      "base_url": "https://openrouter.ai/api/v1",                            "docs": "openrouter.ai/keys"},
-    {"name": "Ollama Cloud",    "base_url": "https://ollama.com/v1",                                   "docs": "ollama.com → Sign in → API Keys"},
+    {"name": "Ollama (local)",  "base_url": "http://localhost:11434/v1",                               "docs": "ollama.ai — runs locally, no API key needed"},
     {"name": "Anthropic Claude","base_url": "https://api.anthropic.com/v1",                            "docs": "console.anthropic.com"},
     {"name": "OpenAI",          "base_url": "https://api.openai.com/v1",                               "docs": "platform.openai.com/api-keys"},
     {"name": "Google Gemini",   "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "docs": "aistudio.google.com/apikey"},
@@ -351,12 +351,11 @@ def run_quick_setup() -> dict:
     from rich.prompt import Prompt
     
     console.print(Panel(
-        "[bold #f5a623]Welcome to HelloChusquis![/bold #f5a623]\n"
-        "[dim]Quick setup — 60 seconds[/dim]",
+        "[bold #f5a623]Welcome to HelloChusquis![/bold #f5a623]",
         expand=False
     ))
     
-    console.print("\n[dim]Get a free API key at openrouter.ai (takes 30 seconds)[/dim]\n")
+    console.print("\n[dim]Get a free API key at: openrouter.ai/keys[/dim]\n")
     
     api_key = Prompt.ask("[bold]Paste your OpenRouter API key[/bold]", password=True)
     

@@ -1,26 +1,9 @@
 ## HelloChusquis v1.3.0
-
 ### What's new
-- **Quick Setup** - First run shows simple 60-second setup with just one question for API key
-- **Setup Flags** - `hellochusquis setup --quick` for quick reset, `--full` for full wizard  
-- Fixed multi-step plan execution (tools now persist across all steps)
-- Fixed web search (switched to reliable DuckDuckGo lite)
+- Quick setup: `hellochusquis --quick` gets you running in 60 seconds with just an OpenRouter API key
+- First-run experience: no config = auto quick setup
+- Full setup still available: `hellochusquis --full`
+- Fixed Ollama local URL (localhost:11434)
 
-### Quick Start
-```bash
+### Install
 pip install hellochusquis
-hellochusquis
-```
-
-### First Run
-When you run `hellochusquis` for the first time:
-1. You'll see a quick 60-second setup
-2. Get a free API key from openrouter.ai
-3. Paste it in
-4. Start using HelloChusquis immediately!
-
-### Setup Commands
-- `hellochusquis` - Start (uses quick setup if no config)
-- `hellochusquis setup --quick` - Quick reset (one question)
-- `hellochusquis setup --full` - Full wizard with multiple providers
-- `hellochusquis config` - Edit existing config

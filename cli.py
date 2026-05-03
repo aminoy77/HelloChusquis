@@ -14,9 +14,21 @@ def main():
     parser.add_argument("--show", action="store_true", help="Show current config")
     parser.add_argument("--api-keys", action="store_true", help="Edit API keys only")
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
-    parser.add_argument("--quick", action="store_true", help="Quick setup (one question)")
-    parser.add_argument("--full", action="store_true", help="Full setup wizard")
+    parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
+    parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
     args = parser.parse_args()
+    
+    # Handle --quick flag directly (no command needed)
+    if args.quick:
+        from core.setup import run_quick_setup
+        run_quick_setup()
+        return
+    
+    # Handle --full flag directly (no command needed)
+    if args.full:
+        from core.setup import run_setup
+        run_setup()
+        return
     
     if args.command == "setup":
         from core.setup import run_quick_setup, run_setup
