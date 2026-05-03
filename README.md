@@ -1,14 +1,15 @@
-# HelloChusquis v1.2.0
+# HelloChusquis v1.3.0
 
 **HelloChusquis** is an AI terminal agent with chat interface, web search, file management, code execution, and multiple AI integrations. 
 
 ![HelloChusquis Demo](demo.gif)
 
-## What's New in v1.2.0
+## What's New in v1.3.0
 
-- **Config Command** - `hellochusquis config` reopens setup wizard anytime
-- **Tool Context Fix** - Multi-step plans now work correctly
-- **Silent Fallback** - Providers switch silently without error messages
+- **Quick Setup** - First run shows simple 60-second setup with just one question for API key
+- **Setup Flags** - `hellochusquis setup --quick` for quick reset, `--full` for full wizard
+- **Fixed Web Search** - Now uses reliable DuckDuckGo lite
+- **Fixed Plan Tools** - Tools now work correctly in multi-step plans
 
 ## Quick Start
 

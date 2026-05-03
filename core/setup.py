@@ -346,7 +346,50 @@ def run_setup():
     return config
 
 
-def ensure_config() -> dict:
+def run_quick_setup() -> dict:
+    """Quick 60-second setup for first-time users."""
+    from rich.prompt import Prompt
+    
+    console.print(Panel(
+        "[bold #f5a623]Welcome to HelloChusquis![/bold #f5a623]\n"
+        "[dim]Quick setup — 60 seconds[/dim]",
+        expand=False
+    ))
+    
+    console.print("\n[dim]Get a free API key at openrouter.ai (takes 30 seconds)[/dim]\n")
+    
+    api_key = Prompt.ask("[bold]Paste your OpenRouter API key[/bold]", password=True)
+    
+    # Create workspace directory
+    workspace_path = Path.home() / "hellochusquis-workspace"
+    workspace_path.mkdir(parents=True, exist_ok=True)
+    
+    config = {
+        "providers": [{
+            "name": "openrouter",
+            "base_url": "https://openrouter.ai/api/v1",
+            "api_key": api_key,
+            "model": "openrouter/auto",
+            "priority": 1,
+        }],
+        "settings": {
+            "provider_reset_hours": 1,
+            "max_retries": 3,
+            "timeout_seconds": 15,
+            "workspace_dirs": [str(workspace_path)],
+            "memory_retention_days": 30,
+        },
+        "agent": {
+            "system_prompt": SYSTEM_PROMPT
+        }
+    }
+    
+    CONFIG_PATH.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
+    console.print(f"\n[#5eb97e]✓ Ready. Starting HelloChusquis...[/#5eb97e]")
+    return config
+
+
+def ensure_config(quick: bool = False, full: bool = False) -> dict:
     # Busca config en varias ubicaciones posibles
     possible_paths = [
         Path("config.yaml"),
@@ -365,8 +408,13 @@ def ensure_config() -> dict:
                 config["agent"]["system_prompt"] = SYSTEM_PROMPT
             return config
 
-    console.print("[yellow]No config found. Running setup...[/yellow]\n")
-    return run_setup()
+    # No config found - use quick setup by default, or full if requested
+    if full:
+        console.print("[yellow]No config found. Running full setup...[/yellow]\n")
+        return run_setup()
+    else:
+        console.print("[yellow]No config found. Running quick setup...[/yellow]\n")
+        return run_quick_setup()
 
 
 def edit_config(section: str = None):

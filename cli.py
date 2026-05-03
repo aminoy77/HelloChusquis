@@ -14,7 +14,17 @@ def main():
     parser.add_argument("--show", action="store_true", help="Show current config")
     parser.add_argument("--api-keys", action="store_true", help="Edit API keys only")
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
+    parser.add_argument("--quick", action="store_true", help="Quick setup (one question)")
+    parser.add_argument("--full", action="store_true", help="Full setup wizard")
     args = parser.parse_args()
+    
+    if args.command == "setup":
+        from core.setup import run_quick_setup, run_setup
+        if args.full:
+            run_setup()
+        else:
+            run_quick_setup()
+        return
     
     if args.command == "config" or args.show:
         from core.setup import show_config, edit_config, ensure_config
