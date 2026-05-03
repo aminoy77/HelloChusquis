@@ -476,9 +476,16 @@ def edit_config(section: str = None):
         for i, p in enumerate(providers):
             current_key = p.get("api_key", "")
             api_key_label = "***" + current_key[-4:] if current_key else ""
-            new_key = Prompt.ask(f"  {p['name']} API Key [{api_key_label}]", default="")
-            if new_key and new_key != "***" + current_key[-4:]:
+            console.print(f"  {p['name']}: [{api_key_label}]")
+            try:
+                new_key = input(f"  Enter new key for {p['name']} (press Enter to keep current): ")
+            except EOFError:
+                new_key = ""
+            if new_key:
                 providers[i]["api_key"] = new_key
+                console.print(f"    ✓ Updated")
+            else:
+                console.print(f"    ✓ Kept existing")
         config["providers"] = providers
     
     if section == "settings" or section is None:

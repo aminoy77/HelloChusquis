@@ -30,6 +30,24 @@ def main():
         run_setup()
         return
     
+    # Handle --show flag directly
+    if args.show:
+        from core.setup import show_config
+        show_config()
+        return
+    
+    # Handle --api-keys flag directly  
+    if args.api_keys:
+        from core.setup import edit_config
+        edit_config("api-keys")
+        return
+    
+    # Handle --providers flag directly
+    if args.providers:
+        from core.setup import edit_config
+        edit_config("providers")
+        return
+    
     if args.command == "setup":
         from core.setup import run_quick_setup, run_setup
         if args.full:
