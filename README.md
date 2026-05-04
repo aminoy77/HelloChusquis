@@ -1,6 +1,6 @@
 # HelloChusquis v1.3.1
 
-[![🚀 Launching on Uneed — May 7, 2026](https://img.shields.io/badge/Uneed-Launch_May_7_2026-667eea?style=flat&logo=rocket)](https://uneed.io/launch)
+[![🚀 Launching on Uneed — May 7, 2026](https://img.shields.io/badge/Uneed-Launch_May_7_2026-667eea?style=flat&logo=rocket)](https://www.uneed.best/tool/hellochusquis)
 
 **HelloChusquis** is an AI terminal agent with chat interface, web search, file management, code execution, and multiple AI integrations. 
 
