@@ -1,12 +1,16 @@
+import time
+from typing import Optional
 from httpx import AsyncClient
 
 
-async def send_metric(key: str, metric: str, value: float, tags: dict = {}) -> dict:
+async def send_metric(key: str, metric: str, value: float, tags: Optional[dict] = None) -> dict:
     """Send metric to DataDog."""
+    if tags is None:
+        tags = {}
     url = "https://api.datadoghq.com/api/v1/series"
     async with AsyncClient() as client:
         r = await client.post(url, json={
-            "series": [{"metric": metric, "points": [[__import__('time').time(), value]], "type": "gauge", "tags": [f"{k}:{v}" for k, v in tags.items()]}]
+            "series": [{"metric": metric, "points": [[time.time(), value]], "type": "gauge", "tags": [f"{k}:{v}" for k, v in tags.items()]}]
         }, headers={"DD-API-KEY": key})
         return r.json()
 

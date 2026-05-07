@@ -69,7 +69,7 @@ def aws_request(method: str, url: str, creds: dict, data: dict = None) -> str:
         if resp.status_code in [200, 201]:
             try:
                 return json.dumps(resp.json(), indent=2)[:1000]
-            except:
+            except Exception:
                 return resp.text[:500]
         return f"Error: {resp.status_code} - {resp.text[:200]}"
     
@@ -142,7 +142,7 @@ def run(action: str, resource: str = "", region: str = "us-east-1", payload: str
             if payload:
                 try:
                     invoke_data = json.loads(payload)
-                except:
+                except Exception:
                     pass
             
             # Convert to JSON string for CLI

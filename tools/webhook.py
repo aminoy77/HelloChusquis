@@ -40,7 +40,7 @@ def run(action: str, url: str = "", payload: str = "{}",
         
         try:
             payload_json = json.loads(payload)
-        except:
+        except json.JSONDecodeError:
             payload_json = {"message": payload}
         
         header_dict = {"Content-Type": "application/json"}

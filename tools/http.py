@@ -7,7 +7,7 @@ async def get(url: str, headers: dict = None) -> dict:
         r = await client.get(url, headers=headers or {})
         try:
             return r.json()
-        except:
+        except json.JSONDecodeError:
             return {"text": r.text}
 
 
@@ -17,7 +17,7 @@ async def post(url: str, json: dict = None, data: dict = None, headers: dict = N
         r = await client.post(url, json=json, data=data, headers=headers or {})
         try:
             return r.json()
-        except:
+        except json.JSONDecodeError:
             return {"text": r.text}
 
 
@@ -27,7 +27,7 @@ async def put(url: str, json: dict = None, headers: dict = None) -> dict:
         r = await client.put(url, json=json, headers=headers or {})
         try:
             return r.json()
-        except:
+        except json.JSONDecodeError:
             return {"text": r.text}
 
 
@@ -44,5 +44,5 @@ async def patch(url: str, json: dict = None, headers: dict = None) -> dict:
         r = await client.patch(url, json=json, headers=headers or {})
         try:
             return r.json()
-        except:
+        except json.JSONDecodeError:
             return {"text": r.text}

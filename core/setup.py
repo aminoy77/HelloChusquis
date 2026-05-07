@@ -349,20 +349,24 @@ def run_setup():
 def run_quick_setup() -> dict:
     """Quick 60-second setup for first-time users."""
     from rich.prompt import Prompt
-    
+
     console.print(Panel(
         "[bold #f5a623]Welcome to HelloChusquis![/bold #f5a623]",
         expand=False
     ))
-    
+
     console.print("\n[dim]Get a free API key at: openrouter.ai/keys[/dim]\n")
-    
+
     api_key = Prompt.ask("[bold]Paste your OpenRouter API key[/bold]", password=True)
-    
+
+    # Create .hellochusquis directory in home
+    config_dir = Path.home() / ".hellochusquis"
+    config_dir.mkdir(parents=True, exist_ok=True)
+
     # Create workspace directory
-    workspace_path = Path.home() / "hellochusquis-workspace"
+    workspace_path = config_dir / "workspace"
     workspace_path.mkdir(parents=True, exist_ok=True)
-    
+
     config = {
         "providers": [{
             "name": "openrouter",
@@ -382,9 +386,11 @@ def run_quick_setup() -> dict:
             "system_prompt": SYSTEM_PROMPT
         }
     }
-    
-    CONFIG_PATH.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
+
+    config_path = config_dir / "config.yaml"
+    config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
     console.print(f"\n[#5eb97e]✓ Ready. Starting HelloChusquis...[/#5eb97e]")
+    console.print(f"[dim]Config saved to: {config_path}[/dim]")
     return config
 
 

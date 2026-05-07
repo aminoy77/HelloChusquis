@@ -158,7 +158,7 @@ class PersistentBrowser:
         try:
             result = self._result_queue.get(timeout=60)
             return result
-        except:
+        except Exception:
             return {'success': False, 'error': 'Timeout'}
 
 

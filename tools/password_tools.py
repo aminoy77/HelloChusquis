@@ -55,7 +55,7 @@ async def verify_hash(password: str, hash: str, method: str = "bcrypt") -> dict:
         try:
             p.verify(hash, password)
             return {"valid": True}
-        except:
+        except Exception:
             return {"valid": False}
     return {"error": "Unknown method"}
 

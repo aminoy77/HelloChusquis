@@ -35,7 +35,7 @@ class Cache:
                 return None
             
             return data.get("response")
-        except:
+        except (json.JSONDecodeError, OSError, KeyError):
             return None
     
     def set(self, text: str, response: str) -> None:

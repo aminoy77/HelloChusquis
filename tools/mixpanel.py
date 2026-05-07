@@ -1,8 +1,11 @@
+from typing import Optional
 from httpx import AsyncClient
 
 
-async def track_event(api_key: str, name: str, properties: dict = {}) -> dict:
+async def track_event(api_key: str, name: str, properties: Optional[dict] = None) -> dict:
     """Track event in Mixpanel."""
+    if properties is None:
+        properties = {}
     url = "https://api.mixpanel.com/track"
     async with AsyncClient() as client:
         r = await client.post(url, json=[{

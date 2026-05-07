@@ -1,8 +1,11 @@
+from typing import Optional
 from httpx import AsyncClient
 
 
-async def create_page(token: str, parent_id: str, title: str, content: str, children: list = []) -> dict:
+async def create_page(token: str, parent_id: str, title: str, content: str, children: Optional[list] = None) -> dict:
     """Create Notion page."""
+    if children is None:
+        children = []
     url = "https://api.notion.com/v1/pages"
     async with AsyncClient() as client:
         r = await client.post(url, json={

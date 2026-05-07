@@ -25,7 +25,7 @@ class APIGenerator:
         try:
             with open(file_path) as f:
                 content = f.read()
-        except:
+        except Exception:
             return endpoints
 
         import re

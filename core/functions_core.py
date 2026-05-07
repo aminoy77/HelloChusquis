@@ -253,10 +253,10 @@ def get_process_list() -> dict:
                     "name": p.info["name"],
                     "cpu": p.info["cpu_percent"]
                 })
-            except:
+            except Exception:
                 pass
         return {"processes": processes[:50], "count": len(processes)}
-    except:
+    except Exception:
         return {"error": "psutil not installed"}
 
 

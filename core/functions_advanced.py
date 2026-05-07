@@ -11,7 +11,7 @@ def try_import_image():
     try:
         from PIL import Image
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -20,7 +20,7 @@ def try_import_pdf():
     try:
         import PyPDF2
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -29,7 +29,7 @@ def try_import_qr():
     try:
         import qrcode
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -38,7 +38,7 @@ def try_import_barcode():
     try:
         import pyzbar
         return True
-    except:
+    except Exception:
         return False
 
 

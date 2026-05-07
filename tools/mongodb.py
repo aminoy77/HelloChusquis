@@ -1,3 +1,4 @@
+from typing import Optional
 from httpx import AsyncClient
 
 
@@ -25,8 +26,10 @@ async def insert_one(mongo_uri: str, database: str, collection: str, document: d
         return r.json()
 
 
-async def find_documents(mongo_uri: str, database: str, collection: str, filter: dict = {}, limit: int = 10) -> dict:
+async def find_documents(mongo_uri: str, database: str, collection: str, filter: Optional[dict] = None, limit: int = 10) -> dict:
     """Find documents in MongoDB."""
+    if filter is None:
+        filter = {}
     url = f"{mongo_uri}/{database}/{collection}?filter={filter}&limit={limit}"
     async with AsyncClient() as client:
         r = await client.get(url)

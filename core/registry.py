@@ -1,4 +1,5 @@
 import json
+import asyncio
 import httpx
 from pathlib import Path
 from typing import Any
@@ -29,7 +30,7 @@ class PluginRegistry:
                 r = await client.get(self.REGISTRY_URL, timeout=10)
                 self.remote = r.json()
                 return self.remote
-        except:
+        except Exception:
             return {}
 
     def install(self, name: str) -> str:
@@ -41,8 +42,7 @@ class PluginRegistry:
             return f"{name} not found in registry"
 
         try:
-            import httpx
-            async def install_sync():
+            async def install_async():
                 url = self.remote[name]["url"]
                 async with httpx.AsyncClient() as client:
                     r = await client.get(url, timeout=30)
@@ -51,7 +51,7 @@ class PluginRegistry:
                     path.write_text(code)
                     return path
 
-            path = install_sync()
+            path = asyncio.run(install_async())
             self.local[name] = str(path)
             return f"Installed {name} from registry"
         except Exception as e:

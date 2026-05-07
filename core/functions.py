@@ -27,11 +27,12 @@ def get_current_time() -> str:
 
 def calculate(expression: str) -> float:
     """Safe mathematical expression evaluator."""
+    import ast
     allowed = set("0123456789.+-*/() ")
     if any(c not in allowed for c in expression):
         return {"error": "Invalid characters in expression"}
     try:
-        result = eval(expression)
+        result = ast.literal_eval(expression)
         return {"result": result, "expression": expression}
     except Exception as e:
         return {"error": str(e)}

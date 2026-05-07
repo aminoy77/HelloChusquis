@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 def search(query, num_results=5):
     url = "https://lite.duckduckgo.com/lite/"
     headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.post(url, data={"q": query}, headers=headers)
+    response = requests.post(url, data={"q": query}, headers=headers, timeout=10)
     soup = BeautifulSoup(response.text, "html.parser")
     results = []
     for link in soup.find_all("a", class_="result-link"):

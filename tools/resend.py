@@ -1,3 +1,4 @@
+from typing import Optional
 from httpx import AsyncClient
 
 
@@ -30,8 +31,10 @@ async def create_template(key: str, name: str, html: str) -> dict:
         return r.json()
 
 
-async def send_template(key: str, template_id: str, to: str, params: dict = {}) -> dict:
+async def send_template(key: str, template_id: str, to: str, params: Optional[dict] = None) -> dict:
     """Send template via Resend."""
+    if params is None:
+        params = {}
     url = f"https://api.resend.com/emails"
     async with AsyncClient() as client:
         r = await client.post(url, json={

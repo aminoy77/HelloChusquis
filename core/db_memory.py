@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -34,16 +35,18 @@ def save_session(messages: List[Dict[str, Any]]) -> None:
     """Guarda una sesión completa en la base de datos."""
     if not messages:
         return
-    
+
     init_db()
     timestamp = datetime.now().isoformat()
-    data = str(messages)  # Podría serializarse mejor en producción
-    
+    data = str(messages)
+
     conn = sqlite3.connect(MEMORY_DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO sessions (timestamp, data) VALUES (?, ?)", (timestamp, data))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO sessions (timestamp, data) VALUES (?, ?)", (timestamp, data))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def load_last_session() -> List[Dict[str, Any]]:
@@ -55,7 +58,7 @@ def load_last_session() -> List[Dict[str, Any]]:
     row = cursor.fetchone()
     conn.close()
     if row:
-        return eval(row[0])  # Mejor usar json.loads en producción
+        return json.loads(row[0])
     return []
 
 
@@ -63,13 +66,15 @@ def save_summary(summary: str) -> None:
     """Guarda o actualiza el resumen de sesiones pasadas."""
     init_db()
     updated_at = datetime.now().isoformat()
-    
+
     conn = sqlite3.connect(MEMORY_DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM summaries")
-    cursor.execute("INSERT INTO summaries (content, updated_at) VALUES (?, ?)", (summary, updated_at))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM summaries")
+        cursor.execute("INSERT INTO summaries (content, updated_at) VALUES (?, ?)", (summary, updated_at))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def load_summary() -> str:

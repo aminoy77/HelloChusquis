@@ -1,15 +1,20 @@
-import tiktoken
+try:
+    import tiktoken
+    _ENCODER = tiktoken.get_encoding("cl100k_base")
+except ImportError:
+    _ENCODER = None
+
 
 class History:
     def __init__(self, max_entries: int = 20):
         self.messages = []
         self.max_entries = max_entries
-        self.encoder = tiktoken.get_encoding("cl100k_base") # GPT-4, GPT-3.5-turbo
+        self.encoder = _ENCODER
 
     def add(self, role: str, content: str):
         self.messages.append({"role": role, "content": content})
         # Keep only the last N entries to manage context size
-        if len(self.messages) > self.max_entries:
+        if len(self.messages) > self.max_entries and self.messages:
             # Remove oldest entries but keep at least the first (system) message if present
             if self.messages[0].get("role") == "system":
                 self.messages = [self.messages[0]] + self.messages[-(self.max_entries-1):]
@@ -25,7 +30,9 @@ class History:
     def get_token_count(self, messages: list[dict]) -> int:
         """Calculate the approximate token count for a list of messages."""
         text = " ".join([msg["content"] for msg in messages if msg.get("content")])
-        return len(self.encoder.encode(text))
+        if self.encoder:
+            return len(self.encoder.encode(text))
+        return len(text) // 4
 
     def optimize_context(self, max_tokens: int = 4000) -> list[dict]:
         """Optimize history to fit within max_tokens, prioritizing system and recent messages."""

@@ -1287,7 +1287,9 @@ class Agent:
 
         while True:
             response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
-            message = response["choices"][0]["message"]
+            if not response.get("choices"):
+                return "Error: No response from AI provider"
+            message = response["choices"][0].get("message", {})
 
             if not message.get("tool_calls"):
                 content = message.get("content") or ""

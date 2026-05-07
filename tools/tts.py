@@ -47,7 +47,7 @@ def run(action: str, text: str, voice: str = "", output_file: str = "", language
                 cmd = ["espeak", text]
                 subprocess.run(cmd, capture_output=True)
                 return f"✓ Spoken: {text[:50]}..."
-            except:
+            except Exception:
                 pass
         
         # Try gTTS (Google TTS)
