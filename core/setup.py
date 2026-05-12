@@ -359,19 +359,59 @@ def run_quick_setup() -> dict:
     ))
 
     console.print("\n[bold]Choose your AI provider:[/bold]\n")
-    console.print("[#667eea]1.[/#667eea] OpenRouter - openrouter.ai/keys (recommended)")
-    console.print("[#667eea]2.[/#667eea] Groq - console.groq.com/keys")
-    console.print("[#667eea]3.[/#667eea] Ollama (local, no API key needed)\n")
+    console.print("[#667eea]1.[/#667eea] OpenRouter - openrouter.ai/keys (recommended, free tier)")
+    console.print("[#667eea]2.[/#667eea] Groq - console.groq.com/keys (free)")
+    console.print("[#667eea]3.[/#667eea] Ollama - localhost (no API key needed)")
+    console.print("[#667eea]4.[/#667eea] OpenAI - platform.openai.com/api-keys")
+    console.print("[#667eea]5.[/#667eea] Anthropic - console.anthropic.com")
+    console.print("[#667eea]6.[/#667eea] Google Gemini - aistudio.google.com/apikey")
+    console.print("[#667eea]7.[/#667eea] xAI (Grok) - console.x.ai")
+    console.print("[#667eea]8.[/#667eea] Mistral - console.mistral.ai/api-keys")
+    console.print("[#667eea]9.[/#667eea] DeepSeek - platform.deepseek.com/api_keys")
+    console.print("[#667eea]10.[/#667eea] Perplexity - perplexity.ai/settings/api")
+    console.print("[#667eea]11.[/#667eea] Together AI - api.together.ai/settings/api-keys")
+    console.print("[#667eea]12.[/#667eea] Cohere - dashboard.cohere.com/api-keys")
+    console.print("[#667eea]13.[/#667eea] HuggingFace - huggingface.co/settings/tokens")
+    console.print("[#667eea]14.[/#667eea] Fireworks AI - fireworks.ai/account/api-keys")
+    console.print("[#667eea]15.[/#667eea] Azure OpenAI - azure.com")
+    console.print("\n[dim]For more providers run: hellochusquis --full[/dim]\n")
 
-    choice = Prompt.ask("[bold]Select option (1-3)[/bold]", default="1")
+    choice = Prompt.ask("[bold]Select option (1-15)[/bold]", default="1")
 
+    providers_config = {
+        "1": {"name": "openrouter", "base_url": "https://openrouter.ai/api/v1", "model": "openrouter/auto"},
+        "2": {"name": "groq", "base_url": "https://api.groq.com/openai/v1", "model": "llama-3.3-70b-versatile"},
+        "3": {"name": "ollama", "base_url": "http://localhost:11434/v1", "model": "llama3.2"},
+        "4": {"name": "openai", "base_url": "https://api.openai.com/v1", "model": "gpt-4o-mini"},
+        "5": {"name": "anthropic", "base_url": "https://api.anthropic.com/v1", "model": "claude-3-5-haiku-20241022"},
+        "6": {"name": "gemini", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "model": "gemini-2.0-flash"},
+        "7": {"name": "xai", "base_url": "https://api.x.ai/v1", "model": "grok-beta"},
+        "8": {"name": "mistral", "base_url": "https://api.mistral.ai/v1", "model": "mistral-small-latest"},
+        "9": {"name": "deepseek", "base_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"},
+        "10": {"name": "perplexity", "base_url": "https://api.perplexity.ai", "model": "llama-3.1-sonar-small-128k-online"},
+        "11": {"name": "together", "base_url": "https://api.together.xyz/v1", "model": "meta-llama/Llama-3-70b-chat-hf"},
+        "12": {"name": "cohere", "base_url": "https://api.cohere.ai/v1", "model": "command-r-plus"},
+        "13": {"name": "huggingface", "base_url": "https://api-inference.huggingface.co/v1", "model": "meta-llama/Llama-3.1-70B"},
+        "14": {"name": "fireworks", "base_url": "https://api.fireworks.ai/inference/v1", "model": "accounts/fireworks/models/llama-v3p1-70b-instruct"},
+        "15": {"name": "azure", "base_url": "https://YOUR_RESOURCE.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT", "model": "gpt-4o"},
+    }
+
+    provider_links = {
+        "1": "openrouter.ai/keys", "2": "console.groq.com/keys", "4": "platform.openai.com/api-keys",
+        "5": "console.anthropic.com", "6": "aistudio.google.com/apikey", "7": "console.x.ai",
+        "8": "console.mistral.ai/api-keys", "9": "platform.deepseek.com/api_keys",
+        "10": "perplexity.ai/settings/api", "11": "api.together.ai/settings/api-keys",
+        "12": "dashboard.cohere.com/api-keys", "13": "huggingface.co/settings/tokens",
+        "14": "fireworks.ai/account/api-keys", "15": "azure.com",
+    }
+
+    selected = providers_config.get(choice, providers_config["1"])
+    
     if choice == "3":
         config = {
             "providers": [{
-                "name": "ollama",
-                "base_url": "http://localhost:11434/v1",
+                **selected,
                 "api_key": "ollama",
-                "model": "llama3",
                 "priority": 1,
             }],
             "settings": {
@@ -386,25 +426,8 @@ def run_quick_setup() -> dict:
             }
         }
     else:
-        providers_config = {
-            "1": {
-                "name": "openrouter",
-                "base_url": "https://openrouter.ai/api/v1",
-                "model": "openrouter/auto",
-            },
-            "2": {
-                "name": "groq",
-                "base_url": "https://api.groq.com/openai/v1",
-                "model": "llama-3.1-8b-instant",
-            },
-        }
-        selected = providers_config.get(choice, providers_config["1"])
-        console.print(f"\n[dim]Get a free API key at: [/dim]")
-        if choice == "1":
-            console.print("[dim]openrouter.ai/keys[/dim]")
-        else:
-            console.print("[dim]console.groq.com/keys[/dim]")
-
+        link = provider_links.get(choice, "platform.openai.com/api-keys")
+        console.print(f"\n[dim]Get your API key at: {link}[/dim]")
         api_key = Prompt.ask("[bold]Paste your API key[/bold]", password=True)
 
         config = {
