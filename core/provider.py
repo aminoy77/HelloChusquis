@@ -261,6 +261,9 @@ class ProviderPool:
 
         Returns the JSON payload on success; raises for HTTP errors.
         """
+        if not provider.base_url.startswith(('http://', 'https://')):
+            provider.base_url = 'https://' + provider.base_url
+
         payload: Dict[str, Any] = {
             "model": provider.model,
             "messages": messages,

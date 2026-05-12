@@ -147,7 +147,11 @@ def main():
 
                 except RuntimeError as e:
                     console.print(f"\n[red]✗ {e}[/red]")
-                    console.print("[dim]Add more providers: rm config.yaml && hellochusquis[/dim]")
+                    console.print("[yellow]No providers available with credits. Try:[/yellow]")
+                    console.print("[dim]  1. OpenRouter: https://openrouter.ai/keys[/dim]")
+                    console.print("[dim]  2. Groq: https://console.groq.com/keys[/dim]")
+                    console.print("[dim]  3. Ollama (local, no key needed)[/dim]")
+                    console.print("[dim]Edit config: nano ~/.hellochusquis/config.yaml[/dim]")
 
             user_input = get_input()
 

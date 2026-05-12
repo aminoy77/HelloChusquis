@@ -141,7 +141,7 @@ url: https://example.com
 ```
 
 ### search
-DuckDuckGo web search.
+DuckDuckGo lite web search. You only have access to DuckDuckGo lite for web search. Do not attempt to use Google, Brave, or any paid search. If asked to search, use the search tool which uses DuckDuckGo.
 ```search
 query: "search terms"
 num_results: 5
@@ -349,43 +349,87 @@ def run_setup():
 def run_quick_setup() -> dict:
     """Quick 60-second setup for first-time users."""
     from rich.prompt import Prompt
+    from rich.console import Console
+
+    console = Console()
 
     console.print(Panel(
         "[bold #f5a623]Welcome to HelloChusquis![/bold #f5a623]",
         expand=False
     ))
 
-    console.print("\n[dim]Get a free API key at: openrouter.ai/keys[/dim]\n")
+    console.print("\n[bold]Choose your AI provider:[/bold]\n")
+    console.print("[#667eea]1.[/#667eea] OpenRouter - openrouter.ai/keys (recommended)")
+    console.print("[#667eea]2.[/#667eea] Groq - console.groq.com/keys")
+    console.print("[#667eea]3.[/#667eea] Ollama (local, no API key needed)\n")
 
-    api_key = Prompt.ask("[bold]Paste your OpenRouter API key[/bold]", password=True)
+    choice = Prompt.ask("[bold>Select option (1-3)[/bold]", default="1")
 
-    # Create .hellochusquis directory in home
+    if choice == "3":
+        config = {
+            "providers": [{
+                "name": "ollama",
+                "base_url": "http://localhost:11434/v1",
+                "api_key": "ollama",
+                "model": "llama3",
+                "priority": 1,
+            }],
+            "settings": {
+                "provider_reset_hours": 1,
+                "max_retries": 3,
+                "timeout_seconds": 120,
+                "workspace_dirs": [str(Path.home() / ".hellochusquis" / "workspace")],
+                "memory_retention_days": 30,
+            },
+            "agent": {
+                "system_prompt": SYSTEM_PROMPT
+            }
+        }
+    else:
+        providers_config = {
+            "1": {
+                "name": "openrouter",
+                "base_url": "https://openrouter.ai/api/v1",
+                "model": "openrouter/auto",
+            },
+            "2": {
+                "name": "groq",
+                "base_url": "https://api.groq.com/openai/v1",
+                "model": "llama-3.1-8b-instant",
+            },
+        }
+        selected = providers_config.get(choice, providers_config["1"])
+        console.print(f"\n[dim]Get a free API key at: [/dim]")
+        if choice == "1":
+            console.print("[dim]openrouter.ai/keys[/dim]")
+        else:
+            console.print("[dim]console.groq.com/keys[/dim]")
+
+        api_key = Prompt.ask("[bold]Paste your API key[/bold]", password=True)
+
+        config = {
+            "providers": [{
+                **selected,
+                "api_key": api_key,
+                "priority": 1,
+            }],
+            "settings": {
+                "provider_reset_hours": 1,
+                "max_retries": 3,
+                "timeout_seconds": 15,
+                "workspace_dirs": [str(Path.home() / ".hellochusquis" / "workspace")],
+                "memory_retention_days": 30,
+            },
+            "agent": {
+                "system_prompt": SYSTEM_PROMPT
+            }
+        }
+
     config_dir = Path.home() / ".hellochusquis"
     config_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create workspace directory
     workspace_path = config_dir / "workspace"
     workspace_path.mkdir(parents=True, exist_ok=True)
-
-    config = {
-        "providers": [{
-            "name": "openrouter",
-            "base_url": "https://openrouter.ai/api/v1",
-            "api_key": api_key,
-            "model": "openrouter/auto",
-            "priority": 1,
-        }],
-        "settings": {
-            "provider_reset_hours": 1,
-            "max_retries": 3,
-            "timeout_seconds": 15,
-            "workspace_dirs": [str(workspace_path)],
-            "memory_retention_days": 30,
-        },
-        "agent": {
-            "system_prompt": SYSTEM_PROMPT
-        }
-    }
+    config["settings"]["workspace_dirs"] = [str(workspace_path)]
 
     config_path = config_dir / "config.yaml"
     config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
