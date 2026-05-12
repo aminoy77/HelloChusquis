@@ -1,4 +1,4 @@
-# HelloChusquis v1.4.0
+# HelloChusquis v1.4.1
 
 [![🚀 Launching on Uneed — May 7, 2026](https://img.shields.io/badge/Uneed-Launch_May_7_2026-667eea?style=flat&logo=rocket)](https://www.uneed.best/tool/hellochusquis)
 

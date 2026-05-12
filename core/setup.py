@@ -363,7 +363,7 @@ def run_quick_setup() -> dict:
     console.print("[#667eea]2.[/#667eea] Groq - console.groq.com/keys")
     console.print("[#667eea]3.[/#667eea] Ollama (local, no API key needed)\n")
 
-    choice = Prompt.ask("[bold>Select option (1-3)[/bold]", default="1")
+    choice = Prompt.ask("[bold]Select option (1-3)[/bold]", default="1")
 
     if choice == "3":
         config = {
