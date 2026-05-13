@@ -93,7 +93,7 @@ class ProjectScanner:
                 try:
                     pkg = json.loads((root / "package.json").read_text())
                     deps["package.json"] = pkg.get("dependencies", {})
-                except:
+                except Exception:
                     pass
         
         return deps
@@ -113,7 +113,7 @@ class ProjectScanner:
             if (root / cfg).exists():
                 try:
                     config[cfg] = (root / cfg).read_text()[:300]
-                except:
+                except Exception:
                     pass
 
         return config

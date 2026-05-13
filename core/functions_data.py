@@ -11,10 +11,11 @@ def json_to_csv(json_str: str, output_path: str = None, delimiter: str = ",") ->
     try:
         data = json.loads(json_str)
         if isinstance(data, list) and data:
-            headers = list(data[0].keys())
+            first_item = data[0] if data else {}
+            headers = list(first_item.keys()) if first_item else []
             lines = [delimiter.join(headers)]
             for row in data:
-                lines.append(delimiterjoin(str(row.get(h, "")) for h in headers))
+                lines.append(delimiter.join(str(row.get(h, "")) for h in headers))
             result = "\n".join(lines)
             if output_path:
                 with open(output_path, "w") as f:
@@ -44,8 +45,8 @@ def csv_to_json_array(csv_path: str, has_header: bool = True, delimiter: str = "
             reader = csv.reader(f, delimiter=delimiter)
             rows = list(reader)
             if has_header and rows:
-                headers = rows[0]
-                data = [{headers[i]: row[i] for i in range(len(row))} for row in rows[1:]]
+                headers = rows[0] if rows else []
+                data = [{headers[i]: row[i] for i in range(len(row))} for row in rows[1:] if row]
             else:
                 data = rows
             return {"json": json.dumps(data, indent=2), "rows": len(data)}
@@ -147,5 +148,6 @@ def avg_by(data: list, key: str) -> dict:
     counted = {}
     summed = sum_by(data, key)
     for k, v in summed["sums"].items():
-        counted[k] = round(v / summed["counts"][k], 2)
+        count = summed.get("counts", {}).get(k, 1)
+        counted[k] = round(v / count, 2)
     return {"averages": counted}

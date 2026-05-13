@@ -67,7 +67,8 @@ def run(action: str, image_path: str, prompt: str = "") -> str:
                 )
                 if resp.status_code == 200:
                     result = resp.json()
-                    text = result.get("ParsedResults", [{}])[0].get("ParsedText", "")
+                    parsed = result.get("ParsedResults", [])
+                    text = parsed[0].get("ParsedText", "") if parsed else ""
                     return f"Extracted text:\n{text}"
                 return f"Error: {resp.status_code}"
         except Exception as e:
@@ -108,7 +109,8 @@ def run(action: str, image_path: str, prompt: str = "") -> str:
         
         if resp.status_code == 200:
             result = resp.json()
-            return result.get("content", [{}])[0].get("text", "")
+            content = result.get("content", [])
+            return content[0].get("text", "") if content else ""
         return f"Error: {resp.status_code} - {resp.text[:200]}"
     
     except Exception as e:

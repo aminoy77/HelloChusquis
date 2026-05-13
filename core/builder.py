@@ -82,31 +82,11 @@ def research_api(topic: str, pool) -> str:
                     "required": ["query"]
                 }
             }
-        }])
-        content = response["choices"][0]["message"].get("content", "")
-        return content
-    except Exception as e:
-        return f"Could not research API: {e}"
-
-
-def generate_plugin_code(topic: str, research: str, plugin_name: str, pool) -> str:
-    """Genera el código del plugin basado en la investigación."""
-    console.print(f"  [dim]Generating plugin code...[/dim]")
-    try:
-        response = pool.chat_with_retry([
-            {"role": "system", "content": BUILDER_SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": (
-                    f"Create a HelloChusquis plugin for: {topic}\n\n"
-                    f"Plugin name: {plugin_name}\n\n"
-                    f"API Research:\n{research}\n\n"
-                    "Write the complete plugin code now."
-                )
-            }
-        ])
-        code = response["choices"][0]["message"].get("content", "")
-        # Limpia backticks si los hay
+}])
+        choices = response.get("choices", [])
+        if not choices:
+            return ""
+        code = choices[0].get("message", {}).get("content", "") or ""
         code = code.replace("```python", "").replace("```", "").strip()
         return code
     except Exception as e:
@@ -157,7 +137,8 @@ def fix_plugin_code(code: str, error: str, pool) -> str:
                 )
             }
         ])
-        fixed_code = response["choices"][0]["message"].get("content", "")
+        choices = response.get("choices", [])
+        fixed_code = choices[0].get("message", {}).get("content", "") if choices else ""
         fixed_code = fixed_code.replace("```python", "").replace("```", "").strip()
         return fixed_code
     except Exception as e:

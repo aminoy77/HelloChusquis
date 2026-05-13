@@ -256,7 +256,7 @@ def calculate_date(base: str, add_days: int = 0) -> dict:
         date = datetime.fromisoformat(base)
         result = date + timedelta(days=add_days)
         return {"result": result.isoformat()}
-    except:
+    except ValueError:
         return {"error": "Invalid date format"}
 
 
@@ -268,5 +268,5 @@ def get_timezone_info(timezone: str = None) -> dict:
             tz = pytz.timezone(timezone)
             return {"timezone": timezone, "now": datetime.now(tz).isoformat()}
         return {"available": "Use pytz.all_timezones"}
-    except:
+    except ValueError:
         return {"error": "pytz not installed"}

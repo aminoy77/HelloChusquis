@@ -416,7 +416,7 @@ class BrowserAgent:
                         element = self.page.locator(selector)
                         if await element.count() > 0:
                             break
-                    except:
+                    except Exception:
                         pass
 
                 if element:

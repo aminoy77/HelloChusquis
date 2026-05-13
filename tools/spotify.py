@@ -84,7 +84,10 @@ def run(action: str, query: str = "", playlist_id: str = "", track_uri: str = ""
                     data = resp.json()
                     if data:
                         item = data.get("item", {})
-                        return f"Now playing: {item.get('name', 'N/A')}\nArtist: {item.get('artists', [{}])[0].get('name', 'N/A')}\nAlbum: {item.get('album', {}).get('name', 'N/A')}"
+                        artists = item.get('artists', [])
+                        artist = artists[0].get('name', 'N/A') if artists else 'N/A'
+                        album = item.get('album', {}).get('name', 'N/A') or 'N/A'
+                        return f"Now playing: {item.get('name', 'N/A')}\nArtist: {artist}\nAlbum: {album}"
                     return "Nothing playing."
                 return f"Error: {resp.status_code} - {resp.text[:200]}"
 

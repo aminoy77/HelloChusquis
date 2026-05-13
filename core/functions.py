@@ -61,7 +61,7 @@ def base64_encode(text: str, encode: bool = True) -> str:
     else:
         try:
             return {"result": base64.b64decode(text.encode()).decode(), "mode": "decode"}
-        except:
+        except Exception:
             return {"error": "Invalid base64 string"}
 
 

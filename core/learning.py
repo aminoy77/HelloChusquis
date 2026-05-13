@@ -56,6 +56,10 @@ def build_learning_prompt(learnings: dict) -> str:
 def add_feedback(feedback_type: str, context: str):
     learnings = load_learnings()
     entry = {"context": context[:200], "timestamp": datetime.now().isoformat()}
+    if "feedback" not in learnings:
+        learnings["feedback"] = {"positive": [], "negative": []}
+    if feedback_type not in learnings["feedback"]:
+        learnings["feedback"][feedback_type] = []
     learnings["feedback"][feedback_type].append(entry)
     # Mantén máximo 50 entradas de feedback
     learnings["feedback"][feedback_type] = learnings["feedback"][feedback_type][-50:]
@@ -93,7 +97,10 @@ def analyze_and_learn(messages: list[dict], pool) -> None:
             }
         ])
 
-        content = response["choices"][0]["message"]["content"].strip()
+        choices = response.get("choices", [])
+        if not choices:
+            return
+        content = choices[0].get("message", {}).get("content", "").strip()
         content = content.replace("```json", "").replace("```", "").strip()
         new_learnings = json.loads(content)
 

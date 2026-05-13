@@ -81,7 +81,7 @@ def event_trigger(action: str, watch_path: str = "", command: str = "") -> str:
         try:
             # Basic watch setup
             return f"Would watch {watch_path} and run: {command}"
-        except:
+        except Exception:
             return "File watching requires OS-specific tools"
     
     return "Use hellochusquis scheduler"

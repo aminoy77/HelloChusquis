@@ -85,7 +85,10 @@ List the main topics discussed."""
             return f"Error: Unknown action {action}"
         
         response = pool.chat_with_retry([{"role": "user", "content": prompt}])
-        return response["choices"][0]["message"]["content"]
+        choices = response.get("choices", [])
+        if not choices:
+            return "Error: No response from AI provider"
+        return choices[0].get("message", {}).get("content", "") or ""
     
     except Exception as e:
         return f"Error: {str(e)}"

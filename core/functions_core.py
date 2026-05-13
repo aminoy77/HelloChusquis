@@ -132,6 +132,8 @@ def extract_phone_numbers(text: str) -> dict:
 def text_to_json(text: str, delimiter: str = ",") -> dict:
     """Convert text to JSON array."""
     lines = text.strip().split("\n")
+    if not lines or not lines[0]:
+        return {"error": "No data to parse"}
     if delimiter in lines[0]:
         headers = lines[0].split(delimiter)
         data = []
@@ -149,10 +151,11 @@ def json_to_text(json_str: str, delimiter: str = ",") -> str:
     try:
         data = json.loads(json_str)
         if isinstance(data, list) and data:
-            headers = list(data[0].keys())
+            first_item = data[0] if data else {}
+            headers = list(first_item.keys()) if first_item else []
             lines = [delimiter.join(headers)]
             for item in data:
-                lines.append(delimiterjoin(str(item.get(h, "")) for h in headers))
+                lines.append(delimiter.join(str(item.get(h, "")) for h in headers))
             return {"text": "\n".join(lines), "count": len(data)}
         return {"error": "Invalid JSON array"}
     except Exception as e:
@@ -237,7 +240,7 @@ def get_network_interfaces() -> dict:
         for name, addrs in interfaces.items():
             result[name] = [{"family": str(a.family), "address": a.address} for a in addrs]
         return result
-    except:
+    except Exception:
         return {"error": "psutil not installed"}
 
 

@@ -83,7 +83,7 @@ class SecurityScanner:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
-        except:
+        except Exception:
             return findings
 
         import re

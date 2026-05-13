@@ -16,7 +16,7 @@ class History:
         # Keep only the last N entries to manage context size
         if len(self.messages) > self.max_entries and self.messages:
             # Remove oldest entries but keep at least the first (system) message if present
-            if self.messages[0].get("role") == "system":
+            if self.messages and self.messages[0].get("role") == "system":
                 self.messages = [self.messages[0]] + self.messages[-(self.max_entries-1):]
             else:
                 self.messages = self.messages[-self.max_entries:]
@@ -72,4 +72,4 @@ class History:
 
     def get_user_inputs(self) -> list[str]:
         """Returns a list of all user inputs in the history."""
-        return [msg["content"] for msg in self.messages if msg["role"] == "user"]
+        return [msg.get("content", "") for msg in self.messages if msg.get("role") == "user"]

@@ -97,7 +97,11 @@ Question: {query}
 Answer:"""
             
             response = pool.chat_with_retry([{"role": "user", "content": prompt}])
-            return response["choices"][0]["message"]["content"]
+            choices = response.get("choices", [])
+            if not choices:
+                return f"Found relevant: {best[:500]}..."
+            content = choices[0].get("message", {}).get("content", "")
+            return content or f"Found relevant: {best[:500]}..."
         
         except Exception as e:
             return f"Found relevant: {best[:500]}..."

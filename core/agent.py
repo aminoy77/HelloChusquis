@@ -1287,9 +1287,10 @@ class Agent:
 
         while True:
             response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
-            if not response.get("choices"):
+            choices = response.get("choices", [])
+            if not choices:
                 return "Error: No response from AI provider"
-            message = response["choices"][0].get("message", {})
+            message = choices[0].get("message", {})
 
             if not message.get("tool_calls"):
                 content = message.get("content") or ""
@@ -1301,9 +1302,13 @@ class Agent:
             messages.append(message)
             step_tool_results = []
 
-            for tc in message["tool_calls"]:
-                tool_name = tc["function"]["name"]
-                tool_args = json.loads(tc["function"]["arguments"])
+            for tc in message.get("tool_calls", []):
+                func = tc.get("function", {})
+                tool_name = func.get("name", "unknown")
+                try:
+                    tool_args = json.loads(func.get("arguments", "{}"))
+                except json.JSONDecodeError:
+                    tool_args = {}
 
                 print_tool_call(tool_name, tool_args)
                 result = self._dispatch_tool(tool_name, tool_args)
@@ -1337,7 +1342,10 @@ class Agent:
             response = self.pool.chat_with_retry([
                 {"role": "user", "content": summary_prompt}
             ])
-            summary = response["choices"][0]["message"]["content"]
+            choices = response.get("choices", [])
+            if not choices:
+                return
+            summary = choices[0].get("message", {}).get("content", "")
             memory.save_summary(summary)
         except Exception:
             pass

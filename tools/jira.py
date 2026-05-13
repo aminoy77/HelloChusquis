@@ -114,7 +114,7 @@ def run(action: str, project: str = "", issue_key: str = "", summary: str = "",
             if not users:
                 return f"Error: User '{assignee}' not found."
             
-            account_id = users[0].get("accountId")
+            account_id = users[0].get("accountId") if users else None
             
             payload = {"name": assignee, "accountId": account_id}
             resp = client.put(f"{base_url}/rest/api/3/issue/{issue_key}/assignee", headers=headers, json=payload)

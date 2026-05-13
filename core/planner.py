@@ -22,7 +22,10 @@ def generate_plan(user_input: str, pool) -> list[str]:
             },
             {"role": "user", "content": user_input}
         ])
-        content = response["choices"][0]["message"]["content"].strip()
+        choices = response.get("choices", [])
+        if not choices:
+            return []
+        content = choices[0].get("message", {}).get("content", "").strip()
         content = content.replace("```json", "").replace("```", "").strip()
         steps = json.loads(content)
         return steps if isinstance(steps, list) else []

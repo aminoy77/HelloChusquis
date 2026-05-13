@@ -41,7 +41,10 @@ Be conservative—prioritize alerting user if unsure—but avoid false positives
 """
 
         response = pool.chat_with_retry([{"role": "user", "content": prompt}])
-        result = response["choices"][0]["message"]["content"].strip()
+        choices = response.get("choices", [])
+        if not choices:
+            return {"decision": "safe", "reason": "No response from provider"}
+        result = choices[0].get("message", {}).get("content", "").strip()
 
         # Parse JSON safely instead of using exec()
         result = result.replace("```json", "").replace("```", "").strip()
