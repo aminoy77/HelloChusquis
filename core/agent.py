@@ -74,6 +74,106 @@ def _build_tools_schema(plugins: list) -> list:
         {
             "type": "function",
             "function": {
+                "name": "browser",
+                "description": "Full browser automation via Playwright. Navigate to URLs, click elements, type text, take screenshots, extract content, fill forms, scroll, and more. Human-like mouse movements enabled. Anti-detection active.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": [
+                                "navigate", "click", "double_click", "right_click",
+                                "type", "scroll", "scroll_to_bottom", "scroll_to_top",
+                                "screenshot", "get_text", "get_visible_text",
+                                "search", "find", "wait_for_element",
+                                "fill_form", "submit_form", "hover",
+                                "execute_script", "press_key",
+                                "go_back", "go_forward", "reload",
+                                "get_url", "get_title", "get_cookies",
+                                "open_new_tab", "switch_to_page", "close_current_tab",
+                                "upload_file", "select_option",
+                            ],
+                            "description": "The browser action to perform"
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "URL for navigate or open_new_tab actions"
+                        },
+                        "selector": {
+                            "type": "string",
+                            "description": "CSS selector for the target element"
+                        },
+                        "text": {
+                            "type": "string",
+                            "description": "Text to type, text to click, or search query"
+                        },
+                        "xpath": {
+                            "type": "string",
+                            "description": "XPath selector for the target element"
+                        },
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for browser_search"
+                        },
+                        "engine": {
+                            "type": "string",
+                            "enum": ["google", "duckduckgo", "bing", "brave"],
+                            "description": "Search engine for browser_search"
+                        },
+                        "direction": {
+                            "type": "string",
+                            "enum": ["down", "up"],
+                            "description": "Scroll direction"
+                        },
+                        "amount": {
+                            "type": "integer",
+                            "description": "Number of scroll steps (each ~300-600px)"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File path to save screenshot"
+                        },
+                        "full_page": {
+                            "type": "boolean",
+                            "description": "Capture full page screenshot"
+                        },
+                        "pattern": {
+                            "type": "string",
+                            "description": "Text pattern to find elements"
+                        },
+                        "index": {
+                            "type": "integer",
+                            "description": "Element index if multiple match"
+                        },
+                        "key": {
+                            "type": "string",
+                            "description": "Keyboard key to press (Enter, Tab, Escape, etc)"
+                        },
+                        "form_data": {
+                            "type": "object",
+                            "description": "Key-value pairs for form fields",
+                            "additionalProperties": {"type": "string"}
+                        },
+                        "script": {
+                            "type": "string",
+                            "description": "JavaScript code to execute"
+                        },
+                        "file_path": {
+                            "type": "string",
+                            "description": "File path for upload"
+                        },
+                        "clear_first": {
+                            "type": "boolean",
+                            "description": "Clear field before typing"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "shell",
                 "description": "Execute a terminal command",
                 "parameters": {
@@ -894,6 +994,104 @@ class Agent:
                     return ToolResult(success=False, output="", error="Access denied by user")
                 self.files.allow_dir(path)
             return self.files.run(**args)
+
+        if name == "browser":
+            try:
+                action = args.get("action", "")
+                if not action:
+                    return ToolResult(success=False, output="", error="Action required for browser tool")
+
+                from tools.browser import (
+                    browser_open, browser_click, browser_double_click, browser_right_click,
+                    browser_type, browser_scroll, browser_screenshot, browser_get_text,
+                    browser_search, browser_find, browser_wait_for_element,
+                    browser_execute_script, browser_get_url, browser_get_title,
+                    browser_go_back, browser_go_forward, browser_reload,
+                    browser_press_key, browser_scroll_to_element,
+                    browser_open_new_tab, browser_switch_to_page,
+                    browser_fill_form, browser_submit_form, browser_hover,
+                    browser_get_visible_text, browser_get_cookies, browser_health,
+                )
+
+                action_map = {
+                    "navigate": lambda: browser_open(args.get("url", "")),
+                    "click": lambda: browser_click(
+                        selector=args.get("selector"),
+                        text=args.get("text"),
+                        xpath=args.get("xpath"),
+                        index=args.get("index", 0),
+                    ),
+                    "double_click": lambda: browser_double_click(
+                        selector=args.get("selector"),
+                        text=args.get("text"),
+                        xpath=args.get("xpath"),
+                    ),
+                    "right_click": lambda: browser_right_click(
+                        selector=args.get("selector"),
+                        text=args.get("text"),
+                        xpath=args.get("xpath"),
+                    ),
+                    "type": lambda: browser_type(
+                        text=args.get("text", ""),
+                        selector=args.get("selector"),
+                        clear_first=args.get("clear_first", True),
+                    ),
+                    "scroll": lambda: browser_scroll(
+                        direction=args.get("direction", "down"),
+                        amount=args.get("amount", 3),
+                    ),
+                    "scroll_to_bottom": lambda: browser_scroll_to_element("body"),
+                    "scroll_to_top": lambda: browser_scroll_to_element("header"),
+                    "screenshot": lambda: browser_screenshot(
+                        path=args.get("path"),
+                        full_page=args.get("full_page", False),
+                    ),
+                    "get_text": lambda: browser_get_text(selector=args.get("selector")),
+                    "get_visible_text": lambda: browser_get_visible_text(),
+                    "search": lambda: browser_search(
+                        query=args.get("query", args.get("text", "")),
+                        engine=args.get("engine", "google"),
+                    ),
+                    "find": lambda: browser_find(pattern=args.get("pattern", args.get("text", ""))),
+                    "wait_for_element": lambda: browser_wait_for_element(
+                        selector=args.get("selector", ""),
+                        timeout=args.get("timeout", 30),
+                    ),
+                    "hover": lambda: browser_hover(
+                        selector=args.get("selector"),
+                        text=args.get("text"),
+                        xpath=args.get("xpath"),
+                    ),
+                    "fill_form": lambda: browser_fill_form(form_data=args.get("form_data", {})),
+                    "submit_form": lambda: browser_submit_form(selector=args.get("selector", "form")),
+                    "execute_script": lambda: browser_execute_script(script=args.get("script", "")),
+                    "press_key": lambda: browser_press_key(key=args.get("key", "")),
+                    "go_back": lambda: browser_go_back(),
+                    "go_forward": lambda: browser_go_forward(),
+                    "reload": lambda: browser_reload(),
+                    "get_url": lambda: browser_get_url(),
+                    "get_title": lambda: browser_get_title(),
+                    "get_cookies": lambda: browser_get_cookies(),
+                    "open_new_tab": lambda: browser_open_new_tab(url=args.get("url")),
+                    "switch_to_page": lambda: browser_switch_to_page(index=args.get("index", 0)),
+                    "close_current_tab": lambda: browser_switch_to_page(index=0),
+                    "health": lambda: browser_health(),
+                }
+
+                handler = action_map.get(action)
+                if not handler:
+                    return ToolResult(success=False, output="", error=f"Unknown browser action: {action}")
+
+                result = handler()
+                if isinstance(result, dict):
+                    output = str(result)
+                    success = result.get("success", False)
+                    return ToolResult(success=success, output=output)
+                return ToolResult(success=True, output=str(result))
+
+            except Exception as e:
+                logger.error("Browser tool error: %s", e)
+                return ToolResult(success=False, output="", error=str(e))
 
         # External tool modules - call run() directly from module
         if name == "github":

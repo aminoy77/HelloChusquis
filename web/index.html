@@ -117,11 +117,22 @@
         }
 
         .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-family: 'Playfair Display', serif;
             font-size: 1.15rem;
             font-weight: 700;
             color: var(--amber);
             font-style: italic;
+            text-decoration: none;
+        }
+
+        .header-logo img {
+            height: 24px;
+            width: 24px;
+            object-fit: contain;
+        }
             text-decoration: none;
         }
 
@@ -1339,7 +1350,10 @@
     <div class="landing" id="landing">
         <header>
             <div class="header-left">
-                <a href="#" class="header-logo" onclick="showApp(); return false;">HelloChusquis</a>
+                <a href="#" class="header-logo" onclick="showApp(); return false;">
+                    <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24">
+                    HelloChusquis
+                </a>
                 <nav>
                     <a href="#features">Features</a>
                     <a href="#providers">Providers</a>
@@ -1368,7 +1382,7 @@
                     <button class="copy-btn" onclick="navigator.clipboard.writeText('pip install hellochusquis'); this.textContent='Copied'; setTimeout(()=>this.textContent='📋',1500)" aria-label="Copy install command">📋</button>
                 </div>
                 <div class="hero-meta">
-                    <span>v1.4.2</span>
+                    <span>v1.4.3</span>
                     <span>MIT License</span>
                     <span>Python 3.10+</span>
                 </div>
@@ -1499,7 +1513,10 @@
     <div class="app-container" id="app-container">
         <header>
             <div class="header-left">
-                <a href="#" class="header-logo" onclick="showLanding(); return false;">HelloChusquis</a>
+                <a href="#" class="header-logo" onclick="showLanding(); return false;">
+                    <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24">
+                    HelloChusquis
+                </a>
                 <div class="header-actions">
                     <button class="btn voice-btn" id="voice-input-btn" onclick="showVoiceMenu('input')" title="Voice Input">🎤</button>
                     <button class="btn voice-btn" id="voice-output-btn" onclick="showVoiceMenu('output')" title="Voice Output">🔊</button>
