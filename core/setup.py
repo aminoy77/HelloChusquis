@@ -215,7 +215,7 @@ def fetch_available_models(base_url: str, api_key: str) -> list[str]:
         return VERIFIED_OPENROUTER_MODELS
     if "groq.com" in base:
         return VERIFIED_GROQ_MODELS
-    if "ollama.com" in base:
+    if "ollama.com" in base or "localhost:11434" in base:
         return VERIFIED_OLLAMA_MODELS
 
     try:
@@ -341,8 +341,11 @@ def run_setup():
         }
     }
 
-    CONFIG_PATH.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
-    console.print(f"\n[#5eb97e]✓ Config saved to {CONFIG_PATH}[/#5eb97e]")
+    config_dir = Path.home() / ".hellochusquis"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "config.yaml"
+    config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
+    console.print(f"\n[#5eb97e]✓ Config saved to {config_path}[/#5eb97e]")
     return config
 
 
@@ -588,8 +591,11 @@ def edit_config(section: str = None):
             "memory_retention_days": retention_days,
         }
     
-    CONFIG_PATH.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
-    console.print(f"\n[#5eb97e]✓ Config saved to {CONFIG_PATH}[/#5eb97e]")
+    config_dir = Path.home() / ".hellochusquis"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "config.yaml"
+    config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
+    console.print(f"\n[#5eb97e]✓ Config saved to {config_path}[/#5eb97e]")
     return config
 
 

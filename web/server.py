@@ -2,23 +2,77 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from fastapi import FastAPI
+from datetime import datetime, timezone
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 import uvicorn
 import json
+import hashlib
+import hmac
 from pathlib import Path
 
 from core.setup import ensure_config
 from core.agent import Agent
 from core.plugins import load_plugins
-from core.memory import load_summary, SESSIONS_DIR
+import core.db_memory as db_memory
 from core.learning import load_learnings
+from core.rate_limiter import RateLimiter
+from core.logger import get_logger
+
+logger = get_logger("web")
+
+# --- Token auth config ---
+REQUIRED_API_KEY = os.environ.get("HELLOCHUSQUIS_API_KEY", "")
+AUTH_ENABLED = bool(REQUIRED_API_KEY)
+
+
+def _verify_token(token: str) -> bool:
+    """Constant-time token comparison to prevent timing attacks."""
+    if not AUTH_ENABLED:
+        return True
+    return hmac.compare_digest(token, REQUIRED_API_KEY)
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Skip auth for login page (GET /)
+        if request.method == "GET" and request.url.path == "/":
+            return await call_next(request)
+
+        # Skip auth for health probes (readiness/liveness)
+        if request.url.path in ("/health/live",):
+            return await call_next(request)
+
+        # If auth disabled, pass through
+        if not AUTH_ENABLED:
+            return await call_next(request)
+
+        # Check Authorization header
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing or invalid Authorization header"},
+            )
+        token = auth_header[7:]  # strip "Bearer "
+        if not _verify_token(token):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid API key"},
+            )
+        return await call_next(request)
+
 
 app = FastAPI()
+app.add_middleware(AuthMiddleware)
 config = ensure_config()
 agent = Agent(config)
+
+_chat_limiter = RateLimiter(requests_per_minute=30)
 
 
 class MessageRequest(BaseModel):
@@ -31,9 +85,65 @@ async def root():
     return html_path.read_text()
 
 
+@app.get("/auth/check")
+def auth_check():
+    """Tell the frontend whether auth is required and if a token works."""
+    auth_required = AUTH_ENABLED
+    return {"auth_required": auth_required}
+
+
+@app.post("/auth/verify")
+def auth_verify(req: MessageRequest):
+    """Verify a bearer token. Returns 200 if valid."""
+    if not AUTH_ENABLED:
+        return {"status": "ok"}
+    if _verify_token(req.message):
+        return {"status": "ok"}
+    raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+@app.get("/health")
+def health_check():
+    providers = agent.pool.status()
+    total = len(providers)
+    ready = sum(1 for p in providers if p["status"] == "ready")
+    return {
+        "status": "ok",
+        "version": "1.4.3",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "providers": {"total": total, "ready": ready},
+    }
+
+
+@app.get("/health/ready")
+def readiness_probe():
+    providers = agent.pool.status()
+    ready = sum(1 for p in providers if p["status"] == "ready")
+    if ready == 0:
+        raise HTTPException(status_code=503, detail="No providers ready")
+    return {"status": "ok", "ready_providers": ready}
+
+
+@app.get("/health/live")
+def liveness_probe():
+    return {"status": "ok"}
+
+
 @app.post("/chat")
-async def chat(req: MessageRequest):
+async def chat(req: MessageRequest, http_request: Request):
+    ip = http_request.client.host if http_request.client else "unknown"
+    if not _chat_limiter.is_allowed(ip):
+        retry = _chat_limiter.get_retry_after(ip)
+        logger.warning("Rate limit exceeded on /chat from %s", ip)
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Max 30 requests/minute.",
+            headers={"Retry-After": str(int(retry) + 1)},
+        )
+
     user_input = req.message.strip()
+
+    logger.info("Chat request from %s", ip)
 
     if user_input == "/clear":
         agent.history.clear()
@@ -62,6 +172,7 @@ async def chat(req: MessageRequest):
     try:
         response = agent.run(user_input)
     except RuntimeError as e:
+        logger.error("Chat error: %s", e)
         response = f"Error: {e}"
     finally:
         agent._dispatch_tool = original_dispatch
@@ -73,8 +184,20 @@ async def chat(req: MessageRequest):
 async def status():
     providers = agent.pool.status()
     plugins = [{"name": p["name"]} for p in agent.plugins]
-    summary = load_summary()
-    sessions = len(list(SESSIONS_DIR.glob("*.json"))) if SESSIONS_DIR.exists() else 0
+    summary = db_memory.load_summary()
+    sessions = 0
+    try:
+        import sqlite3
+        from pathlib import Path
+        db_path = Path.home() / ".hellochusquis/memory.db"
+        if db_path.exists():
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM sessions")
+            sessions = cursor.fetchone()[0]
+            conn.close()
+    except Exception:
+        pass
     learnings = load_learnings()
     return {
         "providers": providers,
@@ -86,7 +209,8 @@ async def status():
         "learnings": {
             "patterns": len(learnings.get("tool_patterns", {})),
             "improvements": len(learnings.get("system_prompt_improvements", []))
-        }
+        },
+        "auth_enabled": AUTH_ENABLED,
     }
 
 
@@ -112,8 +236,8 @@ async def update_provider(data: ProviderUpdate):
         return {"status": "error", "message": str(e)}
 
 
-def start():
-    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
+def start(host: str = "127.0.0.1", port: int = 8000):
+    uvicorn.run(app, host=host, port=port, log_level="warning")
 
 
 if __name__ == "__main__":

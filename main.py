@@ -6,8 +6,30 @@ from core.learning import add_feedback
 from rich.console import Console
 import threading
 import sys
+import signal
 
 console = Console()
+
+# Graceful shutdown flag — checked by main loop
+_shutdown_requested = False
+
+
+def _request_shutdown(signum, frame):
+    """Handle SIGTERM/SIGHUP — request graceful shutdown."""
+    global _shutdown_requested
+    _shutdown_requested = True
+    console.print(f"\n[yellow]Signal {signum} received — shutting down gracefully...[/yellow]")
+
+
+def _cleanup(agent, retention_days):
+    """Ensure session and memory are saved on exit."""
+    console.print("[dim]Saving session data...[/dim]")
+    try:
+        agent.summarize_and_save(retention_days)
+    except Exception as e:
+        console.print(f"[red]Error saving session: {e}[/red]")
+    console.print("[dim]Goodbye.[/dim]")
+
 
 # Palabras que siempre son tareas complejas — sin llamar al LLM
 FORCE_PLAN_KEYWORDS = [
@@ -65,10 +87,14 @@ def main():
     agent = Agent(config)
     retention_days = config["settings"].get("memory_retention_days", 30)
 
+    # Install signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, _request_shutdown)
+    signal.signal(signal.SIGHUP, _request_shutdown)
+
     print_banner()
     try:
         user_input = get_input()
-        while user_input not in ["exit", "quit"]:
+        while user_input not in ["exit", "quit"] and not _shutdown_requested:
 
             if handle_feedback(user_input, agent.history):
                 user_input = get_input()
@@ -157,10 +183,8 @@ def main():
 
     except KeyboardInterrupt:
         console.print("\n")
-
-    console.print("[dim]Saving memory...[/dim]")
-    agent.summarize_and_save(retention_days)
-    console.print("[dim]Goodbye.[/dim]")
+    finally:
+        _cleanup(agent, retention_days)
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+# DEPRECATED: This module is not used. Consider removing.
 """Advanced built-in functions (dependencies optional)."""
 
 import json

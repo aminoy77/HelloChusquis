@@ -13,6 +13,9 @@ from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
 from core.security_evaluator import evaluate_command_safety
 from ui.terminal import print_tool_call, print_tool_result, console
+from core.logger import get_logger
+
+logger = get_logger("agent")
 
 # Import tool modules directly (they provide run functions)
 import tools.github as github_module
@@ -834,6 +837,8 @@ class Agent:
         self.plugins = load_plugins()
         self.tools_schema = _build_tools_schema(self.plugins)
 
+        logger.info("Agent initialized — %d providers, %d tools", len(self.pool.providers), len(self.tools_schema))
+
         if self.plugins:
             plugin_names = ", ".join(p["name"] for p in self.plugins)
             self.system_prompt += (
@@ -868,6 +873,7 @@ class Agent:
                 safety_check = evaluate_command_safety(cmd, self.pool)
                 if not safety_check.get("safe", True):
                     risk_msg = safety_check.get("reason", "Potentially unsafe command detected.")
+                    logger.warning("Blocked unsafe command: %s — %s", cmd, risk_msg)
                     console.print(f"[bold red]⛔ Blocked unsafe command:[/bold red] {cmd}")
                     console.print(f"[dim]{risk_msg}[/dim]")
                     return ToolResult(success=False, output="", error=f"Safety check failed: {risk_msg}")
@@ -1311,7 +1317,10 @@ class Agent:
                     tool_args = {}
 
                 print_tool_call(tool_name, tool_args)
+                logger.info("Tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
                 result = self._dispatch_tool(tool_name, tool_args)
+                if not result.success:
+                    logger.error("Tool error: %s — %s", tool_name, result.error)
                 print_tool_result(result.success, result.output)
 
                 tool_msg = {
@@ -1323,6 +1332,78 @@ class Agent:
                 step_tool_results.append(tool_msg)
             
             # Keep all tool results for this turn for next turn
+            self._pending_tool_results.extend(step_tool_results)
+
+    def stream_run(self, user_input: str):
+        """Yield SSE events instead of returning full string.
+        Yields dict payloads: {"type": "chunk"|"tool_call"|"done", ...}
+        """
+        self.history.add("user", user_input)
+        messages = self._build_messages()
+
+        self._pending_tool_results = getattr(self, '_pending_tool_results', [])
+        for tr in self._pending_tool_results:
+            messages.append(tr)
+
+        if self.history.get_token_count(messages) > 4000:
+            messages = self.history.optimize_context(max_tokens=4000)
+            for tr in self._pending_tool_results:
+                messages.append(tr)
+
+        while True:
+            response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
+            choices = response.get("choices", [])
+            if not choices:
+                yield {"type": "chunk", "content": "Error: No response from AI provider"}
+                yield {"type": "done"}
+                return
+            message = choices[0].get("message", {})
+
+            if not message.get("tool_calls"):
+                content = message.get("content") or ""
+                self.history.add("assistant", content)
+                self._pending_tool_results = []
+
+                # Yield content in ~50 char chunks to simulate streaming
+                chunk_size = 50
+                for i in range(0, len(content), chunk_size):
+                    yield {"type": "chunk", "content": content[i:i + chunk_size]}
+                yield {"type": "done"}
+                return
+
+            messages.append(message)
+            step_tool_results = []
+
+            for tc in message.get("tool_calls", []):
+                func = tc.get("function", {})
+                tool_name = func.get("name", "unknown")
+                try:
+                    tool_args = json.loads(func.get("arguments", "{}"))
+                except json.JSONDecodeError:
+                    tool_args = {}
+
+                # Yield tool call status event
+                yield {
+                    "type": "tool_call",
+                    "tool": tool_name,
+                    "args": tool_args,
+                }
+
+                print_tool_call(tool_name, tool_args)
+                logger.info("Stream tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
+                result = self._dispatch_tool(tool_name, tool_args)
+                if not result.success:
+                    logger.error("Stream tool error: %s — %s", tool_name, result.error)
+                print_tool_result(result.success, result.output)
+
+                tool_msg = {
+                    "role": "tool",
+                    "tool_call_id": tc["id"],
+                    "content": result.output if result.success else f"ERROR: {result.error}"
+                }
+                messages.append(tool_msg)
+                step_tool_results.append(tool_msg)
+
             self._pending_tool_results.extend(step_tool_results)
 
     def summarize_and_save(self, retention_days: int = 30):

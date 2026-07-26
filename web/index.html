@@ -3,9 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelloChusquis</title>
+    <title>HelloChusquis — AI Terminal Agent</title>
+    <meta name="description" content="AI terminal agent with chat interface, web search, file management, code execution, and multiple AI integrations. Install with pip and start in seconds.">
+    <meta name="keywords" content="AI agent, terminal, chat, code execution, web search, OpenAI, Anthropic, Claude, GPT">
+    <link rel="canonical" href="https://hellochusquis.dev">
+    <meta property="og:title" content="HelloChusquis — AI Terminal Agent">
+    <meta property="og:description" content="AI terminal agent with chat, web search, file management, and code execution. pip install hellochusquis">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://hellochusquis.dev/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="HelloChusquis — AI Terminal Agent">
+    <meta name="twitter:description" content="AI terminal agent with chat, web search, file management, and code execution.">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "HelloChusquis",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Cross-platform",
+        "description": "AI terminal agent with chat interface, web search, file management, code execution, and multiple AI integrations.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -13,26 +34,28 @@
             --bg: #080807;
             --surface: #0f0f0d;
             --surface2: #161614;
+            --surface3: #1c1c19;
             --amber: #f5a623;
             --amber-dim: #c4841c;
-            --amber-glow: rgba(245, 166, 35, 0.08);
+            --amber-glow: rgba(245, 166, 35, 0.12);
             --text: #e8e3d8;
-            --text-muted: #6b6860;
-            --text-dim: #3d3c39;
-            --border: #1f1e1b;
-            --green: #5eb97e;
+            --text-muted: #9a9488;
+            --text-dim: #5a5750;
+            --border: #2a2926;
+            --green: #6bc98a;
             --blue: #7eb8d4;
             --red: #ef4444;
+            --radius: 8px;
         }
+
+        html { scroll-behavior: smooth; }
 
         body {
             background: var(--bg);
             color: var(--text);
             font-family: 'JetBrains Mono', monospace;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         body::before {
@@ -42,85 +65,652 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
             pointer-events: none;
             z-index: 1000;
-            opacity: 0.3;
+            opacity: 0.25;
         }
 
+        /* SKIP LINK */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 16px;
+            background: var(--amber);
+            color: var(--bg);
+            padding: 12px 24px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-decoration: none;
+            z-index: 9999;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .skip-link:focus { top: 16px; }
+
+        /* FOCUS STYLES */
+        *:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+        }
+
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+        }
+
+        /* HEADER */
         header {
-            padding: 14px 24px;
-            background: var(--surface);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0 24px;
+            height: 56px;
+            background: rgba(8, 8, 7, 0.92);
+            backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-shrink: 0;
         }
 
         .header-left {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 24px;
         }
 
         .header-logo {
             font-family: 'Playfair Display', serif;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 700;
             color: var(--amber);
             font-style: italic;
+            text-decoration: none;
         }
+
+        nav { display: flex; gap: 4px; }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.72rem;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            transition: all 0.15s;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        nav a:hover { color: var(--text); background: var(--surface2); }
 
         .header-actions {
             display: flex;
             gap: 8px;
+            align-items: center;
         }
 
-        .header-btn {
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             background: transparent;
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 6px 12px;
+            padding: 7px 14px;
             font-size: 0.7rem;
             font-family: 'JetBrains Mono', monospace;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            border-radius: var(--radius);
         }
 
-        .header-btn:hover {
-            border-color: var(--amber);
-            color: var(--amber);
-        }
+        .btn:hover { border-color: var(--amber); color: var(--amber); }
+        .btn.active { background: var(--amber); color: var(--bg); border-color: var(--amber); }
+        .btn-primary { background: var(--amber); color: var(--bg); border-color: var(--amber); font-weight: 600; }
+        .btn-primary:hover { background: var(--amber-dim); border-color: var(--amber-dim); }
 
-        .header-btn.active {
-            background: var(--amber);
-            color: var(--bg);
-            border-color: var(--amber);
-        }
-
-        .header-status {
-            display: flex;
+        /* HERO */
+        .hero {
+            padding: 80px 24px 60px;
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
             align-items: center;
-            gap: 8px;
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
         }
 
-        .status-dot {
+        .hero-text { max-width: 500px; }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.65rem;
+            color: var(--green);
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .hero-badge::before {
+            content: '';
             width: 6px;
             height: 6px;
             border-radius: 50%;
             background: var(--green);
-            animation: pulse 2s infinite;
+            animation: pulse-dot 2s infinite;
         }
 
-        @keyframes pulse {
+        @keyframes pulse-dot {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
 
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.2rem;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--amber);
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+
+        .hero-sub {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .hero-install {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .install-cmd {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-size: 0.82rem;
+            color: var(--text);
+        }
+
+        .install-cmd .prompt { color: var(--green); }
+        .install-cmd code { color: var(--text); }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 8px;
+            cursor: pointer;
+            border-radius: var(--radius);
+            font-size: 0.8rem;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .copy-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+        .hero-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 24px;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+        /* TERMINAL PREVIEW */
+        .terminal-preview {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .terminal-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ef4444; }
+        .terminal-dot.yellow { background: #eab308; }
+        .terminal-dot.green { background: #22c55e; }
+
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .terminal-body {
+            padding: 20px;
+            font-size: 0.78rem;
+            line-height: 1.8;
+            min-height: 320px;
+        }
+
+        .term-line { margin-bottom: 4px; }
+        .term-prompt { color: var(--green); }
+        .term-cmd { color: var(--text); }
+        .term-output { color: var(--text-muted); }
+        .term-highlight { color: var(--amber); }
+        .term-dim { color: var(--text-dim); }
+
+        .term-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: var(--amber);
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* FEATURES */
+        .section {
+            padding: 80px 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+        .section-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--amber);
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .section-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            max-width: 560px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            transition: all 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--amber);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(245, 166, 35, 0.06);
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .feature-code {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            color: var(--green);
+        }
+
+        /* PROVIDERS */
+        .providers-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .provider-tag {
+            padding: 8px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            transition: all 0.15s;
+        }
+
+        .provider-tag:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+        }
+
+        /* INTEGRATIONS */
+        .integrations-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .integration-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            transition: all 0.15s;
+        }
+
+        .integration-card:hover {
+            border-color: var(--amber);
+            color: var(--text);
+        }
+
+        .integration-icon {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+        }
+
+        /* CTA */
+        .cta-section {
+            padding: 80px 24px;
+            text-align: center;
+        }
+
+        .cta-box {
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px 40px;
+        }
+
+        .cta-box h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--amber);
+            margin-bottom: 12px;
+        }
+
+        .cta-box p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .cta-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        /* FOOTER */
+        footer {
+            padding: 40px 24px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        footer p {
+            font-size: 0.68rem;
+            color: var(--text-dim);
+        }
+
+        footer a {
+            color: var(--amber);
+            text-decoration: none;
+        }
+
+        footer a:hover { text-decoration: underline; }
+
+        /* CHAT APP (hidden by default) */
+        .app-container {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .app-container.active {
+            display: flex;
+        }
+
+        .landing { display: block; }
+        .landing.hidden { display: none; }
+
+        /* AUTH BANNER */
+        .auth-banner {
+            display: none;
+            padding: 10px 24px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .auth-banner.visible { display: flex; }
+        .auth-banner.authed { justify-content: center; }
+
+        .auth-banner input {
+            flex: 1;
+            max-width: 360px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            outline: none;
+            border-radius: var(--radius);
+        }
+
+        .auth-banner input:focus { border-color: var(--amber); }
+
+        .auth-banner button {
+            background: var(--amber);
+            color: var(--bg);
+            border: none;
+            padding: 8px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: var(--radius);
+        }
+
+        .auth-banner button:hover { background: var(--amber-dim); }
+
+        .auth-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            color: var(--green);
+            letter-spacing: 0.1em;
+        }
+
+        .auth-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+
+        .auth-banner button.disconnect {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            margin-left: 8px;
+        }
+
+        .auth-banner button.disconnect:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* CONFIG PANEL */
+        .config-panel {
+            display: none;
+            position: fixed;
+            top: 56px;
+            right: 20px;
+            width: 320px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 20px;
+            z-index: 200;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .config-panel.visible { display: block; }
+
+        .config-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amber);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .config-section { margin-bottom: 20px; }
+
+        .config-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .config-value {
+            font-size: 0.75rem;
+            color: var(--text);
+            padding: 6px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            word-break: break-all;
+            border-radius: var(--radius);
+        }
+
+        .config-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+        }
+
+        .toggle-switch {
+            width: 36px;
+            height: 20px;
+            background: var(--border);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-switch.active { background: var(--amber); }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: var(--text);
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch.active::after { transform: translateX(16px); }
+
+        /* MAIN APP LAYOUT */
         .main {
             display: flex;
             flex: 1;
@@ -188,88 +778,6 @@
 
         .memory-stat span { color: var(--text); }
 
-        /* CONFIG PANEL */
-        .config-panel {
-            display: none;
-            position: fixed;
-            top: 60px;
-            right: 20px;
-            width: 320px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 20px;
-            z-index: 200;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .config-panel.visible { display: block; }
-
-        .config-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--amber);
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .config-section {
-            margin-bottom: 20px;
-        }
-
-        .config-label {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .config-value {
-            font-size: 0.75rem;
-            color: var(--text);
-            padding: 6px 10px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            word-break: break-all;
-        }
-
-        .config-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-        }
-
-        .toggle-switch {
-            width: 36px;
-            height: 20px;
-            background: var(--border);
-            border-radius: 10px;
-            position: relative;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .toggle-switch.active { background: var(--amber); }
-
-        .toggle-switch::after {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            background: var(--text);
-            border-radius: 50%;
-            top: 2px;
-            left: 2px;
-            transition: transform 0.2s;
-        }
-
-        .toggle-switch.active::after { transform: translateX(16px); }
-
         /* CHAT */
         .chat-area {
             flex: 1;
@@ -322,14 +830,8 @@
             padding: 0 2px;
         }
 
-        .message.user .message-label {
-            color: var(--text-muted);
-            text-align: right;
-        }
-
-        .message.assistant .message-label {
-            color: var(--amber);
-        }
+        .message.user .message-label { color: var(--text-muted); text-align: right; }
+        .message.assistant .message-label { color: var(--amber); }
 
         .message-actions {
             display: flex;
@@ -347,39 +849,28 @@
             padding: 3px 8px;
             font-size: 0.65rem;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
+            border-radius: var(--radius);
         }
 
-        .action-btn:hover {
-            border-color: var(--text-muted);
-            color: var(--text);
-        }
-
+        .action-btn:hover { border-color: var(--text-muted); color: var(--text); }
         .action-btn.like:hover { border-color: var(--green); color: var(--green); }
         .action-btn.dislike:hover { border-color: var(--red); color: var(--red); }
         .action-btn.copy:hover { border-color: var(--amber); color: var(--amber); }
-
-        .header-btn.active {
-            background: var(--amber);
-            color: var(--bg);
-            border-color: var(--amber);
-        }
 
         .language-selector {
             background: var(--surface);
             color: var(--text);
             border: 1px solid var(--border);
             padding: 6px 10px;
-            border-radius: 4px;
+            border-radius: var(--radius);
             font-size: 0.75rem;
             font-family: inherit;
             cursor: pointer;
             outline: none;
         }
 
-        .language-selector:hover {
-            border-color: var(--text-muted);
-        }
+        .language-selector:hover { border-color: var(--text-muted); }
 
         .voice-btn.active {
             background: var(--green);
@@ -388,8 +879,8 @@
         }
 
         @keyframes pulse-voice {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(94, 185, 126, 0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(94, 185, 126, 0); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(107, 201, 138, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(107, 201, 138, 0); }
         }
 
         .voice-menu {
@@ -398,7 +889,7 @@
             right: 0;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 12px;
             min-width: 200px;
             z-index: 1000;
@@ -421,23 +912,14 @@
             align-items: center;
             gap: 10px;
             padding: 8px 12px;
-            border-radius: 4px;
+            border-radius: var(--radius);
             cursor: pointer;
             font-size: 0.8rem;
         }
 
-        .voice-option:hover {
-            background: var(--surface2);
-        }
-
-        .voice-option.selected {
-            background: var(--amber-glow);
-            color: var(--amber);
-        }
-
-        .voice-option input {
-            accent-color: var(--amber);
-        }
+        .voice-option:hover { background: var(--surface2); }
+        .voice-option.selected { background: var(--amber-glow); color: var(--amber); }
+        .voice-option input { accent-color: var(--amber); }
 
         .voice-listening {
             background: var(--green);
@@ -451,6 +933,7 @@
             line-height: 1.7;
             white-space: pre-wrap;
             word-break: break-word;
+            border-radius: var(--radius);
         }
 
         .message.user .message-bubble {
@@ -481,6 +964,7 @@
             border: 1px solid var(--border);
             padding: 4px 10px;
             font-family: 'JetBrains Mono', monospace;
+            border-radius: var(--radius);
         }
 
         .tool-call.success { border-left: 2px solid var(--green); color: var(--text-muted); }
@@ -495,6 +979,7 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-left: 2px solid var(--amber);
+            border-radius: var(--radius);
         }
 
         .thinking span {
@@ -533,13 +1018,11 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.825rem;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.15s;
+            border-radius: var(--radius);
         }
 
-        .input-area input:focus {
-            border-color: rgba(245, 166, 35, 0.3);
-        }
-
+        .input-area input:focus { border-color: rgba(245, 166, 35, 0.4); }
         .input-area input::placeholder { color: var(--text-dim); }
 
         .input-area button {
@@ -553,7 +1036,8 @@
             letter-spacing: 0.1em;
             text-transform: uppercase;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.15s;
+            border-radius: var(--radius);
         }
 
         .input-area button:hover { background: var(--amber-dim); }
@@ -594,11 +1078,12 @@
             padding: 6px 12px;
             border: 1px solid var(--border);
             text-align: left;
+            border-radius: var(--radius);
         }
 
         .hint-item span { color: var(--amber); }
 
-        /* COPTOAST */
+        /* TOAST */
         .toast {
             position: fixed;
             bottom: 80px;
@@ -612,6 +1097,7 @@
             opacity: 0;
             transition: all 0.3s ease;
             z-index: 300;
+            border-radius: var(--radius);
         }
 
         .toast.show {
@@ -624,6 +1110,7 @@
             --bg: #ffffff;
             --surface: #f5f5f5;
             --surface2: #ebebeb;
+            --surface3: #e0e0e0;
             --amber: #d97706;
             --text: #1f1f1f;
             --text-muted: #6b7280;
@@ -635,6 +1122,7 @@
             --bg: #0a0a0a;
             --surface: #141414;
             --surface2: #1a1a1a;
+            --surface3: #222222;
             --amber: #22d3ee;
             --text: #fafafa;
             --text-muted: #64748b;
@@ -646,6 +1134,7 @@
             --bg: #0c1929;
             --surface: #12263d;
             --surface2: #163252;
+            --surface3: #1a3d62;
             --amber: #06b6d4;
             --text: #e0f2fe;
             --text-muted: #7dd3fc;
@@ -656,53 +1145,22 @@
             --bg: #0a1208;
             --surface: #0f1a0d;
             --surface2: #152211;
+            --surface3: #1a2a15;
             --amber: #22c55e;
             --text: #dcfce7;
             --text-muted: #86efac;
             --border: #14532d;
         }
 
-        /* EMOJI PICKER */
-        .emoji-picker {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 12px;
-            border-radius: 8px;
-            display: none;
-            z-index: 300;
-            max-width: 300px;
-        }
-
-        .emoji-picker.show { display: block; }
-
-        .emoji-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 4px;
-        }
-
-        .emoji-btn {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 4px;
-        }
-
-        .emoji-btn:hover { background: var(--surface2); border-radius: 4px; }
-
-        /* SHORTCUTS HELP */
+        /* SHORTCUTS PANEL */
         .shortcuts-panel {
             position: fixed;
-            top: 60px;
+            top: 56px;
             left: 20px;
             background: var(--surface);
             border: 1px solid var(--border);
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             display: none;
             z-index: 300;
             min-width: 280px;
@@ -725,30 +1183,7 @@
             color: var(--amber);
         }
 
-        /* EXPORT MENU */
-        .export-menu {
-            position: fixed;
-            top: 60px;
-            right: 20px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 12px;
-            border-radius: 8px;
-            display: none;
-            z-index: 300;
-        }
-
-        .export-menu.show { display: block; }
-
-        .export-option {
-            padding: 8px 16px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .export-option:hover { background: var(--surface2); }
-
-        /* COMMAND PALETTE (Ctrl+P) */
+        /* COMMAND PALETTE */
         .command-palette {
             position: fixed;
             top: 50%;
@@ -781,9 +1216,7 @@
 
         .command-palette-input::placeholder { color: var(--text-dim); }
 
-        .command-palette-section {
-            padding: 8px 0;
-        }
+        .command-palette-section { padding: 8px 0; }
 
         .command-palette-section-title {
             padding: 8px 20px 4px;
@@ -802,29 +1235,12 @@
             transition: background 0.1s;
         }
 
-        .command-palette-item:hover, .command-palette-item.selected {
-            background: var(--surface2);
-        }
+        .command-palette-item:hover, .command-palette-item.selected { background: var(--surface2); }
 
-        .command-palette-item-icon {
-            font-size: 1.2rem;
-            width: 28px;
-            text-align: center;
-        }
-
-        .command-palette-item-text {
-            flex: 1;
-        }
-
-        .command-palette-item-title {
-            font-size: 0.85rem;
-            color: var(--text);
-        }
-
-        .command-palette-item-desc {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-        }
+        .command-palette-item-icon { font-size: 1.2rem; width: 28px; text-align: center; }
+        .command-palette-item-text { flex: 1; }
+        .command-palette-item-title { font-size: 0.85rem; color: var(--text); }
+        .command-palette-item-desc { font-size: 0.7rem; color: var(--text-muted); }
 
         .command-palette-item-shortcut {
             font-size: 0.65rem;
@@ -858,18 +1274,31 @@
             display: none;
             z-index: 999;
         }
+
         .command-palette-overlay.show { display: block; }
 
-        /* PRESETS */
-        .preset-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: var(--amber);
-            color: var(--bg);
-            border-radius: 4px;
-            font-size: 0.65rem;
-            font-weight: 700;
+        /* EXPORT MENU */
+        .export-menu {
+            position: fixed;
+            top: 56px;
+            right: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 12px;
+            display: none;
+            z-index: 300;
         }
+
+        .export-menu.show { display: block; }
+
+        .export-option {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: var(--radius);
+        }
+
+        .export-option:hover { background: var(--surface2); }
 
         .message-bubble pre {
             background: var(--bg);
@@ -886,256 +1315,431 @@
             font-size: 0.85em;
         }
 
-        .message-bubble pre code {
-            background: none;
-            padding: 0;
+        .message-bubble pre code { background: none; padding: 0; }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .hero {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                padding: 40px 20px;
+            }
+            .hero h1 { font-size: 2.2rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .integrations-grid { grid-template-columns: repeat(2, 1fr); }
+            nav { display: none; }
+            .messages { padding: 20px; }
+            .input-area { padding: 12px 20px; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="header-left">
-            <div class="header-logo">HelloChusquis</div>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="landing" id="landing">
+        <header>
+            <div class="header-left">
+                <a href="#" class="header-logo" onclick="showApp(); return false;">HelloChusquis</a>
+                <nav>
+                    <a href="#features">Features</a>
+                    <a href="#providers">Providers</a>
+                    <a href="#integrations">Integrations</a>
+                </nav>
+            </div>
             <div class="header-actions">
-                <button class="header-btn voice-btn" id="voice-input-btn" onclick="showVoiceMenu('input')" title="Voice Input">🎤</button>
-                <button class="header-btn voice-btn" id="voice-output-btn" onclick="showVoiceMenu('output')" title="Voice Output">🔊</button>
-                <button class="header-btn" id="toggle-sidebar" onclick="toggleSidebar()">☰ Sidebar</button>
-                <button class="header-btn" id="toggle-config" onclick="toggleConfig()">⚙ Config</button>
-                <button class="header-btn" onclick="toggleShortcuts()" title="Keyboard Shortcuts">⌨️</button>
-                <button class="header-btn" onclick="toggleExportMenu()" title="Export Chat">📤</button>
+                <button class="btn" onclick="showApp()">Open App</button>
+                <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener">GitHub</a>
             </div>
-            <select id="language-select" class="language-selector" onchange="changeLanguage(this.value)">
-                <option value="auto">🌐 Auto</option>
-                <option value="en-US">English</option>
-                <option value="es-ES">Español</option>
-                <option value="fr-FR">Français</option>
-                <option value="de-DE">Deutsch</option>
-                <option value="it-IT">Italiano</option>
-                <option value="pt-BR">Português</option>
-                <option value="ja-JP">日本語</option>
-                <option value="ko-KR">한국어</option>
-                <option value="zh-CN">中文</option>
-                <option value="ru-RU">Русский</option>
-                <option value="ar-SA">العربية</option>
-            </select>
-        </div>
-        <div class="header-status">
-            <div class="status-dot"></div>
-            <span>Ready</span>
-        </div>
-    </header>
+        </header>
 
-    <div class="config-panel" id="config-panel">
-        <div class="config-title">⚙ Configuration</div>
-        
-        <div class="config-section">
-            <div class="config-label">Profile</div>
-            <input type="text" id="config-profile" class="config-value" value="default" style="width: 100%; color: var(--text);">
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Temperature</div>
-            <input type="range" id="config-temperature" min="0" max="2" step="0.1" value="0.7" 
-                style="width: 100%;" oninput="updateConfig('temperature', this.value)">
-            <div style="font-size: 0.7rem; color: var(--text-muted); text-align: right;" id="temp-value">0.7</div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Max Tokens</div>
-            <input type="number" id="config-maxtokens" class="config-value" value="4096" 
-                style="width: 100%; color: var(--text);" onchange="updateConfig('max_tokens', this.value)">
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Memory Retention</div>
-            <input type="number" id="config-memory" class="config-value" value="30" 
-                style="width: 100%; color: var(--text);" onchange="updateConfig('memory_days', this.value)">
-            <div style="font-size: 0.65rem; color: var(--text-dim); margin-top: 4px;">days</div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">System Prompt</div>
-            <textarea id="config-system" class="config-value" rows="3" 
-                style="width: 100%; color: var(--text); resize: vertical;" 
-                onchange="updateConfig('system_prompt', this.value)">You are HelloChusquis, a helpful AI assistant.</textarea>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Interface Theme</div>
-            <div class="config-toggle">
-                <div class="toggle-switch active" id="toggle-theme" onclick="toggleTheme()"></div>
-                <span>Dark Mode</span>
-            </div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Auto-Save</div>
-            <div class="config-toggle">
-                <div class="toggle-switch active" id="toggle-autosave" onclick="toggleAutosave()"></div>
-                <span>Save sessions automatically</span>
-            </div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Sound Effects</div>
-            <div class="config-toggle">
-                <div class="toggle-switch" id="toggle-sound" onclick="toggleSound()"></div>
-                <span>Play sound on response</span>
-            </div>
-        </div>
-
-        <div class="config-section">
-            <div class="config-label">Streaming</div>
-            <div class="config-toggle">
-                <div class="toggle-switch" id="toggle-stream" onclick="toggleStream()"></div>
-                <span>Stream responses</span>
-            </div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Theme</div>
-            <select id="config-theme" class="config-value" style="width: 100%; color: var(--text);" onchange="setTheme(this.value)">
-                <option value="dark">🌙 Dark</option>
-                <option value="light">☀️ Light</option>
-                <option value="minimal">⚫ Minimal</option>
-                <option value="ocean">🌊 Ocean</option>
-                <option value="forest">🌲 Forest</option>
-            </select>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Font Size</div>
-            <select id="config-fontsize" class="config-value" style="width: 100%; color: var(--text);" onchange="setFontSize(this.value)">
-                <option value="0.75rem">Small</option>
-                <option value="0.825rem" selected>Medium</option>
-                <option value="1rem">Large</option>
-            </select>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Execute Tools</div>
-            <div class="config-toggle">
-                <div class="toggle-switch active" id="toggle-tools" onclick="toggleTools()"></div>
-                <span>Allow tool execution</span>
-            </div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Web Search</div>
-            <div class="config-toggle">
-                <div class="toggle-switch active" id="toggle-search" onclick="toggleSearch()"></div>
-                <span>Enable web search</span>
-            </div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Code Interpreter</div>
-            <div class="config-toggle">
-                <div class="toggle-switch active" id="toggle-code" onclick="toggleCode()"></div>
-                <span>Enable code execution</span>
-            </div>
-        </div>
-        
-        <div class="config-section">
-            <div class="config-label">Image Generation</div>
-            <div class="config-toggle">
-                <div class="toggle-switch" id="toggle-images" onclick="toggleImages()"></div>
-                <span>Enable DALL-E</span>
-            </div>
-        </div>
-        
-        <div class="config-section" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
-            <button class="header-btn" onclick="exportConfig()" style="width: 48%;">📤 Export</button>
-            <button class="header-btn" onclick="importConfig()" style="width: 48%;">📥 Import</button>
-            <button class="header-btn" onclick="clearHistory()" style="width: 100%; margin-top: 8px;">🗑 Clear History</button>
-            <button class="header-btn" onclick="resetConfig()" style="width: 100%; margin-top: 8px; border-color: var(--red); color: var(--red);">🔄 Reset Defaults</button>
-        </div>
-    </div>
-
-    <!-- Shortcuts Panel -->
-    <div class="shortcuts-panel" id="shortcuts-panel">
-        <div class="config-title">⌨️ Keyboard Shortcuts</div>
-        <div class="shortcut-item"><span>Send message</span><span class="shortcut-key">Enter</span></div>
-        <div class="shortcut-item"><span>Voice input</span><span class="shortcut-key">V</span></div>
-        <div class="shortcut-item"><span>Voice output</span><span class="shortcut-key">S</span></div>
-        <div class="shortcut-item"><span>Command Palette</span><span class="shortcut-key">Ctrl+P</span></div>
-        <div class="shortcut-item"><span>Toggle sidebar</span><span class="shortcut-key">Tab</span></div>
-        <div class="shortcut-item"><span>Config panel</span><span class="shortcut-key">C</span></div>
-        <div class="shortcut-item"><span>Clear input</span><span class="shortcut-key">Esc</span></div>
-        <div class="shortcut-item"><span>Shortcuts help</span><span class="shortcut-key">?</span></div>
-    </div>
-
-    <!-- Command Palette -->
-    <div class="command-palette-overlay" id="command-palette-overlay" onclick="closeCommandPalette()"></div>
-    <div class="command-palette" id="command-palette">
-        <input type="text" class="command-palette-input" id="command-palette-input" 
-               placeholder="Type a command..." autocomplete="off">
-        <div id="command-palette-results"></div>
-        <div class="command-palette-footer">
-            <span><kbd>↑↓</kbd> Navigate</span>
-            <span><kbd>Enter</kbd> Select</span>
-            <span><kbd>Esc</kbd> Close</span>
-        </div>
-    </div>
-
-    <!-- Emoji Picker -->
-    <div class="emoji-picker" id="emoji-picker">
-        <div class="emoji-grid" id="emoji-grid"></div>
-    </div>
-
-    <!-- Export Menu -->
-    <div class="export-menu" id="export-menu">
-        <div class="export-option" onclick="exportChat('json')">📄 Export as JSON</div>
-        <div class="export-option" onclick="exportChat('md')">📝 Export as Markdown</div>
-        <div class="export-option" onclick="exportChat('html')">🌐 Export as HTML</div>
-        <div class="export-option" onclick="exportChat('pdf')">📑 Save as PDF</div>
-    </div>
-
-    <div class="main">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-section">
-                <h3>Providers</h3>
-                <div id="providers-list"><div class="sidebar-item">Loading...</div></div>
-            </div>
-            <div class="sidebar-section">
-                <h3>Plugins</h3>
-                <div id="plugins-list"><div class="sidebar-item">Loading...</div></div>
-            </div>
-            <div class="sidebar-section">
-                <h3>Memory</h3>
-                <div id="memory-info"><div class="memory-stat">Loading...</div></div>
-            </div>
-            <div class="sidebar-section">
-                <h3>Learnings</h3>
-                <div id="learnings-info"><div class="memory-stat">Loading...</div></div>
-            </div>
-            <div class="sidebar-section" style="margin-top: auto;">
-                <h3>Quick Actions</h3>
-                <button class="header-btn" onclick="showStatus()" style="width: 100%; margin-bottom: 8px;">/status</button>
-                <button class="header-btn" onclick="clearHistory()" style="width: 100%;">/clear</button>
-            </div>
-        </aside>
-
-        <div class="chat-area">
-            <div class="messages" id="messages">
-                <div class="welcome">
-                    <h2>HelloChusquis</h2>
-                    <p>Terminal AI Agent</p>
-                    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
-                        <span style="display:inline-block;padding:2px 8px;background:var(--green);color:var(--bg);border-radius:4px;font-size:0.6rem;font-weight:700;">v1.1.0</span>
-                        <span style="display:inline-block;padding:2px 8px;background:var(--green);color:var(--bg);border-radius:4px;font-size:0.6rem;font-weight:700;">STABLE</span>
+        <section class="hero">
+            <div class="hero-text">
+                <div class="hero-badge">Stable Release</div>
+                <h1>AI in your terminal. Actually useful.</h1>
+                <p class="hero-sub">
+                    Chat with AI, search the web, run code, manage files, and connect to 20+ services.
+                    One pip install. No dashboard. No vendor lock-in.
+                </p>
+                <div class="hero-install">
+                    <div class="install-cmd">
+                        <span class="prompt">$</span>
+                        <code>pip install hellochusquis</code>
                     </div>
-                    <div class="welcome-hint">
-                        <div class="hint-item"><span>/help</span> — show commands</div>
-                        <div class="hint-item"><span>/status</span> — provider status</div>
-                        <div class="hint-item"><span>/clear</span> — clear history</div>
-                        <div class="hint-item"><span>👍 / 👎</span> — give feedback</div>
-                    </div>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('pip install hellochusquis'); this.textContent='Copied'; setTimeout(()=>this.textContent='📋',1500)" aria-label="Copy install command">📋</button>
+                </div>
+                <div class="hero-meta">
+                    <span>v1.4.2</span>
+                    <span>MIT License</span>
+                    <span>Python 3.10+</span>
                 </div>
             </div>
-            <div class="input-area">
-                <input type="text" id="input" placeholder="Type a message..." autocomplete="off" />
-                <button id="send-btn" onclick="sendMessage()">Send →</button>
+            <div class="terminal-preview" role="img" aria-label="HelloChusquis terminal demo showing AI agent executing commands">
+                <div class="terminal-bar">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                    <div class="terminal-title">hellochusquis — terminal</div>
+                </div>
+                <div class="terminal-body">
+                    <div class="term-line"><span class="term-prompt">$ </span><span class="term-cmd">hellochusquis</span></div>
+                    <div class="term-line"><span class="term-dim">Loading providers...</span></div>
+                    <div class="term-line"><span class="term-highlight">Providers:</span> <span class="term-output">OpenAI, Anthropic, Google, Ollama</span></div>
+                    <div class="term-line"><span class="term-highlight">Tools:</span> <span class="term-output">shell, code, files, web_search</span></div>
+                    <div class="term-line"><span class="term-dim">──────────────────────────────────</span></div>
+                    <div class="term-line"><span class="term-prompt">You: </span><span class="term-cmd">Search for latest Python releases</span></div>
+                    <div class="term-line"><span class="term-dim">→ web_search("latest Python releases 2026")</span></div>
+                    <div class="term-line"><span class="term-output">Found 5 results. Python 3.13 released Mar 2026.</span></div>
+                    <div class="term-line"><span class="term-dim">──────────────────────────────────</span></div>
+                    <div class="term-line"><span class="term-prompt">You: </span><span class="term-cmd">Create a REST API for todos</span></div>
+                    <div class="term-line"><span class="term-dim">→ code(python, "from flask import Flask...")</span></div>
+                    <div class="term-line"><span class="term-output">✓ Created api.py with 4 endpoints</span></div>
+                    <div class="term-line"><span class="term-dim">──────────────────────────────────</span></div>
+                    <div class="term-line"><span class="term-prompt">You: </span><span class="term-cursor"></span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="features">
+            <div class="section-header">
+                <div class="section-label">Built-in Tools</div>
+                <h2 class="section-title">Everything you need, nothing you don't.</h2>
+                <p class="section-desc">
+                    Four core tools that cover 90% of developer workflows. No bloated plugin system required.
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🖥️</div>
+                    <h3>Shell Execution</h3>
+                    <p>Run any terminal command directly from chat. Build, test, deploy — without leaving the conversation.</p>
+                    <div class="feature-code">$ hellochusquis → shell("docker build -t app .")</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🐍</div>
+                    <h3>Code Interpreter</h3>
+                    <p>Execute Python code in real-time. Data analysis, scripting, prototyping — all sandboxed and safe.</p>
+                    <div class="feature-code">$ hellochusquis → code("print(sum(range(100)))")</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>File Management</h3>
+                    <p>Read, write, delete, and list files. Build entire projects without touching your editor.</p>
+                    <div class="feature-code">$ hellochusquis → files(write, "app.py", content)</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Web Search</h3>
+                    <p>Search the web via DuckDuckGo. Get current information without leaving the terminal.</p>
+                    <div class="feature-code">$ hellochusquis → web_search("Python 3.13 features")</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="providers">
+            <div class="section-header">
+                <div class="section-label">AI Providers</div>
+                <h2 class="section-title">Use any model. Switch anytime.</h2>
+                <p class="section-desc">
+                    OpenAI, Anthropic, Google, Ollama, Groq, Mistral, and more. Automatic fallback when a provider goes down.
+                </p>
+            </div>
+            <div class="providers-grid">
+                <div class="provider-tag">OpenAI (GPT-4o, GPT-4o-mini)</div>
+                <div class="provider-tag">Anthropic (Claude 3.5 Sonnet)</div>
+                <div class="provider-tag">Google (Gemini 2.0 Flash)</div>
+                <div class="provider-tag">Ollama (Llama 3.1, Mistral)</div>
+                <div class="provider-tag">OpenRouter</div>
+                <div class="provider-tag">Groq</div>
+                <div class="provider-tag">Mistral</div>
+                <div class="provider-tag">Cohere</div>
+                <div class="provider-tag">AWS Bedrock</div>
+            </div>
+        </section>
+
+        <section class="section" id="integrations">
+            <div class="section-header">
+                <div class="section-label">Integrations</div>
+                <h2 class="section-title">Connect to everything.</h2>
+                <p class="section-desc">
+                    GitHub, Slack, Docker, Notion, AWS, and more. Extend HelloChusquis with plugins or use the REST API.
+                </p>
+            </div>
+            <div class="integrations-grid">
+                <div class="integration-card"><div class="integration-icon">🐙</div>GitHub</div>
+                <div class="integration-card"><div class="integration-icon">💬</div>Slack</div>
+                <div class="integration-card"><div class="integration-icon">🐳</div>Docker</div>
+                <div class="integration-card"><div class="integration-icon">📝</div>Notion</div>
+                <div class="integration-card"><div class="integration-icon">☁️</div>AWS</div>
+                <div class="integration-card"><div class="integration-icon">📧</div>Gmail</div>
+                <div class="integration-card"><div class="integration-icon">🎫</div>Jira</div>
+                <div class="integration-card"><div class="integration-icon">🗄️</div>PostgreSQL</div>
+                <div class="integration-card"><div class="integration-icon">🍃</div>MongoDB</div>
+                <div class="integration-card"><div class="integration-icon">💳</div>Stripe</div>
+                <div class="integration-card"><div class="integration-icon">📱</div>Twilio</div>
+                <div class="integration-card"><div class="integration-icon">🚀</div>Vercel</div>
+            </div>
+        </section>
+
+        <section class="cta-section">
+            <div class="cta-box">
+                <h2>Start in 10 seconds.</h2>
+                <p>Install. Run. Talk to your AI agent. No configuration needed to get started.</p>
+                <div class="cta-actions">
+                    <button class="btn btn-primary" onclick="showApp()">Launch App</button>
+                    <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener">View Docs</a>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Built with care by <a href="https://github.com/aminoy77" target="_blank" rel="noopener">aminoy77</a> and the HelloChusquis community. MIT License.</p>
+        </footer>
+    </div>
+
+    <div class="app-container" id="app-container">
+        <header>
+            <div class="header-left">
+                <a href="#" class="header-logo" onclick="showLanding(); return false;">HelloChusquis</a>
+                <div class="header-actions">
+                    <button class="btn voice-btn" id="voice-input-btn" onclick="showVoiceMenu('input')" title="Voice Input">🎤</button>
+                    <button class="btn voice-btn" id="voice-output-btn" onclick="showVoiceMenu('output')" title="Voice Output">🔊</button>
+                    <button class="btn" id="toggle-sidebar" onclick="toggleSidebar()">☰ Sidebar</button>
+                    <button class="btn" id="toggle-config" onclick="toggleConfig()">⚙ Config</button>
+                    <button class="btn" onclick="toggleShortcuts()" title="Keyboard Shortcuts">⌨️</button>
+                    <button class="btn" onclick="toggleExportMenu()" title="Export Chat">📤</button>
+                </div>
+                <select id="language-select" class="language-selector" onchange="changeLanguage(this.value)">
+                    <option value="auto">🌐 Auto</option>
+                    <option value="en-US">English</option>
+                    <option value="es-ES">Español</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                    <option value="it-IT">Italiano</option>
+                    <option value="pt-BR">Português</option>
+                    <option value="ja-JP">日本語</option>
+                    <option value="ko-KR">한국어</option>
+                    <option value="zh-CN">中文</option>
+                    <option value="ru-RU">Русский</option>
+                    <option value="ar-SA">العربية</option>
+                </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite;"></div>
+                <span>Ready</span>
+            </div>
+        </header>
+
+        <div class="auth-banner" id="auth-banner">
+            <input type="password" id="auth-token-input" placeholder="API Key" autocomplete="off" />
+            <button id="auth-connect-btn" onclick="connectWithToken()">Connect</button>
+            <span class="auth-badge" id="auth-badge" style="display:none;">Connected</span>
+            <button class="disconnect" id="auth-disconnect-btn" style="display:none;" onclick="disconnectToken()">Disconnect</button>
+        </div>
+
+        <div class="config-panel" id="config-panel">
+            <div class="config-title">⚙ Configuration</div>
+            
+            <div class="config-section">
+                <div class="config-label">Profile</div>
+                <input type="text" id="config-profile" class="config-value" value="default" style="width: 100%; color: var(--text);">
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Temperature</div>
+                <input type="range" id="config-temperature" min="0" max="2" step="0.1" value="0.7" 
+                    style="width: 100%;" oninput="updateConfig('temperature', this.value)">
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-align: right;" id="temp-value">0.7</div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Max Tokens</div>
+                <input type="number" id="config-maxtokens" class="config-value" value="4096" 
+                    style="width: 100%; color: var(--text);" onchange="updateConfig('max_tokens', this.value)">
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Memory Retention</div>
+                <input type="number" id="config-memory" class="config-value" value="30" 
+                    style="width: 100%; color: var(--text);" onchange="updateConfig('memory_days', this.value)">
+                <div style="font-size: 0.65rem; color: var(--text-dim); margin-top: 4px;">days</div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">System Prompt</div>
+                <textarea id="config-system" class="config-value" rows="3" 
+                    style="width: 100%; color: var(--text); resize: vertical;" 
+                    onchange="updateConfig('system_prompt', this.value)">You are HelloChusquis, a helpful AI assistant.</textarea>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Interface Theme</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch active" id="toggle-theme" onclick="toggleTheme()"></div>
+                    <span>Dark Mode</span>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Auto-Save</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch active" id="toggle-autosave" onclick="toggleAutosave()"></div>
+                    <span>Save sessions automatically</span>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Sound Effects</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch" id="toggle-sound" onclick="toggleSound()"></div>
+                    <span>Play sound on response</span>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <div class="config-label">Streaming</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch" id="toggle-stream" onclick="toggleStream()"></div>
+                    <span>Stream responses</span>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Theme</div>
+                <select id="config-theme" class="config-value" style="width: 100%; color: var(--text);" onchange="setTheme(this.value)">
+                    <option value="dark">🌙 Dark</option>
+                    <option value="light">☀️ Light</option>
+                    <option value="minimal">⚫ Minimal</option>
+                    <option value="ocean">🌊 Ocean</option>
+                    <option value="forest">🌲 Forest</option>
+                </select>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Font Size</div>
+                <select id="config-fontsize" class="config-value" style="width: 100%; color: var(--text);" onchange="setFontSize(this.value)">
+                    <option value="0.75rem">Small</option>
+                    <option value="0.825rem" selected>Medium</option>
+                    <option value="1rem">Large</option>
+                </select>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Execute Tools</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch active" id="toggle-tools" onclick="toggleTools()"></div>
+                    <span>Allow tool execution</span>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Web Search</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch active" id="toggle-search" onclick="toggleSearch()"></div>
+                    <span>Enable web search</span>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Code Interpreter</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch active" id="toggle-code" onclick="toggleCode()"></div>
+                    <span>Enable code execution</span>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <div class="config-label">Image Generation</div>
+                <div class="config-toggle">
+                    <div class="toggle-switch" id="toggle-images" onclick="toggleImages()"></div>
+                    <span>Enable DALL-E</span>
+                </div>
+            </div>
+            
+            <div class="config-section" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <button class="btn" onclick="exportConfig()" style="width: 48%;">📤 Export</button>
+                <button class="btn" onclick="importConfig()" style="width: 48%;">📥 Import</button>
+                <button class="btn" onclick="clearHistory()" style="width: 100%; margin-top: 8px;">🗑 Clear History</button>
+                <button class="btn" onclick="resetConfig()" style="width: 100%; margin-top: 8px; border-color: var(--red); color: var(--red);">🔄 Reset Defaults</button>
+            </div>
+        </div>
+
+        <div class="shortcuts-panel" id="shortcuts-panel">
+            <div class="config-title">⌨️ Keyboard Shortcuts</div>
+            <div class="shortcut-item"><span>Send message</span><span class="shortcut-key">Enter</span></div>
+            <div class="shortcut-item"><span>Voice input</span><span class="shortcut-key">V</span></div>
+            <div class="shortcut-item"><span>Voice output</span><span class="shortcut-key">S</span></div>
+            <div class="shortcut-item"><span>Command Palette</span><span class="shortcut-key">Ctrl+P</span></div>
+            <div class="shortcut-item"><span>Toggle sidebar</span><span class="shortcut-key">Tab</span></div>
+            <div class="shortcut-item"><span>Config panel</span><span class="shortcut-key">C</span></div>
+            <div class="shortcut-item"><span>Clear input</span><span class="shortcut-key">Esc</span></div>
+            <div class="shortcut-item"><span>Shortcuts help</span><span class="shortcut-key">?</span></div>
+        </div>
+
+        <div class="command-palette-overlay" id="command-palette-overlay" onclick="closeCommandPalette()"></div>
+        <div class="command-palette" id="command-palette">
+            <input type="text" class="command-palette-input" id="command-palette-input" 
+                   placeholder="Type a command..." autocomplete="off">
+            <div id="command-palette-results"></div>
+            <div class="command-palette-footer">
+                <span><kbd>↑↓</kbd> Navigate</span>
+                <span><kbd>Enter</kbd> Select</span>
+                <span><kbd>Esc</kbd> Close</span>
+            </div>
+        </div>
+
+        <div class="export-menu" id="export-menu">
+            <div class="export-option" onclick="exportChat('json')">📄 Export as JSON</div>
+            <div class="export-option" onclick="exportChat('md')">📝 Export as Markdown</div>
+            <div class="export-option" onclick="exportChat('html')">🌐 Export as HTML</div>
+            <div class="export-option" onclick="exportChat('pdf')">📑 Save as PDF</div>
+        </div>
+
+        <div class="main">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-section">
+                    <h3>Providers</h3>
+                    <div id="providers-list"><div class="sidebar-item">Loading...</div></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Plugins</h3>
+                    <div id="plugins-list"><div class="sidebar-item">Loading...</div></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Memory</h3>
+                    <div id="memory-info"><div class="memory-stat">Loading...</div></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Learnings</h3>
+                    <div id="learnings-info"><div class="memory-stat">Loading...</div></div>
+                </div>
+                <div class="sidebar-section" style="margin-top: auto;">
+                    <h3>Quick Actions</h3>
+                    <button class="btn" onclick="showStatus()" style="width: 100%; margin-bottom: 8px;">/status</button>
+                    <button class="btn" onclick="clearHistory()" style="width: 100%;">/clear</button>
+                </div>
+            </aside>
+
+            <div class="chat-area">
+                <div class="messages" id="messages">
+                    <div class="welcome">
+                        <h2>HelloChusquis</h2>
+                        <p>Terminal AI Agent</p>
+                        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
+                            <span style="display:inline-block;padding:2px 8px;background:var(--green);color:var(--bg);border-radius:4px;font-size:0.6rem;font-weight:700;">v1.4.2</span>
+                            <span style="display:inline-block;padding:2px 8px;background:var(--green);color:var(--bg);border-radius:4px;font-size:0.6rem;font-weight:700;">STABLE</span>
+                        </div>
+                        <div class="welcome-hint">
+                            <div class="hint-item"><span>/help</span> — show commands</div>
+                            <div class="hint-item"><span>/status</span> — provider status</div>
+                            <div class="hint-item"><span>/clear</span> — clear history</div>
+                            <div class="hint-item"><span>👍 / 👎</span> — give feedback</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="input" placeholder="Type a message..." autocomplete="off" />
+                    <button id="send-btn" onclick="sendMessage()">Send →</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1143,6 +1747,19 @@
     <div class="toast" id="toast">Copied to clipboard!</div>
 
     <script>
+        // Navigation between landing and app
+        function showApp() {
+            document.getElementById('landing').classList.add('hidden');
+            document.getElementById('app-container').classList.add('active');
+            document.getElementById('input')?.focus();
+            loadStatus();
+        }
+
+        function showLanding() {
+            document.getElementById('landing').classList.remove('hidden');
+            document.getElementById('app-container').classList.remove('active');
+        }
+
         // Configuration
         let config = {
             provider: 'openai',
@@ -1167,16 +1784,12 @@
         let configVisible = false;
         let sidebarVisible = true;
 
-        // Load config from localStorage
         function loadConfig() {
             const saved = localStorage.getItem('hellochusquis_config');
-            if (saved) {
-                config = { ...config, ...JSON.parse(saved) };
-            }
+            if (saved) config = { ...config, ...JSON.parse(saved) };
             applyConfig();
         }
 
-        // Apply config to UI
         function applyConfig() {
             document.getElementById('config-temperature').value = config.temperature;
             document.getElementById('temp-value').textContent = config.temperature;
@@ -1193,67 +1806,27 @@
             document.getElementById('toggle-images').classList.toggle('active', config.image_gen);
         }
 
-        // Update config
         function updateConfig(key, value) {
             config[key] = value;
             localStorage.setItem('hellochusquis_config', JSON.stringify(config));
             showToast(key + ' updated');
-            
-            // Update temperature display
-            if (key === 'temperature') {
-                document.getElementById('temp-value').textContent = value;
-            }
-            
-            // Send to server
+            if (key === 'temperature') document.getElementById('temp-value').textContent = value;
             fetch('/config', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
                 body: JSON.stringify(config)
             }).catch(() => {});
         }
 
-        // Toggle functions
-        function toggleTheme() {
-            config.dark_mode = !config.dark_mode;
-            updateConfig('dark_mode', config.dark_mode);
-        }
+        function toggleTheme() { config.dark_mode = !config.dark_mode; updateConfig('dark_mode', config.dark_mode); }
+        function toggleAutosave() { config.autosave = !config.autosave; updateConfig('autosave', config.autosave); }
+        function toggleSound() { config.sound = !config.sound; updateConfig('sound', config.sound); }
+        function toggleStream() { config.stream = !config.stream; updateConfig('stream', config.stream); }
+        function toggleTools() { config.tools_enabled = !config.tools_enabled; updateConfig('tools_enabled', config.tools_enabled); }
+        function toggleSearch() { config.web_search = !config.web_search; updateConfig('web_search', config.web_search); }
+        function toggleCode() { config.code_exec = !config.code_exec; updateConfig('code_exec', config.code_exec); }
+        function toggleImages() { config.image_gen = !config.image_gen; updateConfig('image_gen', config.image_gen); }
 
-        function toggleAutosave() {
-            config.autosave = !config.autosave;
-            updateConfig('autosave', config.autosave);
-        }
-
-        function toggleSound() {
-            config.sound = !config.sound;
-            updateConfig('sound', config.sound);
-        }
-
-        function toggleStream() {
-            config.stream = !config.stream;
-            updateConfig('stream', config.stream);
-        }
-
-        function toggleTools() {
-            config.tools_enabled = !config.tools_enabled;
-            updateConfig('tools_enabled', config.tools_enabled);
-        }
-
-        function toggleSearch() {
-            config.web_search = !config.web_search;
-            updateConfig('web_search', config.web_search);
-        }
-
-        function toggleCode() {
-            config.code_exec = !config.code_exec;
-            updateConfig('code_exec', config.code_exec);
-        }
-
-        function toggleImages() {
-            config.image_gen = !config.image_gen;
-            updateConfig('image_gen', config.image_gen);
-        }
-
-        // Export/Import config
         function exportConfig() {
             const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -1277,9 +1850,7 @@
                         applyConfig();
                         localStorage.setItem('hellochusquis_config', JSON.stringify(config));
                         showToast('Config imported!');
-                    } catch {
-                        showToast('Invalid config file');
-                    }
+                    } catch { showToast('Invalid config file'); }
                 };
                 reader.readAsText(file);
             };
@@ -1288,20 +1859,10 @@
 
         function resetConfig() {
             config = {
-                provider: 'openai',
-                model: 'gpt-4o',
-                temperature: 0.7,
-                max_tokens: 4096,
-                memory_days: 30,
-                system_prompt: 'You are HelloChusquis, a helpful AI assistant.',
-                dark_mode: true,
-                autosave: true,
-                sound: false,
-                stream: false,
-                tools_enabled: true,
-                web_search: true,
-                code_exec: true,
-                image_gen: false
+                provider: 'openai', model: 'gpt-4o', temperature: 0.7, max_tokens: 4096,
+                memory_days: 30, system_prompt: 'You are HelloChusquis, a helpful AI assistant.',
+                dark_mode: true, autosave: true, sound: false, stream: false,
+                tools_enabled: true, web_search: true, code_exec: true, image_gen: false
             };
             applyConfig();
             localStorage.setItem('hellochusquis_config', JSON.stringify(config));
@@ -1310,8 +1871,7 @@
 
         function toggleSidebar() {
             sidebarVisible = !sidebarVisible;
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('hidden', !sidebarVisible);
+            document.getElementById('sidebar').classList.toggle('hidden', !sidebarVisible);
             document.getElementById('toggle-sidebar').classList.toggle('active', sidebarVisible);
         }
 
@@ -1330,155 +1890,52 @@
 
         async function loadStatus() {
             try {
-                const res = await fetch('/status');
+                const res = await fetch('/status', { headers: authHeaders() });
                 const data = await res.json();
-
                 document.getElementById('providers-list').innerHTML = data.providers.map(p => `
                     <div class="sidebar-item">
                         <div class="indicator ${p.status}"></div>
                         <span>${p.name}</span>
                     </div>
                 `).join('');
-
-                // Render plugins list
                 document.getElementById('plugins-list').innerHTML = data.plugins.length
-                    ? data.plugins.map(p => `
-                        <div class="sidebar-item">
-                            <div class="indicator plugin"></div>
-                            <span>${p.name}</span>
-                        </div>
-                    `).join('')
+                    ? data.plugins.map(p => `<div class="sidebar-item"><div class="indicator plugin"></div><span>${p.name}</span></div>`).join('')
                     : '<div class="sidebar-item" style="color:var(--text-dim)">No plugins</div>';
-
                 document.getElementById('memory-info').innerHTML = `
                     <div class="memory-stat">Sessions: <span>${data.memory.sessions}</span></div>
-                    <div class="memory-stat">Summary: <span>${data.memory.summary ? 'Available' : 'None yet'}</span></div>
-                `;
-
+                    <div class="memory-stat">Summary: <span>${data.memory.summary ? 'Available' : 'None yet'}</span></div>`;
                 document.getElementById('learnings-info').innerHTML = `
                     <div class="memory-stat">Patterns: <span>${data.learnings.patterns}</span></div>
-                    <div class="memory-stat">Rules: <span>${data.learnings.improvements}</span></div>
-                `;
+                    <div class="memory-stat">Rules: <span>${data.learnings.improvements}</span></div>`;
             } catch(e) {}
-        }
-
-        function renderProvidersConfig(providers) {
-            const container = document.getElementById('providers-config');
-            const providerOptions = ['openai', 'anthropic', 'google', 'ollama', 'openrouter', 'groq', 'mistral', 'cohere', 'bedrock'];
-            
-            container.innerHTML = providers.map(p => `
-                <div style="margin-bottom: 12px; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 0.75rem; color: var(--amber); font-weight: 700;">${p.name.toUpperCase()}</span>
-                        <span class="indicator ${p.status}" style="width: 8px; height: 8px;"></span>
-                    </div>
-                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 8px;">
-                        ${p.status === 'ready' ? '✓ Ready' : '✗ Error'}
-                    </div>
-                    <div style="margin-bottom: 6px;">
-                        <input type="password" id="key-${p.name}" placeholder="API Key" 
-                            class="config-value" style="width: 100%; font-size: 0.7rem;" 
-                            value="${localStorage.getItem('key_' + p.name) || ''}"
-                            onchange="saveProviderKey('${p.name}', this.value)">
-                    </div>
-                    ${p.name !== 'mock' ? `
-                    <div style="margin-bottom: 6px;">
-                        <input type="text" id="base-${p.name}" placeholder="Base URL (optional)" 
-                            class="config-value" style="width: 100%; font-size: 0.7rem;"
-                            value="${localStorage.getItem('base_' + p.name) || ''}"
-                            onchange="saveProviderBase('${p.name}', this.value)">
-                    </div>
-                    ` : ''}
-                    ${p.name !== 'mock' ? `
-                    <div style="margin-bottom: 6px;">
-                        <select id="model-${p.name}" class="config-value" style="width: 100%; font-size: 0.7rem;" onchange="saveProviderModel('${p.name}', this.value)">
-                            ${getModelOptions(p.name).map(m => `<option value="${m}">${m}</option>`).join('')}
-                        </select>
-                    </div>
-                    ` : ''}
-                </div>
-            `).join('');
-        }
-
-        function getModelOptions(provider) {
-            const models = {
-                openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-                anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-opus', 'claude-3-haiku'],
-                google: ['gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'],
-                ollama: ['llama3.1', 'llama3', 'mistral', 'codellama', 'mixtral'],
-                openrouter: ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'google/gemini-2.0-flash'],
-                groq: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'],
-                mistral: ['mistral-large-2411', 'mistral-small', 'codestral'],
-                cohere: ['command-r-plus', 'command-r', 'command'],
-                bedrock: ['anthropic.claude-3-5-sonnet', 'amazon.nova-pro']
-            };
-            return models[provider] || ['default'];
-        }
-
-        function saveProviderKey(name, key) {
-            localStorage.setItem('key_' + name, key);
-            showToast('API key saved for ' + name);
-            fetch('/update-provider', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, key})
-            }).catch(() => {});
-        }
-
-        function saveProviderBase(name, base) {
-            localStorage.setItem('base_' + name, base);
-            fetch('/update-provider', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, base})
-            }).catch(() => {});
-        }
-
-        function saveProviderModel(name, model) {
-            localStorage.setItem('model_' + name, model);
-            showToast('Model: ' + model);
-            fetch('/update-provider', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, model})
-            }).catch(() => {});
         }
 
         function addMessage(role, content, toolCalls = []) {
             const welcome = document.querySelector('.welcome');
             if (welcome) welcome.remove();
-
             const div = document.createElement('div');
             div.className = `message ${role}`;
-
             const header = document.createElement('div');
             header.className = 'message-header';
-            
             const label = document.createElement('div');
             label.className = 'message-label';
             label.textContent = role === 'user' ? 'You' : 'HelloChusquis';
-            
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble';
             bubble.textContent = content;
             bubble.id = 'msg-' + Date.now();
-
             header.appendChild(label);
-            
             if (role === 'assistant') {
                 const actions = document.createElement('div');
                 actions.className = 'message-actions';
                 actions.innerHTML = `
                     <button class="action-btn copy" onclick="copyMessage('${bubble.id}')">📋 Copy</button>
                     <button class="action-btn like" onclick="giveFeedback('positive')">👍</button>
-                    <button class="action-btn dislike" onclick="giveFeedback('negative')">👎</button>
-                `;
+                    <button class="action-btn dislike" onclick="giveFeedback('negative')">👎</button>`;
                 header.appendChild(actions);
             }
-            
             div.appendChild(header);
             div.appendChild(bubble);
-
             if (toolCalls.length > 0) {
                 const tcDiv = document.createElement('div');
                 tcDiv.className = 'tool-calls';
@@ -1491,33 +1948,26 @@
                 });
                 div.appendChild(tcDiv);
             }
-
             messagesEl.appendChild(div);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
         function copyMessage(id) {
             const text = document.getElementById(id).textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('Copied to clipboard!');
-            });
+            navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!'));
         }
 
         async function giveFeedback(type) {
             const lastMsg = document.querySelector('.message.assistant:last-child .message-bubble');
             if (!lastMsg) return;
-            
             try {
-                const res = await fetch('/feedback', {
+                await fetch('/feedback', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: type, context: lastMsg.textContent })
+                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                    body: JSON.stringify({ type, context: lastMsg.textContent })
                 });
-                const data = await res.json();
-                showToast(type === 'positive' ? 'Thanks for the positive feedback!' : 'Thanks for the feedback. I\'ll learn from this.');
-            } catch(e) {
-                showToast('Could not save feedback');
-            }
+                showToast(type === 'positive' ? 'Thanks for the positive feedback!' : "Thanks for the feedback. I'll learn from this.");
+            } catch(e) { showToast('Could not save feedback'); }
         }
 
         function addThinking() {
@@ -1533,33 +1983,24 @@
         async function sendMessage() {
             const text = inputEl.value.trim();
             if (!text) return;
-
             inputEl.value = '';
             sendBtn.disabled = true;
             addMessage('user', text);
-
             const thinking = addThinking();
-
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        message: text,
-                        config: config
-                    })
+                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                    body: JSON.stringify({ message: text, config })
                 });
                 const data = await res.json();
                 thinking.remove();
                 addMessage('assistant', data.response, data.tool_calls || []);
-                
                 if (config.sound) {
-                    // Play notification sound
                     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleR4ORpXc27+5oxkPIEndpoints');
                     audio.volume = 0.1;
                     audio.play().catch(() => {});
                 }
-                
                 loadStatus();
             } catch(e) {
                 thinking.remove();
@@ -1572,99 +2013,122 @@
 
         async function clearHistory() {
             try {
-                await fetch('/clear', { method: 'POST' });
+                await fetch('/clear', { method: 'POST', headers: authHeaders() });
                 messagesEl.innerHTML = '';
                 showToast('History cleared!');
                 loadStatus();
-            } catch(e) {
-                showToast('Could not clear history');
-            }
+            } catch(e) { showToast('Could not clear history'); }
         }
 
-        function showStatus() {
-            inputEl.value = '/status';
-            sendMessage();
-        }
+        function showStatus() { inputEl.value = '/status'; sendMessage(); }
 
         inputEl.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         });
 
-        loadStatus();
-        setInterval(loadStatus, 30000);
         loadConfig();
 
-        // Enhanced Voice Input/Output with multilingual support
-        let voiceInputEnabled = false;
-        let voiceOutputEnabled = false;
-        let voiceInputLang = 'auto';
-        let voiceOutputLang = 'auto';
-        let recognition = null;
-        let synthesis = window.speechSynthesis;
-        let availableVoices = [];
-        let selectedVoice = null;
-        let voiceMenuShown = null;
+        // AUTH
+        let authRequired = false;
+        function getToken() { return localStorage.getItem('hellochusquis_api_token') || ''; }
+        function setToken(token) { localStorage.setItem('hellochusquis_api_token', token); }
+        function clearToken() { localStorage.removeItem('hellochusquis_api_token'); }
+        function authHeaders() {
+            const token = getToken();
+            if (!token) return {};
+            return { 'Authorization': 'Bearer ' + token };
+        }
 
-        // Get browser language
-        const browserLang = navigator.language || 'en-US';
+        async function checkAuth() {
+            try {
+                const res = await fetch('/auth/check');
+                const data = await res.json();
+                authRequired = data.auth_required;
+                updateBanner();
+            } catch { authRequired = false; updateBanner(); }
+        }
 
-        // Load available TTS voices
-        function loadVoices() {
-            if (synthesis) {
-                availableVoices = synthesis.getVoices();
+        function updateBanner() {
+            const banner = document.getElementById('auth-banner');
+            const badge = document.getElementById('auth-badge');
+            const disconnect = document.getElementById('auth-disconnect-btn');
+            const input = document.getElementById('auth-token-input');
+            const connectBtn = document.getElementById('auth-connect-btn');
+            const token = getToken();
+            if (!authRequired) { banner.classList.remove('visible'); return; }
+            banner.classList.add('visible');
+            if (token) {
+                input.style.display = 'none'; connectBtn.style.display = 'none';
+                badge.style.display = ''; disconnect.style.display = '';
+                banner.classList.add('authed');
+            } else {
+                input.style.display = ''; connectBtn.style.display = '';
+                badge.style.display = 'none'; disconnect.style.display = 'none';
+                banner.classList.remove('authed');
             }
         }
-        if (synthesis) {
-            synthesis.onvoiceschanged = loadVoices;
-            loadVoices();
+
+        async function connectWithToken() {
+            const input = document.getElementById('auth-token-input');
+            const token = input.value.trim();
+            if (!token) { showToast('Enter a token'); return; }
+            setToken(token);
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                    body: JSON.stringify({ message: '/status' })
+                });
+                if (res.status === 401) { clearToken(); showToast('Invalid API key'); return; }
+            } catch {}
+            input.value = '';
+            updateBanner();
+            showToast('Connected');
+            loadStatus();
         }
 
-        // Create voice menu
+        function disconnectToken() { clearToken(); updateBanner(); showToast('Disconnected'); }
+
+        document.getElementById('auth-token-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); connectWithToken(); }
+        });
+
+        checkAuth();
+
+        // VOICE
+        let voiceInputEnabled = false, voiceOutputEnabled = false;
+        let voiceInputLang = 'auto', voiceOutputLang = 'auto';
+        let recognition = null, synthesis = window.speechSynthesis;
+        let availableVoices = [], selectedVoice = null, voiceMenuShown = null;
+        const browserLang = navigator.language || 'en-US';
+
+        function loadVoices() { if (synthesis) availableVoices = synthesis.getVoices(); }
+        if (synthesis) { synthesis.onvoiceschanged = loadVoices; loadVoices(); }
+
         function showVoiceMenu(type) {
             voiceMenuShown = type;
             const btn = document.getElementById(type === 'input' ? 'voice-input-btn' : 'voice-output-btn');
             let menu = document.getElementById('voice-menu');
-            if (!menu) {
-                menu = document.createElement('div');
-                menu.id = 'voice-menu';
-                menu.className = 'voice-menu';
-                document.body.appendChild(menu);
-            }
-
+            if (!menu) { menu = document.createElement('div'); menu.id = 'voice-menu'; menu.className = 'voice-menu'; document.body.appendChild(menu); }
             const isInput = type === 'input';
             let html = `<div class="voice-menu-title">${isInput ? '🎤 Voice Input' : '🔊 Voice Output'}</div>`;
-            
             if (isInput) {
-                html += `<div class="voice-option" onclick="setVoiceInput(true)">
-                    <input type="checkbox" ${voiceInputEnabled ? 'checked' : ''}>
-                    <span>Enable voice input</span>
-                </div>`;
-                html += `<div class="voice-option" onclick="setVoiceInput(false)">
-                    <span>Disable voice input</span>
-                </div>`;
+                html += `<div class="voice-option" onclick="setVoiceInput(true)"><input type="checkbox" ${voiceInputEnabled ? 'checked' : ''}><span>Enable voice input</span></div>`;
+                html += `<div class="voice-option" onclick="setVoiceInput(false)"><span>Disable voice input</span></div>`;
                 html += `<div class="voice-menu-title" style="margin-top:12px">Language</div>`;
                 html += `<div class="voice-option ${voiceInputLang === 'auto' ? 'selected' : ''}" onclick="setVoiceLang('auto')">🌐 Auto-detect</div>`;
-                ['en-US', 'es-ES', 'fr-FR', 'de-DE', 'it-IT', 'pt-BR', 'ja-JP', 'ko-KR', 'zh-CN'].forEach(l => {
+                ['en-US','es-ES','fr-FR','de-DE','it-IT','pt-BR','ja-JP','ko-KR','zh-CN'].forEach(l => {
                     html += `<div class="voice-option ${voiceInputLang === l ? 'selected' : ''}" onclick="setVoiceLang('${l}')">${l.replace('-', ' ')}</div>`;
                 });
             } else {
-                html += `<div class="voice-option" onclick="setVoiceOutput(true)">
-                    <input type="checkbox" ${voiceOutputEnabled ? 'checked' : ''}>
-                    <span>Enable voice output</span>
-                </div>`;
-                html += `<div class="voice-option" onclick="setVoiceOutput(false)">
-                    <span>Disable voice output</span>
-                </div>`;
+                html += `<div class="voice-option" onclick="setVoiceOutput(true)"><input type="checkbox" ${voiceOutputEnabled ? 'checked' : ''}><span>Enable voice output</span></div>`;
+                html += `<div class="voice-option" onclick="setVoiceOutput(false)"><span>Disable voice output</span></div>`;
                 html += `<div class="voice-menu-title" style="margin-top:12px">Voice</div>`;
                 html += `<div class="voice-option ${!selectedVoice ? 'selected' : ''}" onclick="setVoice(null)">Default Voice</div>`;
-                availableVoices.slice(0, 10).forEach((v, i) => {
+                availableVoices.slice(0, 10).forEach(v => {
                     html += `<div class="voice-option ${selectedVoice === v.name ? 'selected' : ''}" onclick="setVoice('${v.name}')">${v.name}</div>`;
                 });
             }
-
             menu.innerHTML = html;
             menu.style.display = 'block';
             const rect = btn.getBoundingClientRect();
@@ -1674,84 +2138,36 @@
 
         function setVoiceInput(enabled) {
             if (!recognition && enabled) {
-                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                    showToast('Voice not supported. Try Chrome/Edge/Safari');
-                    return;
-                }
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { showToast('Voice not supported. Try Chrome/Edge/Safari'); return; }
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = true;
+                recognition.continuous = false; recognition.interimResults = true;
                 recognition.lang = voiceInputLang === 'auto' ? browserLang : voiceInputLang;
-
-                recognition.onresult = (event) => {
-                    const transcript = Array.from(event.results).map(r => r[0].transcript).join('');
-                    inputEl.value = transcript;
-                };
-                recognition.onerror = (e) => {
-                    showToast('Voice error: ' + e.error);
-                    voiceInputEnabled = false;
-                    updateVoiceButtons();
-                };
-                recognition.onend = () => {
-                    if (voiceInputEnabled) try { recognition.start(); } catch(e) {}
-                };
+                recognition.onresult = (event) => { inputEl.value = Array.from(event.results).map(r => r[0].transcript).join(''); };
+                recognition.onerror = (e) => { showToast('Voice error: ' + e.error); voiceInputEnabled = false; updateVoiceButtons(); };
+                recognition.onend = () => { if (voiceInputEnabled) try { recognition.start(); } catch {} };
             }
             voiceInputEnabled = enabled;
-            if (enabled) {
-                try { recognition.start(); } catch(e) {}
-            } else {
-                try { recognition.stop(); } catch(e) {}
-            }
-            updateVoiceButtons();
-            showToast(enabled ? 'Voice input ON' : 'Voice input OFF');
-            hideVoiceMenu();
+            if (enabled) { try { recognition.start(); } catch {} } else { try { recognition.stop(); } catch {} }
+            updateVoiceButtons(); showToast(enabled ? 'Voice input ON' : 'Voice input OFF'); hideVoiceMenu();
         }
 
         function setVoiceOutput(enabled) {
-            voiceOutputEnabled = enabled;
-            updateVoiceButtons();
+            voiceOutputEnabled = enabled; updateVoiceButtons();
             if (enabled) showToast('Voice output ON - Agent will speak');
-            else {
-                synthesis.cancel();
-                showToast('Voice output OFF');
-            }
+            else { synthesis.cancel(); showToast('Voice output OFF'); }
             hideVoiceMenu();
         }
 
-        function setVoiceLang(lang) {
-            voiceInputLang = lang;
-            if (recognition) {
-                recognition.lang = lang === 'auto' ? browserLang : lang;
-            }
-            showToast('Language: ' + lang);
-            hideVoiceMenu();
-        }
-
-        function setVoice(voiceName) {
-            selectedVoice = voiceName;
-            showToast(voiceName ? 'Voice: ' + voiceName : 'Using default');
-            hideVoiceMenu();
-        }
-
-        function hideVoiceMenu() {
-            const menu = document.getElementById('voice-menu');
-            if (menu) menu.style.display = 'none';
-            voiceMenuShown = null;
-        }
-
-        function changeLanguage(lang) {
-            document.getElementById('language-select').value = lang;
-            showToast('Interface: ' + lang);
-        }
+        function setVoiceLang(lang) { voiceInputLang = lang; if (recognition) recognition.lang = lang === 'auto' ? browserLang : lang; showToast('Language: ' + lang); hideVoiceMenu(); }
+        function setVoice(voiceName) { selectedVoice = voiceName; showToast(voiceName ? 'Voice: ' + voiceName : 'Using default'); hideVoiceMenu(); }
+        function hideVoiceMenu() { const menu = document.getElementById('voice-menu'); if (menu) menu.style.display = 'none'; voiceMenuShown = null; }
+        function changeLanguage(lang) { document.getElementById('language-select').value = lang; showToast('Interface: ' + lang); }
 
         function updateVoiceButtons() {
             const inBtn = document.getElementById('voice-input-btn');
             const outBtn = document.getElementById('voice-output-btn');
-            if (inBtn) {
-                inBtn.classList.toggle('active', voiceInputEnabled);
-                inBtn.classList.toggle('voice-listening', voiceInputEnabled);
-            }
+            if (inBtn) { inBtn.classList.toggle('active', voiceInputEnabled); inBtn.classList.toggle('voice-listening', voiceInputEnabled); }
             if (outBtn) outBtn.classList.toggle('active', voiceOutputEnabled);
         }
 
@@ -1760,27 +2176,18 @@
             synthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = voiceInputLang === 'auto' ? browserLang : voiceInputLang;
-            utterance.rate = 0.9;
-            utterance.pitch = 1.0;
-            utterance.volume = 1.0;
-            if (selectedVoice) {
-                const voice = availableVoices.find(v => v.name === selectedVoice);
-                if (voice) utterance.voice = voice;
-            }
+            utterance.rate = 0.9; utterance.pitch = 1.0; utterance.volume = 1.0;
+            if (selectedVoice) { const voice = availableVoices.find(v => v.name === selectedVoice); if (voice) utterance.voice = voice; }
             synthesis.speak(utterance);
         }
 
         function toggleVoiceInput() { showVoiceMenu('input'); }
         function toggleVoiceOutput() { showVoiceMenu('output'); }
 
-        // Close menus on click outside
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.voice-menu') && !e.target.closest('.voice-btn')) {
-                hideVoiceMenu();
-            }
+            if (!e.target.closest('.voice-menu') && !e.target.closest('.voice-btn')) hideVoiceMenu();
         });
 
-        // Modify sendMessage to speak response
         const originalSendMessage = sendMessage;
         sendMessage = async function() {
             await originalSendMessage();
@@ -1790,13 +2197,9 @@
             }
         }
 
-        // Shortcuts
+        // SHORTCUTS
         document.addEventListener('keydown', e => {
-            // Command Palette Ctrl+P
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                openCommandPalette();
-            }
+            if (e.ctrlKey && e.key === 'p') { e.preventDefault(); openCommandPalette(); }
             if (!inputEl.matches(':focus')) {
                 if (e.key === 'v') toggleVoiceInput();
                 if (e.key === 's') toggleVoiceOutput();
@@ -1804,47 +2207,35 @@
                 if (e.key === 'c') toggleConfig();
                 if (e.key === '?') toggleShortcuts();
             }
-            if (e.key === 'Escape') { 
-                closeCommandPalette();
-                inputEl.value = ''; 
-            }
+            if (e.key === 'Escape') { closeCommandPalette(); inputEl.value = ''; }
         });
 
-        // Command Palette
+        // COMMAND PALETTE
         const defaultCommands = [
-            // Sessions
             { section: 'Session', icon: '💬', title: 'New Chat', desc: 'Start a new conversation', action: () => newChat() },
             { section: 'Session', icon: '🗑️', title: 'Clear Chat', desc: 'Clear conversation', action: () => clearChat() },
-            // Models (dynamic from providers)
             { section: 'Models', icon: '🤖', title: 'GPT-4o', desc: 'OpenAI flagship model', provider: 'openai', action: () => selectModel('openai', 'gpt-4o') },
             { section: 'Models', icon: '🤖', title: 'GPT-4o Mini', desc: 'Fast and cheap', provider: 'openai', action: () => selectModel('openai', 'gpt-4o-mini') },
             { section: 'Models', icon: '🤖', title: 'Claude 3.5 Sonnet', desc: 'Anthropic best model', provider: 'anthropic', action: () => selectModel('anthropic', 'claude-3-5-sonnet') },
             { section: 'Models', icon: '🤖', title: 'Gemini 2.0 Flash', desc: 'Google fast model', provider: 'google', action: () => selectModel('google', 'gemini-2.0-flash') },
             { section: 'Models', icon: '🤖', title: 'Ollama', desc: 'Local model', provider: 'ollama', action: () => selectModel('ollama', 'llama3') },
-            // Themes
             { section: 'Appearance', icon: '🌙', title: 'Dark Theme', desc: 'Default dark mode', action: () => setTheme('dark') },
             { section: 'Appearance', icon: '☀️', title: 'Light Theme', desc: 'Light mode', action: () => setTheme('light') },
             { section: 'Appearance', icon: '🌊', title: 'Ocean Theme', desc: 'Blue ocean colors', action: () => setTheme('ocean') },
             { section: 'Appearance', icon: '🌲', title: 'Forest Theme', desc: 'Green forest colors', action: () => setTheme('forest') },
-            // Settings
             { section: 'Settings', icon: '📝', title: 'Toggle Sidebar', desc: 'Show/hide sidebar', action: () => toggleSidebar() },
             { section: 'Settings', icon: '⚙️', title: 'Open Config', desc: 'Configuration panel', action: () => toggleConfig() },
             { section: 'Settings', icon: '🎤', title: 'Voice Input', desc: 'Enable voice input', action: () => toggleVoiceInput() },
             { section: 'Settings', icon: '🔊', title: 'Voice Output', desc: 'Enable voice output', action: () => toggleVoiceOutput() },
-            // Tools
             { section: 'Tools', icon: '🌐', title: 'Web Search', desc: 'Toggle web search', action: () => toggleWebSearch() },
             { section: 'Tools', icon: '📄', title: 'Open Browser', desc: 'Control browser', action: () => openBrowser() },
             { section: 'Tools', icon: '🖥️', title: 'Code Interpreter', desc: 'Run code', action: () => toggleCodeExec() },
-            // Help
             { section: 'Help', icon: '⌨️', title: 'Keyboard Shortcuts', desc: 'View all shortcuts', action: () => toggleShortcuts() },
             { section: 'Help', icon: '📖', title: 'Documentation', desc: 'GitHub docs', action: () => window.open('https://github.com/aminoy77/HelloChusquis', '_blank') },
         ];
 
-        // Merge dynamic provider commands
         function getCommands() {
             const commands = [...defaultCommands];
-            
-            // Add provider-specific models from localStorage
             const savedProviders = localStorage.getItem('providers_config');
             if (savedProviders) {
                 try {
@@ -1852,38 +2243,24 @@
                     Object.entries(providers).forEach(([name, settings]) => {
                         if (settings.models && settings.models.length > 0) {
                             settings.models.forEach(model => {
-                                const alreadyExists = commands.some(c => c.title === model);
-                                if (!alreadyExists) {
-                                    commands.push({
-                                        section: 'Models',
-                                        icon: '🤖',
-                                        title: model,
-                                        desc: `Use ${model} with ${name}`,
-                                        provider: name,
-                                        action: () => selectModel(name, model)
-                                    });
+                                if (!commands.some(c => c.title === model)) {
+                                    commands.push({ section: 'Models', icon: '🤖', title: model, desc: `Use ${model} with ${name}`, provider: name, action: () => selectModel(name, model) });
                                 }
                             });
                         }
                     });
-                } catch (e) {}
+                } catch {}
             }
-            
             return commands;
         }
 
-        let commands = getCommands();
-
-        let paletteSelectedIndex = 0;
-        let filteredCommands = [...commands];
+        let commands = getCommands(), paletteSelectedIndex = 0, filteredCommands = [...commands];
 
         function openCommandPalette() {
             document.getElementById('command-palette').classList.add('show');
             document.getElementById('command-palette-overlay').classList.add('show');
             document.getElementById('command-palette-input').value = '';
-            commands = getCommands();
-            filteredCommands = [...commands];
-            paletteSelectedIndex = 0;
+            commands = getCommands(); filteredCommands = [...commands]; paletteSelectedIndex = 0;
             renderPaletteResults();
             document.getElementById('command-palette-input').focus();
         }
@@ -1895,16 +2272,10 @@
 
         function renderPaletteResults() {
             const container = document.getElementById('command-palette-results');
-            let html = '';
-            let currentSection = '';
-            
+            let html = '', currentSection = '';
             filteredCommands.forEach((cmd, i) => {
-                if (cmd.section !== currentSection) {
-                    currentSection = cmd.section;
-                    html += `<div class="command-palette-section-title">${currentSection}</div>`;
-                }
-                const selected = i === paletteSelectedIndex ? 'selected' : '';
-                html += `<div class="command-palette-item ${selected}" onclick="executeCommand(${i})">
+                if (cmd.section !== currentSection) { currentSection = cmd.section; html += `<div class="command-palette-section-title">${currentSection}</div>`; }
+                html += `<div class="command-palette-item ${i === paletteSelectedIndex ? 'selected' : ''}" onclick="executeCommand(${i})">
                     <span class="command-palette-item-icon">${cmd.icon}</span>
                     <div class="command-palette-item-text">
                         <div class="command-palette-item-title">${cmd.title}</div>
@@ -1913,160 +2284,69 @@
                     ${cmd.shortcut ? `<span class="command-palette-item-shortcut">${cmd.shortcut}</span>` : ''}
                 </div>`;
             });
-            
             container.innerHTML = html;
         }
 
-        function executeCommand(index) {
-            const cmd = filteredCommands[index];
-            if (cmd && cmd.action) {
-                cmd.action();
-                closeCommandPalette();
-            }
-        }
+        function executeCommand(index) { const cmd = filteredCommands[index]; if (cmd && cmd.action) { cmd.action(); closeCommandPalette(); } }
 
-        // Palette input handler
         document.getElementById('command-palette-input').addEventListener('input', e => {
             const query = e.target.value.toLowerCase();
-            filteredCommands = query ? commands.filter(c => 
-                c.title.toLowerCase().includes(query) || 
-                c.desc.toLowerCase().includes(query) ||
-                c.section.toLowerCase().includes(query)
-            ) : [...commands];
-            paletteSelectedIndex = 0;
-            renderPaletteResults();
+            filteredCommands = query ? commands.filter(c => c.title.toLowerCase().includes(query) || c.desc.toLowerCase().includes(query) || c.section.toLowerCase().includes(query)) : [...commands];
+            paletteSelectedIndex = 0; renderPaletteResults();
         });
 
         document.getElementById('command-palette-input').addEventListener('keydown', e => {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                paletteSelectedIndex = Math.min(paletteSelectedIndex + 1, filteredCommands.length - 1);
-                renderPaletteResults();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                paletteSelectedIndex = Math.max(paletteSelectedIndex - 1, 0);
-                renderPaletteResults();
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                executeCommand(paletteSelectedIndex);
-            }
+            if (e.key === 'ArrowDown') { e.preventDefault(); paletteSelectedIndex = Math.min(paletteSelectedIndex + 1, filteredCommands.length - 1); renderPaletteResults(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); paletteSelectedIndex = Math.max(paletteSelectedIndex - 1, 0); renderPaletteResults(); }
+            else if (e.key === 'Enter') { e.preventDefault(); executeCommand(paletteSelectedIndex); }
         });
 
-        // Helper functions
         function setProvider(p) { updateConfig('provider', p); showToast(`Provider: ${p}`); }
-        
-        function selectModel(provider, model) {
-            updateConfig('provider', provider);
-            updateConfig('model', model);
-            showToast(`${model} selected (${provider})`);
-        }
-        
+        function selectModel(provider, model) { updateConfig('provider', provider); updateConfig('model', model); showToast(`${model} selected (${provider})`); }
         function newChat() { clearChat(); showToast('New chat started'); }
         function clearChat() { document.getElementById('messages').innerHTML = ''; }
         function toggleWebSearch() { toggleSwitch('toggle-search'); }
         function toggleCodeExec() { toggleSwitch('toggle-code'); }
-        function openBrowser() { 
+        function openBrowser() {
             const url = prompt('Enter URL:', 'https://example.com');
-            if (url) {
-                addMessage('user', `Open browser and navigate to: ${url}`);
-                setTimeout(() => sendMessage(), 100);
-            }
+            if (url) { addMessage('user', `Open browser and navigate to: ${url}`); setTimeout(() => sendMessage(), 100); }
         }
 
-        // Shortcuts Panel
-        function toggleShortcuts() {
-            const panel = document.getElementById('shortcuts-panel');
-            panel.classList.toggle('show');
-        }
+        function toggleShortcuts() { document.getElementById('shortcuts-panel').classList.toggle('show'); }
 
-        // Emoji Picker
-        const emojis = ['😀','😃','😄','😁','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😎','🤔','😐','😑','😶','🙄','😬','😔','😷','🤒','👍','👎','❤️','🧠','⚡','🔥','✨','🌟','💡','🎉','🎯','✅','❌','⚠️'];
-        
-        function toggleEmojiPicker() {
-            const picker = document.getElementById('emoji-picker');
-            if (!picker.classList.contains('show')) {
-                const grid = document.getElementById('emoji-grid');
-                grid.innerHTML = emojis.map(e => `<button class="emoji-btn" onclick="insertEmoji('${e}')">${e}</button>`).join('');
-            }
-            picker.classList.toggle('show');
-        }
-
-        function insertEmoji(emoji) {
-            inputEl.value += emoji;
-            inputEl.focus();
-            document.getElementById('emoji-picker').classList.remove('show');
-        }
-
-        // Export Menu
-        function toggleExportMenu() {
-            const menu = document.getElementById('export-menu');
-            menu.classList.toggle('show');
-        }
+        function toggleExportMenu() { document.getElementById('export-menu').classList.toggle('show'); }
 
         function exportChat(format) {
             const messages = document.querySelectorAll('.message');
             let content = '';
-            
             if (format === 'json') {
-                const data = Array.from(messages).map(m => ({
-                    role: m.classList.contains('user') ? 'user' : 'assistant',
-                    content: m.querySelector('.message-bubble').textContent
-                }));
-                content = JSON.stringify(data, null, 2);
+                content = JSON.stringify(Array.from(messages).map(m => ({ role: m.classList.contains('user') ? 'user' : 'assistant', content: m.querySelector('.message-bubble').textContent })), null, 2);
             } else if (format === 'md') {
-                messages.forEach(m => {
-                    const role = m.classList.contains('user') ? '**You**' : '**HelloChusquis**';
-                    content += `${role}: ${m.querySelector('.message-bubble').textContent}\n\n`;
-                });
+                messages.forEach(m => { content += `${m.classList.contains('user') ? '**You**' : '**HelloChusquis**'}: ${m.querySelector('.message-bubble').textContent}\n\n`; });
             } else if (format === 'html') {
-                content = '<html><body>';
-                messages.forEach(m => {
-                    const cls = m.classList.contains('user') ? 'user' : 'assistant';
-                    content += `<div class="${cls}">${m.querySelector('.message-bubble').innerHTML}</div>`;
-                });
-                content += '</body></html>';
+                content = '<html><body>'; messages.forEach(m => { content += `<div class="${m.classList.contains('user') ? 'user' : 'assistant'}">${m.querySelector('.message-bubble').innerHTML}</div>`; }); content += '</body></html>';
             }
-            
             const blob = new Blob([content], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `hellochusquis-chat.${format}`;
-            a.click();
+            const a = document.createElement('a'); a.href = url; a.download = `hellochusquis-chat.${format}`; a.click();
             showToast(`Exported as ${format.toUpperCase()}`);
             document.getElementById('export-menu').classList.remove('show');
         }
 
-        // Theme
-        function setTheme(theme) {
-            document.body.className = theme === 'dark' ? '' : `theme-${theme}`;
-            localStorage.setItem('theme', theme);
-        }
+        function setTheme(theme) { document.body.className = theme === 'dark' ? '' : `theme-${theme}`; localStorage.setItem('theme', theme); }
+        function setFontSize(size) { document.querySelectorAll('.message-bubble').forEach(b => b.style.fontSize = size); localStorage.setItem('fontsize', size); }
 
-        function setFontSize(size) {
-            document.querySelectorAll('.message-bubble').forEach(b => b.style.fontSize = size);
-            localStorage.setItem('fontsize', size);
-        }
-
-        // Load saved preferences
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) setTheme(savedTheme);
-        
         const savedFontSize = localStorage.getItem('fontsize');
         if (savedFontSize) setFontSize(savedFontSize);
 
-        // Close panels on outside click
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.emoji-picker') && !e.target.closest('button[onclick*="toggleEmoji"]')) {
-                document.getElementById('emoji-picker')?.classList.remove('show');
-            }
-            if (!e.target.closest('.export-menu') && !e.target.closest('button[onclick*="toggleExport"]')) {
-                document.getElementById('export-menu')?.classList.remove('show');
-            }
-            if (!e.target.closest('.shortcuts-panel') && !e.target.closest('button[onclick*="toggleShortcuts"]')) {
-                document.getElementById('shortcuts-panel')?.classList.remove('show');
-            }
+            if (!e.target.closest('.export-menu') && !e.target.closest('button[onclick*="toggleExport"]')) document.getElementById('export-menu')?.classList.remove('show');
+            if (!e.target.closest('.shortcuts-panel') && !e.target.closest('button[onclick*="toggleShortcuts"]')) document.getElementById('shortcuts-panel')?.classList.remove('show');
         });
+
+        setInterval(loadStatus, 30000);
     </script>
 </body>
 </html>

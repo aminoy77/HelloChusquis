@@ -1,3 +1,4 @@
+# DEPRECATED: This module is not used. Consider removing.
 """Utility functions for HelloChusquis."""
 
 import re

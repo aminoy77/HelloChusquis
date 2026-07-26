@@ -1,3 +1,4 @@
+# DEPRECATED: This module is not used. Consider removing.
 import os
 import time
 from watchdog.observers import Observer

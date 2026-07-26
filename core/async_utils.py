@@ -1,3 +1,4 @@
+# DEPRECATED: This module is not used. Consider removing.
 import asyncio
 import functools
 from typing import Callable, Any

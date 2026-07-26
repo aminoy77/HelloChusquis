@@ -1,3 +1,5 @@
+# DEPRECATED: This module is not used. Consider removing.
+# Use core.db_memory instead for database-backed memory.
 import json
 from datetime import datetime, timedelta
 from pathlib import Path

@@ -38,7 +38,7 @@ def save_session(messages: List[Dict[str, Any]]) -> None:
 
     init_db()
     timestamp = datetime.now().isoformat()
-    data = str(messages)
+    data = json.dumps(messages, ensure_ascii=False)
 
     conn = sqlite3.connect(MEMORY_DB_PATH)
     try:

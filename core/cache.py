@@ -1,3 +1,4 @@
+# DEPRECATED: This module is not used. Consider removing.
 import json
 import hashlib
 import time

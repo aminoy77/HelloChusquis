@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,18 +7,10 @@ from typing import List, Optional, Dict, Any
 
 import httpx
 import yaml
-from rich.console import Console
 
-# Configure a basic logger – developers can adjust the level as needed.
-logger = logging.getLogger(__name__)
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+from core.logger import get_logger
 
-console = Console()
+logger = get_logger("provider")
 
 
 @dataclass

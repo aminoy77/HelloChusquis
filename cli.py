@@ -16,6 +16,8 @@ def main():
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
     parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
     parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
+    parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 8000 web)")
+    parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 0.0.0.0 api / 127.0.0.1 web)")
     args = parser.parse_args()
     
     # Handle --quick flag directly (no command needed)
@@ -73,20 +75,20 @@ def main():
         return
     
     if args.command == "web":
-        from web.server import app
-        import uvicorn
-        print("Starting HelloChusquis web interface on http://localhost:8000")
-        uvicorn.run(app, host="127.0.0.1", port=8000)
+        from web.server import start
+        host = args.host or "127.0.0.1"
+        port = args.port or 8000
+        print(f"Starting HelloChusquis web interface on http://{host}:{port}")
+        start(host=host, port=port)
         return
     
     if args.command == "api":
         from api.main import app
         import uvicorn
-        port = 8080
-        if args.args and args.args[0].isdigit():
-            port = int(args.args[0])
-        print(f"Starting HelloChusquis API on http://localhost:{port}")
-        uvicorn.run(app, host="0.0.0.0", port=port)
+        host = args.host or "0.0.0.0"
+        port = args.port or 8080
+        print(f"Starting HelloChusquis API on http://{host}:{port}")
+        uvicorn.run(app, host=host, port=port)
         return
     
     if args.command:

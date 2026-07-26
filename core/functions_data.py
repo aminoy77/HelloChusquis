@@ -1,3 +1,4 @@
+# DEPRECATED: This module is not used. Consider removing.
 """Data processing functions for HelloChusquis."""
 
 import json

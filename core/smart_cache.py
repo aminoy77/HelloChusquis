@@ -48,7 +48,7 @@ class SmartCache:
         if len(self._cache) >= self.max_size:
             self._evict_lru()
 
-        expires_at = time.time() + (ttl or self.default_ttl) if ttl else None
+        expires_at = time.time() + (ttl if ttl is not None else self.default_ttl) if ttl is not None else None
         self._cache[key] = CacheEntry(
             key=key,
             value=value,
