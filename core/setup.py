@@ -133,12 +133,9 @@ content: "only for write action"
 ## Plugins
 
 ### browser
-Full browser automation via Playwright. Human-like mouse movement enabled.
-Actions: goto, click, type, screenshot, extract_text, scroll, wait, back, forward, refresh
-```browser
-action: goto
-url: https://example.com
-```
+Full browser automation via Playwright. Anti-detection enabled. Human-like mouse movements.
+Use the `browser` function tool directly — never try to use it via `code` or `shell`.
+Available actions: navigate, click, type, screenshot, get_text, search, scroll, wait_for_element, execute_script, fill_form, submit_form, hover, go_back, go_forward, reload, press_key, get_url, get_title, get_cookies, open_new_tab, switch_to_page
 
 ### search
 DuckDuckGo lite web search. You only have access to DuckDuckGo lite for web search. Do not attempt to use Google, Brave, or any paid search. If asked to search, use the search tool which uses DuckDuckGo.
