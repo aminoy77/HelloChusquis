@@ -2245,7 +2245,8 @@
             { section: 'Settings', icon: '🎤', title: 'Voice Input', desc: 'Enable voice input', action: () => toggleVoiceInput() },
             { section: 'Settings', icon: '🔊', title: 'Voice Output', desc: 'Enable voice output', action: () => toggleVoiceOutput() },
             { section: 'Tools', icon: '🌐', title: 'Web Search', desc: 'Toggle web search', action: () => toggleWebSearch() },
-            { section: 'Tools', icon: '📄', title: 'Open Browser', desc: 'Control browser', action: () => openBrowser() },
+            { section: 'Tools', icon: '🌍', title: 'Browser Navigate', desc: 'Open a URL in the browser', action: () => openBrowser() },
+            { section: 'Tools', icon: '📸', title: 'Browser Screenshot', desc: 'Take a screenshot', action: () => browserScreenshot() },
             { section: 'Tools', icon: '🖥️', title: 'Code Interpreter', desc: 'Run code', action: () => toggleCodeExec() },
             { section: 'Help', icon: '⌨️', title: 'Keyboard Shortcuts', desc: 'View all shortcuts', action: () => toggleShortcuts() },
             { section: 'Help', icon: '📖', title: 'Documentation', desc: 'GitHub docs', action: () => window.open('https://github.com/aminoy77/HelloChusquis', '_blank') },
@@ -2322,11 +2323,45 @@
         function selectModel(provider, model) { updateConfig('provider', provider); updateConfig('model', model); showToast(`${model} selected (${provider})`); }
         function newChat() { clearChat(); showToast('New chat started'); }
         function clearChat() { document.getElementById('messages').innerHTML = ''; }
+        async function browserScreenshot() {
+            addMessage('user', 'Taking browser screenshot...');
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                    body: JSON.stringify({
+                        message: 'Take a screenshot of the current browser page and describe what you see.',
+                        config: config
+                    })
+                });
+                const data = await res.json();
+                addMessage('assistant', data.response || 'Screenshot taken.', data.tool_calls || []);
+            } catch(e) {
+                addMessage('assistant', 'Failed to take screenshot.');
+            }
+        }
+
         function toggleWebSearch() { toggleSwitch('toggle-search'); }
         function toggleCodeExec() { toggleSwitch('toggle-code'); }
-        function openBrowser() {
+        async function openBrowser() {
             const url = prompt('Enter URL:', 'https://example.com');
-            if (url) { addMessage('user', `Open browser and navigate to: ${url}`); setTimeout(() => sendMessage(), 100); }
+            if (url) {
+                addMessage('user', `Opening browser: ${url}`);
+                try {
+                    const res = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                        body: JSON.stringify({
+                            message: `Open the browser and navigate to ${url}. Then take a screenshot and describe what you see.`,
+                            config: config
+                        })
+                    });
+                    const data = await res.json();
+                    addMessage('assistant', data.response || 'Browser opened.', data.tool_calls || []);
+                } catch(e) {
+                    addMessage('assistant', 'Failed to open browser. Is the server running?');
+                }
+            }
         }
 
         function toggleShortcuts() { document.getElementById('shortcuts-panel').classList.toggle('show'); }
