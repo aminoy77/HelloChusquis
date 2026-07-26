@@ -6,6 +6,7 @@
 
 ## What's New in v1.4.3
 
+- **Browser Automation v2** — Complete rewrite. Anti-detection stealth mode, 30+ actions as native LLM tool, auto-recovery on crash, health checks, human-like mouse async movements
 - **Rate Limiting** — API endpoints protected with per-IP rate limits (30 req/min)
 - **SSE Streaming** — Real-time streaming responses via Server-Sent Events
 - **Smart History Compression** — Intelligent token-based context management (100 entries, auto-compress)

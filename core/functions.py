@@ -271,16 +271,28 @@ def browser_open(url: str) -> dict:
     return _browser_open(url)
 
 
-def browser_click(selector: str = None, text: str = None) -> dict:
+def browser_click(selector: str = None, text: str = None, xpath: str = None, index: int = 0) -> dict:
     """Click an element on the page by selector or text."""
     from tools.browser import browser_click as _browser_click
-    return _browser_click(selector, text)
+    return _browser_click(selector, text, xpath, index)
 
 
-def browser_type(text: str, selector: str = None) -> dict:
+def browser_double_click(selector: str = None, text: str = None, xpath: str = None) -> dict:
+    """Double-click an element."""
+    from tools.browser import browser_double_click as _browser_double_click
+    return _browser_double_click(selector, text, xpath)
+
+
+def browser_right_click(selector: str = None, text: str = None, xpath: str = None) -> dict:
+    """Right-click an element."""
+    from tools.browser import browser_right_click as _browser_right_click
+    return _browser_right_click(selector, text, xpath)
+
+
+def browser_type(text: str, selector: str = None, clear_first: bool = True) -> dict:
     """Type text into an input field."""
     from tools.browser import browser_type as _browser_type
-    return _browser_type(text, selector)
+    return _browser_type(text, selector, clear_first)
 
 
 def browser_scroll(direction: str = 'down', amount: int = 3) -> dict:
@@ -292,13 +304,19 @@ def browser_scroll(direction: str = 'down', amount: int = 3) -> dict:
 def browser_screenshot(path: str = None, full_page: bool = False) -> dict:
     """Take a screenshot of the current page."""
     from tools.browser import browser_screenshot as _browser_screenshot
-    return _browser_screenshot(path)
+    return _browser_screenshot(path, full_page)
 
 
 def browser_get_text(selector: str = None) -> dict:
     """Get text content from the page or an element."""
     from tools.browser import browser_get_text as _browser_get_text
     return _browser_get_text(selector)
+
+
+def browser_get_visible_text() -> dict:
+    """Get visible text from the page."""
+    from tools.browser import browser_get_visible_text as _browser_get_visible_text
+    return _browser_get_visible_text()
 
 
 def browser_search(query: str, engine: str = 'google') -> dict:
@@ -315,7 +333,104 @@ def browser_find(pattern: str) -> dict:
 
 def browser_fill_form(form_data: dict) -> dict:
     """Fill a form with field-value pairs."""
-    return {'error': 'Use browser_click and browser_type to fill forms manually'}
+    from tools.browser import browser_fill_form as _browser_fill_form
+    return _browser_fill_form(form_data)
+
+
+def browser_submit_form(selector: str = 'form') -> dict:
+    """Submit a form."""
+    from tools.browser import browser_submit_form as _browser_submit_form
+    return _browser_submit_form(selector)
+
+
+def browser_hover(selector: str = None, text: str = None, xpath: str = None) -> dict:
+    """Hover over an element."""
+    from tools.browser import browser_hover as _browser_hover
+    return _browser_hover(selector, text, xpath)
+
+
+def browser_wait_for_element(selector: str, timeout: int = 30) -> dict:
+    """Wait for an element to appear."""
+    from tools.browser import browser_wait_for_element as _browser_wait
+    return _browser_wait(selector, timeout)
+
+
+def browser_wait_for_navigation(timeout: int = 30) -> dict:
+    """Wait for page navigation."""
+    from tools.browser import browser_wait_for_navigation as _browser_wait_nav
+    return _browser_wait_nav(timeout)
+
+
+def browser_execute_script(script: str) -> dict:
+    """Execute JavaScript on the page."""
+    from tools.browser import browser_execute_script as _browser_script
+    return _browser_script(script)
+
+
+def browser_get_url() -> dict:
+    """Get current page URL."""
+    from tools.browser import browser_get_url as _browser_get_url
+    return _browser_get_url()
+
+
+def browser_get_title() -> dict:
+    """Get current page title."""
+    from tools.browser import browser_get_title as _browser_get_title
+    return _browser_get_title()
+
+
+def browser_get_cookies() -> dict:
+    """Get all cookies from the browser context."""
+    from tools.browser import browser_get_cookies as _browser_cookies
+    return _browser_cookies()
+
+
+def browser_go_back() -> dict:
+    """Go back in browser history."""
+    from tools.browser import browser_go_back as _browser_back
+    return _browser_back()
+
+
+def browser_go_forward() -> dict:
+    """Go forward in browser history."""
+    from tools.browser import browser_go_forward as _browser_forward
+    return _browser_forward()
+
+
+def browser_reload() -> dict:
+    """Reload the current page."""
+    from tools.browser import browser_reload as _browser_reload
+    return _browser_reload()
+
+
+def browser_press_key(key: str) -> dict:
+    """Press a keyboard key (Enter, Tab, Escape, etc)."""
+    from tools.browser import browser_press_key as _browser_key
+    return _browser_key(key)
+
+
+def browser_scroll_to_element(selector: str) -> dict:
+    """Scroll to a specific element."""
+    from tools.browser import browser_scroll_to_element as _browser_scroll_to
+    return _browser_scroll_to(selector)
+
+
+def browser_open_new_tab(url: str = None) -> dict:
+    """Open a new browser tab."""
+    from tools.browser import browser_open_new_tab as _browser_new_tab
+    return _browser_new_tab(url)
+
+
+def browser_switch_to_page(index: int = 0) -> dict:
+    """Switch to a specific tab by index."""
+    from tools.browser import browser_switch_to_page as _browser_switch
+    return _browser_switch(index)
+
+
+def browser_health() -> dict:
+    """Check if browser is healthy and responsive."""
+    from tools.browser import browser_health as _browser_health
+    return _browser_health()
 
 
 def browser_close() -> dict:
@@ -326,18 +441,11 @@ def browser_close() -> dict:
 
 def browser_explore(start_url: str, task: str) -> dict:
     """Explore a website and gather information based on a task."""
-    from tools.browser import browser_find
-    from tools.browser import browser_get_text
-
-    # Open the URL
     result = browser_open(start_url)
     if not result.get('success'):
         return result
 
-    # Find elements matching task
     find_result = browser_find(task)
-
-    # Get page text
     text_result = browser_get_text()
 
     return {

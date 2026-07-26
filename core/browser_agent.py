@@ -11,6 +11,7 @@ import os
 import random
 import re
 import time
+import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -127,6 +128,7 @@ class BrowserAgent:
         self.state = BrowserState()
         self._screenshot_count = 0
         self._session_dir = None
+        self._last_mouse_pos = (0, 0)
         self._pending_dialogs = asyncio.Queue()
         self._route_handlers = []
         self._health_check_interval = 10
@@ -518,6 +520,7 @@ class BrowserAgent:
                 )
                 await asyncio.sleep(random.uniform(0.05, 0.15))
                 await self.page.mouse.click(click_x, click_y)
+                self._last_mouse_pos = (click_x, click_y)
                 await asyncio.sleep(random.uniform(0.1, 0.3))
             else:
                 await element.click(timeout=timeout_ms)
@@ -595,6 +598,7 @@ class BrowserAgent:
 
             current_pos = await self._get_current_mouse_position()
             await self._human_move_to(current_pos['x'], current_pos['y'], x, y)
+            self._last_mouse_pos = (x, y)
             await asyncio.sleep(random.uniform(0.3, 0.8))
 
             return True
@@ -1042,7 +1046,7 @@ class BrowserAgent:
 
     async def search(self, query: str, engine: str = 'google') -> bool:
         """Search using specified search engine."""
-        query_encoded = __import__('urllib.parse').parse.quote(query)
+        query_encoded = urllib.parse.quote(query)
 
         engines = {
             'google': 'https://www.google.com/search?q=',
@@ -1343,14 +1347,8 @@ class BrowserAgent:
     # ─── INTERNAL HELPERS ──────────────────────────────────────────
 
     async def _get_current_mouse_position(self) -> Dict[str, int]:
-        """Get current mouse position from page."""
-        try:
-            return await self.page.evaluate("""() => ({
-                x: window.mouseX || 0,
-                y: window.mouseY || 0,
-            })""")
-        except Exception:
-            return {'x': 0, 'y': 0}
+        """Get current mouse position from tracked position."""
+        return {'x': self._last_mouse_pos[0], 'y': self._last_mouse_pos[1]}
 
     async def _human_move_to(
         self, from_x: int, from_y: int, to_x: int, to_y: int
@@ -1359,6 +1357,7 @@ class BrowserAgent:
         async def on_move(x: int, y: int):
             try:
                 await self.page.mouse.move(x, y)
+                self._last_mouse_pos = (x, y)
             except Exception:
                 pass
 
@@ -1369,6 +1368,7 @@ class BrowserAgent:
         )
         try:
             await self.page.mouse.move(int(to_x), int(to_y))
+            self._last_mouse_pos = (int(to_x), int(to_y))
         except Exception:
             pass
 

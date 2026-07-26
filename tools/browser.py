@@ -75,11 +75,19 @@ class PersistentBrowser:
 
     def start(self, headless: bool = False, undetected: bool = True):
         """Start the persistent browser in a background thread."""
-        if self._started and self._thread and self._thread.is_alive():
-            return
+        with self._result_lock:
+            if self._started and self._thread and self._thread.is_alive():
+                return
+            if self._thread and self._thread.is_alive() and not self._started:
+                # Already starting - wait for it
+                if self._init_event.wait(timeout=30):
+                    return
+                else:
+                    # Previous init timed out, restart fresh
+                    pass
 
-        self._stopped = False
-        self._init_event.clear()
+            self._stopped = False
+            self._init_event.clear()
 
         def run_browser_loop():
             """Run the browser event loop in a daemon thread."""
@@ -96,9 +104,10 @@ class PersistentBrowser:
         self._thread.start()
 
         # Wait for browser to initialize (with timeout)
-        if not self._init_event.wait(timeout=20):
+        if not self._init_event.wait(timeout=30):
             logger.error("Browser initialization timed out")
-            raise BrowserError("Browser initialization timed out after 20s")
+            self._started = False
+            raise BrowserError("Browser initialization timed out after 30s")
 
         self._started = True
         logger.info("PersistentBrowser ready")

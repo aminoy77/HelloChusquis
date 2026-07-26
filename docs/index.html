@@ -8,7 +8,7 @@
     <meta property="og:description" content="Spin up an AI agent with one pip install. 35+ providers, auto-fallback, 150+ tools.">
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/hc.png">
+    <meta property="og:image" content="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="HelloChusquis — Terminal AI Agent">
     <meta name="twitter:description" content="One pip install. 35+ providers. 150+ tools. Auto-fallback.">
@@ -22,17 +22,17 @@
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #0a0a09;
-            --surface: #111110;
-            --surface2: #1a1918;
-            --surface3: #222220;
+            --bg: #050504;
+            --surface: #0c0c0a;
+            --surface2: #141412;
+            --surface3: #1c1c19;
             --amber: #f5a623;
             --amber-dim: #c4841c;
-            --amber-glow: rgba(245, 166, 35, 0.08);
+            --amber-glow: rgba(245, 166, 35, 0.06);
             --text: #e8e3d8;
             --text-muted: #8a8578;
-            --text-dim: #5a574f;
-            --border: #2a2926;
+            --text-dim: #4a4840;
+            --border: #1e1d1a;
             --green: #5eb97e;
             --blue: #7eb8d4;
             --red: #e85d5d;
@@ -50,7 +50,7 @@
             overflow-x: hidden;
         }
 
-        /* Skip to content — accessibility */
+        /* Skip to content */
         .skip-link {
             position: absolute;
             top: -100%;
@@ -67,7 +67,6 @@
         }
         .skip-link:focus { top: 16px; }
 
-        /* Focus styles — accessibility */
         :focus-visible {
             outline: 2px solid var(--amber);
             outline-offset: 2px;
@@ -84,7 +83,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(10, 10, 9, 0.92);
+            background: rgba(5, 5, 4, 0.92);
             backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
         }
@@ -106,6 +105,7 @@
             height: 28px;
             width: 28px;
             object-fit: contain;
+            filter: drop-shadow(0 0 6px rgba(245, 166, 35, 0.3));
         }
 
         .nav-links {
@@ -150,12 +150,12 @@
         .hero::before {
             content: '';
             position: absolute;
-            top: 15%;
+            top: 10%;
             left: 50%;
             transform: translateX(-50%);
-            width: 700px;
-            height: 700px;
-            background: radial-gradient(circle, rgba(245, 166, 35, 0.05) 0%, transparent 60%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(245, 166, 35, 0.04) 0%, transparent 55%);
             pointer-events: none;
         }
 
@@ -179,12 +179,13 @@
             height: 8px;
             background: var(--green);
             border-radius: 50%;
+            box-shadow: 0 0 8px rgba(94, 185, 126, 0.5);
             animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(94, 185, 126, 0.5); }
+            50% { opacity: 0.6; box-shadow: 0 0 4px rgba(94, 185, 126, 0.2); }
         }
 
         .hero-title {
@@ -196,7 +197,7 @@
             max-width: 680px;
         }
 
-        .hero-title span { color: var(--amber); }
+        .hero-title span { color: var(--amber); text-shadow: 0 0 40px rgba(245, 166, 35, 0.15); }
 
         .hero-desc {
             font-size: 1.05rem;
@@ -206,7 +207,7 @@
             line-height: 1.7;
         }
 
-        /* TERMINAL — animated typing demo */
+        /* TERMINAL */
         .demo-wrapper {
             max-width: 620px;
             width: 100%;
@@ -216,10 +217,10 @@
         .terminal {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 2px;
             width: 100%;
             text-align: left;
             overflow: hidden;
+            box-shadow: 0 0 60px rgba(245, 166, 35, 0.03), 0 0 1px rgba(245, 166, 35, 0.1);
         }
 
         .terminal-header {
@@ -256,8 +257,6 @@
         .t-cmd { color: var(--text); }
         .t-output { color: var(--green); padding-left: 20px; }
         .t-tool { color: var(--blue); padding-left: 20px; font-size: 0.75rem; }
-        .t-error { color: var(--red); padding-left: 20px; }
-        .t-dim { color: var(--text-dim); }
         .t-cursor {
             display: inline-block;
             width: 8px;
@@ -265,11 +264,11 @@
             background: var(--amber);
             animation: blink 1s infinite;
             vertical-align: middle;
+            box-shadow: 0 0 6px rgba(245, 166, 35, 0.4);
         }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        /* Typing animation lines */
         .t-anim { opacity: 0; }
         .t-anim.show { opacity: 1; }
 
@@ -296,11 +295,10 @@
         }
 
         .btn-primary { background: var(--amber); color: var(--bg); }
-        .btn-primary:hover { background: var(--amber-dim); transform: translateY(-1px); }
+        .btn-primary:hover { background: var(--amber-dim); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(245, 166, 35, 0.2); }
         .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
         .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
 
-        /* SOCIAL PROOF */
         .social-proof {
             display: flex;
             align-items: center;
@@ -312,12 +310,7 @@
             color: var(--text-dim);
         }
 
-        .social-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
+        .social-item { display: flex; align-items: center; gap: 8px; }
         .social-item strong { color: var(--text-muted); }
 
         /* STATS */
@@ -340,6 +333,7 @@
             font-weight: 700;
             color: var(--amber);
             display: block;
+            text-shadow: 0 0 20px rgba(245, 166, 35, 0.15);
         }
 
         .stat-label {
@@ -382,6 +376,16 @@
             margin-bottom: 48px;
         }
 
+        /* H3 subheadings */
+        .sub-heading {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 16px;
+            letter-spacing: 0.02em;
+        }
+
         /* HOW IT WORKS */
         .how-grid {
             display: grid;
@@ -393,7 +397,10 @@
             background: var(--surface);
             border: 1px solid var(--border);
             padding: 32px 28px;
+            transition: border-color 0.2s;
         }
+
+        .how-card:hover { border-color: var(--amber-dim); }
 
         .how-step {
             font-family: var(--mono);
@@ -416,7 +423,30 @@
             line-height: 1.6;
         }
 
-        /* FEATURES — terminal aesthetic */
+        /* WHY WE BUILT THIS */
+        .why-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 40px;
+            margin-top: 48px;
+            max-width: 700px;
+        }
+
+        .why-box h3 {
+            font-family: var(--mono);
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--amber);
+        }
+
+        .why-box p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        /* FEATURES */
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -465,7 +495,27 @@
             line-height: 1.6;
         }
 
-        /* CODE EXAMPLE — show, don't tell */
+        /* TOOL EXAMPLES */
+        .tool-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .tool-tag {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tool-tag:hover { border-color: var(--amber); color: var(--amber); }
+
+        /* CODE EXAMPLE */
         .code-example {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -530,6 +580,7 @@
             border-radius: 50%;
             background: var(--green);
             flex-shrink: 0;
+            box-shadow: 0 0 6px rgba(94, 185, 126, 0.4);
         }
 
         /* INSTALL */
@@ -597,6 +648,33 @@
             line-height: 1.5;
         }
 
+        /* FAQ */
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+        }
+
+        .faq-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 28px;
+        }
+
+        .faq-q {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .faq-a {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
         /* FOOTER */
         footer {
             border-top: 1px solid var(--border);
@@ -624,6 +702,7 @@
             height: 24px;
             width: 24px;
             object-fit: contain;
+            filter: drop-shadow(0 0 6px rgba(245, 166, 35, 0.3));
         }
 
         .footer-links {
@@ -655,13 +734,13 @@
             margin: 0 auto;
         }
 
-        /* RESPONSIVE */
         @media (max-width: 768px) {
             nav { padding: 14px 24px; }
             .nav-links { display: none; }
             .hero { padding: 100px 24px 60px; }
             section { padding: 64px 24px; }
             .how-grid { grid-template-columns: 1fr; }
+            .faq-grid { grid-template-columns: 1fr; }
             .stats-bar { gap: 40px; padding: 32px 24px; }
             .social-proof { flex-direction: column; gap: 16px; }
             footer { padding: 32px 24px; flex-direction: column; text-align: center; }
@@ -682,12 +761,51 @@
       "license": "https://opensource.org/licenses/MIT"
     }
     </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is HelloChusquis?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 35+ AI providers, 150+ tool integrations, browser automation, and persistent memory — all from one pip install."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does HelloChusquis cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "HelloChusquis is free and open source under the MIT license. You pay only for your AI provider API usage (OpenRouter, Groq, OpenAI, etc.). Some providers like Groq and Ollama are free."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What AI providers does HelloChusquis support?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "35+ providers including OpenRouter, Groq, Ollama (local), OpenAI, Anthropic, Google Gemini, xAI, Perplexity, Mistral, DeepSeek, Cohere, Together AI, Azure OpenAI, AWS Bedrock, and more. Automatic failover when a provider goes down."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use HelloChusquis without an API key?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Install Ollama locally and HelloChusquis connects to it automatically. No API key needed. Your data stays on your machine."
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
 
 <a href="#main" class="skip-link">Skip to main content</a>
 
-<!-- NAV -->
 <nav>
     <a href="#" class="nav-logo" aria-label="HelloChusquis home">
         <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="28" height="28">
@@ -697,8 +815,8 @@
         <li><a href="#how">How It Works</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#demo">Demo</a></li>
-        <li><a href="#integrations">Integrations</a></li>
         <li><a href="#providers">Providers</a></li>
+        <li><a href="#faq">FAQ</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="nav-cta" rel="noopener">GitHub</a></li>
     </ul>
@@ -718,7 +836,6 @@
         No cloud account needed.
     </p>
 
-    <!-- ANIMATED TERMINAL DEMO -->
     <div class="demo-wrapper">
         <div class="terminal" role="img" aria-label="Terminal showing HelloChusquis agent deploying a Docker app to AWS">
             <div class="terminal-header">
@@ -749,63 +866,56 @@
         <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn btn-secondary" rel="noopener" aria-label="View source code on GitHub">View Source</a>
     </div>
 
-    <!-- SOCIAL PROOF -->
     <div class="social-proof">
         <div class="social-item">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
             <strong>Open Source</strong>
         </div>
-        <div class="social-item">
-            <span>MIT License</span>
-        </div>
-        <div class="social-item">
-            <span>Python 3.10+</span>
-        </div>
+        <div class="social-item"><span>MIT License</span></div>
+        <div class="social-item"><span>Python 3.10+</span></div>
     </div>
 </div>
 
 <!-- STATS -->
 <div class="stats-bar">
-    <div class="stat">
-        <span class="stat-value">35+</span>
-        <span class="stat-label">AI Providers</span>
-    </div>
-    <div class="stat">
-        <span class="stat-value">150+</span>
-        <span class="stat-label">Integrations</span>
-    </div>
-    <div class="stat">
-        <span class="stat-value">100%</span>
-        <span class="stat-label">Open Source</span>
-    </div>
-    <div class="stat">
-        <span class="stat-value">0</span>
-        <span class="stat-label">Cloud Accounts</span>
-    </div>
+    <div class="stat"><span class="stat-value">35+</span><span class="stat-label">AI Providers</span></div>
+    <div class="stat"><span class="stat-value">150+</span><span class="stat-label">Integrations</span></div>
+    <div class="stat"><span class="stat-value">100%</span><span class="stat-label">Open Source</span></div>
+    <div class="stat"><span class="stat-value">0</span><span class="stat-label">Cloud Accounts</span></div>
 </div>
 
 <!-- HOW IT WORKS -->
 <section id="how">
     <p class="section-label">How It Works</p>
-    <h2 class="section-title">Three steps. No setup wizard needed.</h2>
-    <p class="section-desc">Install it, configure one API key, and start asking questions. The agent handles the rest.</p>
+    <h2 class="section-title">Three steps. No setup wizard.</h2>
+    <p class="section-desc">Install it, configure one API key, and start asking questions.</p>
 
     <div class="how-grid">
         <div class="how-card">
             <div class="how-step">Step 1</div>
             <div class="how-title">Install</div>
-            <div class="how-desc">One pip command. Works on macOS, Linux, and Windows. Python 3.10+ required.</div>
+            <div class="how-desc">One pip command. macOS, Linux, Windows. Python 3.10+.</div>
         </div>
         <div class="how-card">
             <div class="how-step">Step 2</div>
             <div class="how-title">Add an API key</div>
-            <div class="how-desc">Paste a free OpenRouter or Groq key. The agent auto-falls back if one provider goes down.</div>
+            <div class="how-desc">Paste a free OpenRouter or Groq key. Auto-failover if one provider goes down.</div>
         </div>
         <div class="how-card">
             <div class="how-step">Step 3</div>
             <div class="how-title">Ask anything</div>
-            <div class="how-desc">Search the web, run code, manage files, automate browsers. The agent picks the right tools.</div>
+            <div class="how-desc">Search the web, run code, manage files, automate browsers. The agent picks the tools.</div>
         </div>
+    </div>
+
+    <div class="why-box">
+        <h3>Why we built this</h3>
+        <p>
+            Every AI agent out there is either a SaaS product that locks you in, or a GitHub repo that needs 47 config files.
+            We wanted something different: install it in one command, use any provider, own your data.
+            HelloChusquis runs locally, talks to whichever AI provider you choose, and never phones home.
+            Your API keys stay on your machine. Your conversations stay in your terminal.
+        </p>
     </div>
 </section>
 
@@ -817,13 +927,14 @@
     <h2 class="section-title">What it actually does.</h2>
     <p class="section-desc">No vaporware. Every feature ships working.</p>
 
+    <h3 class="sub-heading">Agent Core</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🔄</div>
                 <div class="feature-title">Multi-provider fallback</div>
             </div>
-            <div class="feature-desc">Configure Groq, OpenRouter, Ollama, OpenAI, and more. If one fails, the next one picks up automatically.</div>
+            <div class="feature-desc">Configure Groq, OpenRouter, Ollama, OpenAI, and more. If one fails, the next picks up.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
@@ -837,56 +948,88 @@
                 <div class="feature-icon">📋</div>
                 <div class="feature-title">Task planner</div>
             </div>
-            <div class="feature-desc">Complex tasks get broken into steps. You review the plan, then the agent executes each step.</div>
+            <div class="feature-desc">Complex tasks broken into steps. You review the plan, then the agent executes.</div>
         </div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:32px">Interfaces</h3>
+    <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🌐</div>
                 <div class="feature-title">Web interface</div>
             </div>
-            <div class="feature-desc">Chat from your browser at localhost:8000. Provider status, plugins, and memory stats in the sidebar.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🔍</div>
-                <div class="feature-title">Browser automation</div>
-            </div>
-            <div class="feature-desc">Open URLs, click buttons, fill forms, take screenshots. Real Playwright automation, not a toy wrapper.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🔒</div>
-                <div class="feature-title">Workspace permissions</div>
-            </div>
-            <div class="feature-desc">Only accesses directories you explicitly allow. Runtime prompts for new paths. Your files stay yours.</div>
+            <div class="feature-desc">Chat from your browser at localhost:8000. Provider status, plugins, memory stats.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">📡</div>
                 <div class="feature-title">REST API with streaming</div>
             </div>
-            <div class="feature-desc">Expose your agent over HTTP. SSE streaming for real-time responses. Rate limiting included.</div>
+            <div class="feature-desc">Expose your agent over HTTP. SSE streaming. Rate limiting included.</div>
+        </div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:32px">Automation</h3>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-header">
+                <div class="feature-icon">🔍</div>
+                <div class="feature-title">Browser automation</div>
+            </div>
+            <div class="feature-desc">Open URLs, click buttons, fill forms, take screenshots. Real Playwright, not a toy wrapper.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-header">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-title">Workspace permissions</div>
+            </div>
+            <div class="feature-desc">Only accesses directories you allow. Runtime prompts for new paths.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🧩</div>
                 <div class="feature-title">Plugin system</div>
             </div>
-            <div class="feature-desc">Install community plugins or build your own. The agent can build integrations for you on demand.</div>
+            <div class="feature-desc">Community plugins or build your own. The agent can build integrations on demand.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🛡️</div>
                 <div class="feature-title">Security checks</div>
             </div>
-            <div class="feature-desc">AI-powered safety evaluator blocks dangerous commands before they run. Configurable strictness.</div>
+            <div class="feature-desc">AI-powered safety evaluator blocks dangerous commands. Configurable strictness.</div>
         </div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:32px">Tools you can use right now</h3>
+    <div class="tool-examples">
+        <span class="tool-tag">shell</span>
+        <span class="tool-tag">code</span>
+        <span class="tool-tag">files</span>
+        <span class="tool-tag">web_search</span>
+        <span class="tool-tag">browser</span>
+        <span class="tool-tag">github</span>
+        <span class="tool-tag">slack</span>
+        <span class="tool-tag">gmail</span>
+        <span class="tool-tag">docker</span>
+        <span class="tool-tag">aws</span>
+        <span class="tool-tag">notion</span>
+        <span class="tool-tag">jira</span>
+        <span class="tool-tag">postgresql</span>
+        <span class="tool-tag">stripe</span>
+        <span class="tool-tag">twilio</span>
+        <span class="tool-tag">spotify</span>
+        <span class="tool-tag">vercel</span>
+        <span class="tool-tag">supabase</span>
+        <span class="tool-tag">cloudinary</span>
+        <span class="tool-tag">+ 130 more</span>
     </div>
 </section>
 
 <hr class="divider">
 
-<!-- DEMO — show real interaction -->
+<!-- DEMO -->
 <section id="demo">
     <p class="section-label">Demo</p>
     <h2 class="section-title">See it in action.</h2>
@@ -906,111 +1049,14 @@
             <div><span class="tool">→ browser_type(text="New York → Tokyo, Aug 15")</span></div>
             <div><span class="tool">→ browser_click(text="Search")</span></div>
             <div><span class="out">Found 47 flights. Best price: €420 on ANA.</span></div>
-            <div style="margin-top: 12px"><span class="prompt">You:</span> <span class="cmd">now write a Python script to track prices daily</span></div>
+            <div style="margin-top:12px"><span class="prompt">You:</span> <span class="cmd">write a Python script to track prices daily</span></div>
             <div><span class="tool">→ code(code="import requests...")</span></div>
             <div><span class="out">Created price_tracker.py. Runs daily via cron.</span></div>
-            <div style="margin-top: 12px"><span class="prompt">You:</span> <span class="cmd">deploy the tracker to my VPS</span></div>
+            <div style="margin-top:12px"><span class="prompt">You:</span> <span class="cmd">deploy the tracker to my VPS</span></div>
             <div><span class="tool">→ shell("scp price_tracker.py user@vps:~/")</span></div>
             <div><span class="tool">→ shell("ssh user@vps 'crontab -e'")</span></div>
             <div><span class="out">Deployed. Price checks run at 9am daily.</span></div>
-            <div style="margin-top: 12px"><span class="comment"># The agent chained 3 tools across 3 different systems</span></div>
-            <div><span class="comment"># without being told which tools to use.</span></div>
-        </div>
-    </div>
-</section>
-
-<hr class="divider">
-
-<!-- INTEGRATIONS -->
-<section id="integrations">
-    <p class="section-label">Integrations</p>
-    <h2 class="section-title">150+ tools. Build more on demand.</h2>
-    <p class="section-desc">Native support for the APIs you already use. Missing one? The agent builds it for you.</p>
-
-    <div class="features-grid">
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🐙</div>
-                <div class="feature-title">GitHub</div>
-            </div>
-            <div class="feature-desc">Repos, issues, PRs, search.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">💬</div>
-                <div class="feature-title">Slack</div>
-            </div>
-            <div class="feature-desc">Messages, channels, users.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">📧</div>
-                <div class="feature-title">Gmail</div>
-            </div>
-            <div class="feature-desc">Send, read, search emails.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">📋</div>
-                <div class="feature-title">Jira</div>
-            </div>
-            <div class="feature-desc">Issues, projects, workflows.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🗄️</div>
-                <div class="feature-title">PostgreSQL</div>
-            </div>
-            <div class="feature-desc">Queries, tables, migrations.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🐳</div>
-                <div class="feature-title">Docker</div>
-            </div>
-            <div class="feature-desc">Containers, images, logs.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">☁️</div>
-                <div class="feature-title">AWS</div>
-            </div>
-            <div class="feature-desc">EC2, S3, Lambda, IAM.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">📓</div>
-                <div class="feature-title">Notion</div>
-            </div>
-            <div class="feature-desc">Pages, databases, content.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🎵</div>
-                <div class="feature-title">Spotify</div>
-            </div>
-            <div class="feature-desc">Playback, playlists, search.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">💳</div>
-                <div class="feature-title">Stripe</div>
-            </div>
-            <div class="feature-desc">Customers, charges, invoices.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">📅</div>
-                <div class="feature-title">Google Calendar</div>
-            </div>
-            <div class="feature-desc">Events, schedules.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🌐</div>
-                <div class="feature-title">Web Search</div>
-            </div>
-            <div class="feature-desc">DuckDuckGo, no API key needed.</div>
+            <div style="margin-top:12px"><span class="comment"># 3 tools, 3 systems, zero manual wiring.</span></div>
         </div>
     </div>
 </section>
@@ -1021,7 +1067,7 @@
 <section id="providers">
     <p class="section-label">AI Providers</p>
     <h2 class="section-title">35+ providers. Automatic failover.</h2>
-    <p class="section-desc">Add as many as you want. The agent switches providers when one hits rate limits or goes down.</p>
+    <p class="section-desc">Add as many as you want. The agent switches when one hits rate limits or goes down.</p>
 
     <div class="providers-grid">
         <div class="provider-card"><div class="provider-dot"></div>OpenRouter</div>
@@ -1047,6 +1093,33 @@
 
 <hr class="divider">
 
+<!-- FAQ -->
+<section id="faq">
+    <p class="section-label">FAQ</p>
+    <h2 class="section-title">Common questions.</h2>
+
+    <div class="faq-grid">
+        <div class="faq-item">
+            <div class="faq-q">What is HelloChusquis?</div>
+            <div class="faq-a">An open source terminal AI agent. One pip install, 35+ providers, 150+ tools, browser automation, persistent memory. Runs locally on your machine.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">How much does it cost?</div>
+            <div class="faq-a">Free and open source (MIT license). You pay only for AI provider API usage. Groq and Ollama are free options.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">Can I use it without an API key?</div>
+            <div class="faq-a">Yes. Install Ollama locally and HelloChusquis connects automatically. No API key needed. Your data stays on your machine.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">What can it actually do?</div>
+            <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 150+ APIs.</div>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
 <!-- INSTALL -->
 <section id="install">
     <p class="section-label">Get Started</p>
@@ -1061,19 +1134,17 @@
                 pip install hellochusquis
                 <button class="copy-btn" onclick="copy(this, 'pip install hellochusquis')" aria-label="Copy pip install command">copy</button>
             </div>
-            <p class="install-note">Requires Python 3.10+. Adds the hellochusquis command to your PATH.</p>
+            <p class="install-note">Requires Python 3.10+. Adds hellochusquis to your PATH.</p>
         </div>
-
         <div class="install-card">
             <div class="install-number">Option 2</div>
             <div class="install-title">curl installer</div>
-            <div class="code-block" style="position:relative; white-space: nowrap; overflow-x: auto;">
+            <div class="code-block" style="position:relative; white-space:nowrap; overflow-x:auto;">
                 curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash
-                <button class="copy-btn" onclick="copy(this, 'curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash')" aria-label="Copy curl install command">copy</button>
+                <button class="copy-btn" onclick="copy(this, 'curl -sSL https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/install.sh | bash')" aria-label="Copy curl command">copy</button>
             </div>
-            <p class="install-note">Downloads and installs everything. macOS and Linux only.</p>
+            <p class="install-note">macOS and Linux only.</p>
         </div>
-
         <div class="install-card">
             <div class="install-number">Option 3</div>
             <div class="install-title">From source</div>
@@ -1081,35 +1152,13 @@
                 git clone https://github.com/aminoy77/HelloChusquis.git && cd HelloChusquis && pip install -e .
                 <button class="copy-btn" onclick="copy(this, 'git clone https://github.com/aminoy77/HelloChusquis.git && cd HelloChusquis && pip install -e .')" aria-label="Copy git clone command">copy</button>
             </div>
-            <p class="install-note">For contributors. Editable install — changes take effect immediately.</p>
-        </div>
-    </div>
-
-    <div style="margin-top:48px; border:1px solid var(--border); background:var(--surface); padding:32px;">
-        <p class="section-label" style="margin-bottom:16px;">First run</p>
-        <div class="terminal" style="max-width:100%; margin:0;">
-            <div class="terminal-header">
-                <div class="terminal-dot"></div>
-                <div class="terminal-dot"></div>
-                <div class="terminal-dot"></div>
-                <span class="terminal-title">quick setup</span>
-            </div>
-            <div class="terminal-body">
-                <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">hellochusquis</span></div>
-                <div class="t-line"><span class="t-output">No config found. Running quick setup...</span></div>
-                <div class="t-line"><span class="t-output">Choose your AI provider:</span></div>
-                <div class="t-line"><span class="t-output">  1. OpenRouter (recommended, free tier)</span></div>
-                <div class="t-line"><span class="t-output">  2. Groq (free)</span></div>
-                <div class="t-line"><span class="t-output">  3. Ollama (local, no key needed)</span></div>
-                <div class="t-line" style="margin-top:8px"><span class="t-output">Select option: <span class="t-cursor" style="width:6px;height:12px"></span></span></div>
-            </div>
+            <p class="install-note">For contributors. Editable install.</p>
         </div>
     </div>
 </section>
 
 </main>
 
-<!-- FOOTER -->
 <footer>
     <div class="footer-logo">
         <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24">
@@ -1124,7 +1173,6 @@
 </footer>
 
 <script>
-    // Copy to clipboard
     function copy(btn, text) {
         navigator.clipboard.writeText(text).then(function() {
             var original = btn.textContent;
