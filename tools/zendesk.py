@@ -1,4 +1,4 @@
-from httpx import AsyncClient, BASIC_AUTH
+from httpx import AsyncClient
 
 
 async def create_ticket(api_key: str, subdomain: str, subject: str, description: str, requester: str, **kwargs) -> dict:
