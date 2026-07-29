@@ -1,10 +1,10 @@
-import importlib.util
-import sys
 from pathlib import Path
 from rich.console import Console
 
+from core.config_paths import PLUGINS_DIR
+from core.plugin_system import get_plugin_manager
+
 console = Console()
-PLUGINS_DIR = Path.home() / ".hellochusquis" / "plugins"
 REGISTRY_URL = "https://raw.githubusercontent.com/aminoy77/HelloChusquis-plugins/main/registry.json"
 
 
@@ -14,26 +14,11 @@ def init():
 
 def load_plugins() -> list[dict]:
     init()
-    plugins = []
-    for path in PLUGINS_DIR.glob("*.py"):
-        try:
-            spec = importlib.util.spec_from_file_location(path.stem, path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-
-            required = ["PLUGIN_NAME", "PLUGIN_SCHEMA", "run"]
-            if not all(hasattr(mod, attr) for attr in required):
-                console.print(f"  [yellow]⚠ Plugin {path.name} missing required attributes, skipping.[/yellow]")
-                continue
-
-            plugins.append({
-                "name": mod.PLUGIN_NAME,
-                "schema": mod.PLUGIN_SCHEMA,
-                "run": mod.run,
-            })
-            console.print(f"  [dim]✓ Plugin loaded: {mod.PLUGIN_NAME}[/dim]")
-        except Exception as e:
-            console.print(f"  [red]✗ Failed to load plugin {path.name}: {e}[/red]")
+    plugins = get_plugin_manager().load_all()
+    for plugin in plugins:
+        manifest = plugin.get("manifest")
+        plugin_type = manifest.plugin_type if manifest else "simple"
+        console.print(f"  [dim]✓ Plugin loaded: {plugin['name']} ({plugin_type})[/dim]")
     return plugins
 
 
