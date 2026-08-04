@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import core.db_memory as memory
 import core.learning as learning
 from core.provider import ProviderPool
@@ -9,9 +10,18 @@ from tools.files import FilesTool
 from tools.code import CodeTool
 from tools.websearch import WebSearchTool
 from tools.base import ToolResult
+from tools.web_fetch import WebFetchTool
 from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
 from core.security_evaluator import evaluate_command_safety
+from core.tool_policy import (
+    ToolPolicy, ToolLoopDetector, SecurityAuditor, DangerousToolDetector,
+    ToolPolicyConfig, LoopDetectionConfig, SessionState as PolicySessionState,
+    Severity,
+)
+from core.session import SessionManager
+from core.voice import VoiceManager
+from core.mcp import get_client as get_mcp_client, MCPTransport
 from ui.terminal import print_tool_call, print_tool_result, console
 from core.logger import get_logger
 
@@ -901,6 +911,94 @@ def _build_tools_schema(plugins: list) -> list:
                     "required": ["action", "path"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "web_fetch",
+                "description": "Fetch URL content with SSRF protection, caching, and markdown/text extraction. Lightweight alternative to browser.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string", "description": "HTTP(S) URL to fetch"},
+                        "extract_mode": {
+                            "type": "string",
+                            "enum": ["markdown", "text"],
+                            "description": "Output format (default: markdown)"
+                        },
+                        "max_chars": {
+                            "type": "integer",
+                            "description": "Max chars returned (default: 20000)"
+                        }
+                    },
+                    "required": ["url"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "speak",
+                "description": "Text-to-speech synthesis. Convert text to audio using available TTS providers (Edge, OpenAI, ElevenLabs, Piper).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string", "description": "Text to synthesize to speech"},
+                        "voice_id": {"type": "string", "description": "Specific voice ID (optional)"},
+                        "language": {"type": "string", "description": "Language code (e.g. en, es)"},
+                        "speed": {"type": "number", "description": "Speech speed multiplier (default: 1.0)"},
+                        "provider": {"type": "string", "description": "TTS provider (edge, openai, elevenlabs, piper)"},
+                        "output_format": {"type": "string", "enum": ["mp3", "wav", "ogg"], "description": "Audio format"}
+                    },
+                    "required": ["text"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "media",
+                "description": "Media processing: image operations (resize, thumbnail, info, convert), PDF text extraction, and QR code generation. Uses ImageMagick/ffmpeg.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["image_info", "image_resize", "image_thumbnail", "image_convert", "pdf_extract", "qr_generate"],
+                            "description": "Media operation to perform"
+                        },
+                        "path": {"type": "string", "description": "Input file path"},
+                        "output_path": {"type": "string", "description": "Output file path (optional)"},
+                        "width": {"type": "integer", "description": "Target width for resize"},
+                        "height": {"type": "integer", "description": "Target height for resize"},
+                        "size": {"type": "integer", "description": "Thumbnail size in px"},
+                        "text": {"type": "string", "description": "Text content for QR code"},
+                        "format": {"type": "string", "description": "Output format (e.g. png, webp)"}
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "mcp",
+                "description": "Route tool calls to Model Context Protocol (MCP) servers. Connect, list tools, and call tools on external MCP servers.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_servers", "list_tools", "call_tool"],
+                            "description": "MCP operation"
+                        },
+                        "server": {"type": "string", "description": "MCP server name"},
+                        "tool": {"type": "string", "description": "Tool name on the MCP server"},
+                        "arguments": {"type": "object", "description": "Arguments for the MCP tool"}
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
     for plugin in plugins:
@@ -936,6 +1034,46 @@ class Agent:
         # Plugins — schema se construye una vez aquí, no se modifica una lista global
         self.plugins = load_plugins()
         self.tools_schema = _build_tools_schema(self.plugins)
+
+        # --- OpenClaw modules integration ---
+
+        # WebFetch tool instance
+        self.web_fetch = WebFetchTool()
+
+        # Tool policy (allow/deny enforcement)
+        policy_cfg = ToolPolicyConfig(
+            allow=config.get("tool_policy", {}).get("allow"),
+            deny=config.get("tool_policy", {}).get("deny"),
+        )
+        self.tool_policy = ToolPolicy(allow=policy_cfg.allow, deny=policy_cfg.deny)
+
+        # Loop detection
+        loop_cfg = LoopDetectionConfig()
+        self.loop_detector = ToolLoopDetector(config=loop_cfg)
+        self._loop_session_state = PolicySessionState()
+
+        # Security auditor
+        self.security_auditor = SecurityAuditor(policy=self.tool_policy)
+
+        # Session persistence
+        sessions_db = os.path.join(
+            os.path.expanduser("~"), ".hellochusquis", "sessions.db"
+        )
+        os.makedirs(os.path.dirname(sessions_db), exist_ok=True)
+        self.session_manager = SessionManager(sessions_db)
+        self._session_id = self.session_manager.create_session(
+            agent_id="main",
+            model=config.get("model", "default"),
+        )
+
+        # Voice/TTS
+        try:
+            self.voice_manager = VoiceManager()
+        except Exception:
+            self.voice_manager = None
+
+        # MCP client
+        self.mcp_client = get_mcp_client()
 
         logger.info("Agent initialized — %d providers, %d tools", len(self.pool.providers), len(self.tools_schema))
 
@@ -1091,6 +1229,91 @@ class Agent:
 
             except Exception as e:
                 logger.error("Browser tool error: %s", e)
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "web_fetch":
+            return self.web_fetch.run(**args)
+
+        if name == "speak":
+            if not self.voice_manager:
+                return ToolResult(success=False, output="", error="Voice/TTS not available. Check provider config.")
+            try:
+                text = args.get("text", "")
+                if not text:
+                    return ToolResult(success=False, output="", error="text parameter required for speak")
+                result = self.voice_manager.synthesize(
+                    text=text,
+                    voice_id=args.get("voice_id"),
+                    language=args.get("language", ""),
+                    speed=args.get("speed", 1.0),
+                    provider_id=args.get("provider"),
+                    output_format=args.get("output_format", "mp3"),
+                )
+                if result.success:
+                    return ToolResult(success=True, output=f"Audio: {result.audio_path}")
+                return ToolResult(success=False, output="", error=result.error or "TTS synthesis failed")
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "media":
+            action = args.get("action", "")
+            try:
+                if action == "image_info":
+                    from core.functions_advanced import image_info
+                    result = image_info(args.get("path", ""))
+                elif action == "image_resize":
+                    from core.functions_advanced import image_resize
+                    result = image_resize(
+                        args.get("path", ""),
+                        args.get("width", 0),
+                        args.get("height", 0),
+                    )
+                elif action == "image_thumbnail":
+                    from core.functions_advanced import image_thumbnail
+                    result = image_thumbnail(
+                        args.get("path", ""),
+                        args.get("size", 128),
+                    )
+                elif action == "pdf_extract":
+                    from core.functions_advanced import pdf_info
+                    result = pdf_info(args.get("path", ""))
+                elif action == "qr_generate":
+                    from core.functions_advanced import qr_code
+                    result = qr_code(
+                        args.get("text", ""),
+                        args.get("output_path"),
+                    )
+                else:
+                    return ToolResult(success=False, output="", error=f"Unknown media action: {action}")
+                return ToolResult(success=True, output=str(result))
+            except Exception as e:
+                return ToolResult(success=False, output="", error=str(e))
+
+        if name == "mcp":
+            action = args.get("action", "")
+            try:
+                if action == "list_servers":
+                    servers = list(self.mcp_client.servers.keys())
+                    return ToolResult(success=True, output=str(servers))
+                elif action == "list_tools":
+                    tools = self.mcp_client.list_tools(args.get("server"))
+                    return ToolResult(success=True, output=str(tools))
+                elif action == "call_tool":
+                    server = args.get("server", "")
+                    tool = args.get("tool", "")
+                    arguments = args.get("arguments", {})
+                    import asyncio
+                    result = asyncio.get_event_loop().run_until_complete(
+                        self.mcp_client.call_tool(server, tool, arguments)
+                    )
+                    return ToolResult(
+                        success=result.get("success", False),
+                        output=str(result.get("data", result.get("error", ""))),
+                        error=result.get("error") if not result.get("success") else None,
+                    )
+                else:
+                    return ToolResult(success=False, output="", error=f"Unknown MCP action: {action}")
+            except Exception as e:
                 return ToolResult(success=False, output="", error=str(e))
 
         # External tool modules - call run() directly from module
@@ -1472,6 +1695,7 @@ class Agent:
 
     def run(self, user_input: str) -> str:
         self.history.add("user", user_input)
+        self.session_manager.append_message(self._session_id, "user", user_input)
         messages = self._build_messages()
 
         # Preserve tool results across turns - don't optimize history during execution
@@ -1499,6 +1723,7 @@ class Agent:
             if not message.get("tool_calls"):
                 content = message.get("content") or ""
                 self.history.add("assistant", content)
+                self.session_manager.append_message(self._session_id, "assistant", content)
                 # Clear pending tool results on successful completion
                 self._pending_tool_results = []
                 return content
@@ -1516,7 +1741,49 @@ class Agent:
 
                 print_tool_call(tool_name, tool_args)
                 logger.info("Tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
-                result = self._dispatch_tool(tool_name, tool_args)
+
+                # --- ToolPolicy enforcement ---
+                if not self.tool_policy.is_tool_allowed(tool_name):
+                    logger.warning("Tool denied by policy: %s", tool_name)
+                    result = ToolResult(success=False, output="", error=f"Tool '{tool_name}' denied by policy")
+                else:
+                    # --- SecurityAuditor pre-check ---
+                    audit_findings = self.security_auditor.audit_tool_call(tool_name, tool_args)
+                    critical_findings = [f for f in audit_findings if f.severity == Severity.CRITICAL]
+                    if critical_findings:
+                        msg = "; ".join(f.title for f in critical_findings)
+                        logger.warning("Security audit blocked %s: %s", tool_name, msg)
+                        result = ToolResult(success=False, output="", error=f"Security audit: {msg}")
+                    else:
+                        # --- ToolLoopDetector check ---
+                        loop_result = self.loop_detector.detect(self._loop_session_state, tool_name, tool_args)
+                        if loop_result.stuck:
+                            logger.warning("Loop detected for %s: %s", tool_name, loop_result.message)
+                            result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
+                        else:
+                            # --- Plugin hooks: before_tool ---
+                            for plugin in self.plugins:
+                                hook_fn = plugin.get("before_tool")
+                                if callable(hook_fn):
+                                    try:
+                                        hook_fn(tool_name, tool_args)
+                                    except Exception:
+                                        pass
+
+                            result = self._dispatch_tool(tool_name, tool_args)
+
+                            # --- Plugin hooks: after_tool ---
+                            for plugin in self.plugins:
+                                hook_fn = plugin.get("after_tool")
+                                if callable(hook_fn):
+                                    try:
+                                        hook_fn(tool_name, tool_args, result)
+                                    except Exception:
+                                        pass
+
+                    # --- Record tool call for loop detector ---
+                    self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+
                 if not result.success:
                     logger.error("Tool error: %s — %s", tool_name, result.error)
                 print_tool_result(result.success, result.output)
@@ -1537,6 +1804,7 @@ class Agent:
         Yields dict payloads: {"type": "chunk"|"tool_call"|"done", ...}
         """
         self.history.add("user", user_input)
+        self.session_manager.append_message(self._session_id, "user", user_input)
         messages = self._build_messages()
 
         self._pending_tool_results = getattr(self, '_pending_tool_results', [])
@@ -1560,6 +1828,7 @@ class Agent:
             if not message.get("tool_calls"):
                 content = message.get("content") or ""
                 self.history.add("assistant", content)
+                self.session_manager.append_message(self._session_id, "assistant", content)
                 self._pending_tool_results = []
 
                 # Yield content in ~50 char chunks to simulate streaming
@@ -1589,7 +1858,47 @@ class Agent:
 
                 print_tool_call(tool_name, tool_args)
                 logger.info("Stream tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
-                result = self._dispatch_tool(tool_name, tool_args)
+
+                # --- ToolPolicy enforcement ---
+                if not self.tool_policy.is_tool_allowed(tool_name):
+                    logger.warning("Stream tool denied by policy: %s", tool_name)
+                    result = ToolResult(success=False, output="", error=f"Tool '{tool_name}' denied by policy")
+                else:
+                    # --- SecurityAuditor pre-check ---
+                    audit_findings = self.security_auditor.audit_tool_call(tool_name, tool_args)
+                    critical_findings = [f for f in audit_findings if f.severity == Severity.CRITICAL]
+                    if critical_findings:
+                        msg = "; ".join(f.title for f in critical_findings)
+                        result = ToolResult(success=False, output="", error=f"Security audit: {msg}")
+                    else:
+                        # --- ToolLoopDetector check ---
+                        loop_result = self.loop_detector.detect(self._loop_session_state, tool_name, tool_args)
+                        if loop_result.stuck:
+                            result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
+                        else:
+                            # --- Plugin hooks: before_tool ---
+                            for plugin in self.plugins:
+                                hook_fn = plugin.get("before_tool")
+                                if callable(hook_fn):
+                                    try:
+                                        hook_fn(tool_name, tool_args)
+                                    except Exception:
+                                        pass
+
+                            result = self._dispatch_tool(tool_name, tool_args)
+
+                            # --- Plugin hooks: after_tool ---
+                            for plugin in self.plugins:
+                                hook_fn = plugin.get("after_tool")
+                                if callable(hook_fn):
+                                    try:
+                                        hook_fn(tool_name, tool_args, result)
+                                    except Exception:
+                                        pass
+
+                    # --- Record tool call for loop detector ---
+                    self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+
                 if not result.success:
                     logger.error("Stream tool error: %s — %s", tool_name, result.error)
                 print_tool_result(result.success, result.output)
@@ -1631,3 +1940,9 @@ class Agent:
 
         learning.analyze_and_learn(messages, self.pool)
         # Ya no limpiamos viejos porque SQLite permite gestionarlo mejor internamente
+
+        # Close session
+        try:
+            self.session_manager.close_session(self._session_id)
+        except Exception:
+            pass

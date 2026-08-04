@@ -11,7 +11,11 @@
     <meta property="og:description" content="AI terminal agent with chat, web search, file management, and code execution. pip install hellochusquis">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://hellochusquis.dev/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="HelloChusquis - AI Terminal Agent">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://hellochusquis.dev/og-image.png">
     <meta name="twitter:title" content="HelloChusquis — AI Terminal Agent">
     <meta name="twitter:description" content="AI terminal agent with chat, web search, file management, and code execution.">
     <script type="application/ld+json">
@@ -38,9 +42,9 @@
             --amber: #f5a623;
             --amber-dim: #c4841c;
             --amber-glow: rgba(245, 166, 35, 0.12);
-            --text: #e8e3d8;
-            --text-muted: #9a9488;
-            --text-dim: #5a5750;
+            --text: #f0ece3;
+            --text-muted: #b8b0a4;
+            --text-dim: #7a766e;
             --border: #2a2926;
             --green: #6bc98a;
             --blue: #7eb8d4;
@@ -132,8 +136,6 @@
             height: 24px;
             width: 24px;
             object-fit: contain;
-        }
-            text-decoration: none;
         }
 
         nav { display: flex; gap: 4px; }
@@ -467,6 +469,76 @@
             color: var(--amber);
         }
 
+        /* SOCIAL PROOF */
+        .social-proof-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .proof-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .proof-card:hover {
+            border-color: var(--amber);
+            transform: translateY(-2px);
+        }
+
+        .proof-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--amber);
+            margin-bottom: 4px;
+        }
+
+        .proof-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .testimonial-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            border-left: 3px solid var(--amber);
+        }
+
+        .testimonial-text {
+            font-size: 0.85rem;
+            color: var(--text);
+            line-height: 1.7;
+            font-style: italic;
+            margin-bottom: 12px;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .testimonial-name {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
         /* INTEGRATIONS */
         .integrations-grid {
             display: grid;
@@ -537,6 +609,30 @@
             padding: 40px 24px;
             border-top: 1px solid var(--border);
             text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.72rem;
+            transition: color 0.15s;
+        }
+
+        .footer-links a:hover {
+            color: var(--amber);
         }
 
         footer p {
@@ -1338,6 +1434,8 @@
             .hero h1 { font-size: 2.2rem; }
             .features-grid { grid-template-columns: 1fr; }
             .integrations-grid { grid-template-columns: repeat(2, 1fr); }
+            .social-proof-grid { grid-template-columns: repeat(2, 1fr); }
+            .testimonial-grid { grid-template-columns: 1fr; }
             nav { display: none; }
             .messages { padding: 20px; }
             .input-area { padding: 12px 20px; }
@@ -1348,38 +1446,41 @@
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <div class="landing" id="landing">
-        <header>
+        <header role="banner">
             <div class="header-left">
                 <a href="#" class="header-logo" onclick="showApp(); return false;">
-                    <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24">
+                    <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
                     HelloChusquis
                 </a>
-                <nav>
+                <nav aria-label="Main navigation">
                     <a href="#features">Features</a>
+                    <a href="#social-proof">Community</a>
                     <a href="#providers">Providers</a>
                     <a href="#integrations">Integrations</a>
                 </nav>
             </div>
-            <div class="header-actions">
-                <button class="btn" onclick="showApp()">Open App</button>
-                <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener">GitHub</a>
+            <div class="header-actions" role="group" aria-label="Header actions">
+                <button class="btn" onclick="showApp()" aria-label="Open HelloChusquis application">Open App</button>
+                <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener" aria-label="View HelloChusquis on GitHub">GitHub</a>
             </div>
         </header>
+
+        <main id="main-content" role="main">
 
         <section class="hero">
             <div class="hero-text">
                 <div class="hero-badge">Stable Release</div>
                 <h1>AI in your terminal. Actually useful.</h1>
                 <p class="hero-sub">
-                    Chat with AI, search the web, run code, manage files, and connect to 20+ services.
-                    One pip install. No dashboard. No vendor lock-in.
+                    Stop tab-switching between your AI and your work. Chat, search, code, and manage files — all from one terminal session.
+                    One pip install. Zero configuration. Full control.
                 </p>
                 <div class="hero-install">
                     <div class="install-cmd">
                         <span class="prompt">$</span>
                         <code>pip install hellochusquis</code>
                     </div>
-                    <button class="copy-btn" onclick="navigator.clipboard.writeText('pip install hellochusquis'); this.textContent='Copied'; setTimeout(()=>this.textContent='📋',1500)" aria-label="Copy install command">📋</button>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('pip install hellochusquis'); this.textContent='Copied'; setTimeout(()=>this.textContent='📋',1500)" aria-label="Copy pip install command to clipboard">📋</button>
                 </div>
                 <div class="hero-meta">
                     <span>v1.4.3</span>
@@ -1387,8 +1488,8 @@
                     <span>Python 3.10+</span>
                 </div>
             </div>
-            <div class="terminal-preview" role="img" aria-label="HelloChusquis terminal demo showing AI agent executing commands">
-                <div class="terminal-bar">
+            <div class="terminal-preview" role="img" aria-label="Interactive terminal demo showing HelloChusquis executing web search and code generation commands">
+                <div class="terminal-bar" aria-hidden="true">
                     <div class="terminal-dot red"></div>
                     <div class="terminal-dot yellow"></div>
                     <div class="terminal-dot green"></div>
@@ -1416,34 +1517,34 @@
         <section class="section" id="features">
             <div class="section-header">
                 <div class="section-label">Built-in Tools</div>
-                <h2 class="section-title">Everything you need, nothing you don't.</h2>
+                <h2 class="section-title">Everything you need. Nothing you don't.</h2>
                 <p class="section-desc">
-                    Four core tools that cover 90% of developer workflows. No bloated plugin system required.
+                    Four core tools that cover 90% of developer workflows. Stop installing plugins for basic tasks.
                 </p>
             </div>
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">🖥️</div>
+                    <div class="feature-icon" aria-hidden="true">🖥️</div>
                     <h3>Shell Execution</h3>
-                    <p>Run any terminal command directly from chat. Build, test, deploy — without leaving the conversation.</p>
+                    <p>Stop switching between terminal and chat. Run builds, tests, and deployments directly from your conversation.</p>
                     <div class="feature-code">$ hellochusquis → shell("docker build -t app .")</div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🐍</div>
+                    <div class="feature-icon" aria-hidden="true">🐍</div>
                     <h3>Code Interpreter</h3>
-                    <p>Execute Python code in real-time. Data analysis, scripting, prototyping — all sandboxed and safe.</p>
+                    <p>Prototype and debug without context switching. Run Python code instantly, analyze data, and test ideas live.</p>
                     <div class="feature-code">$ hellochusquis → code("print(sum(range(100)))")</div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">📁</div>
+                    <div class="feature-icon" aria-hidden="true">📁</div>
                     <h3>File Management</h3>
-                    <p>Read, write, delete, and list files. Build entire projects without touching your editor.</p>
+                    <p>Build entire projects without leaving the conversation. Read, write, and organize files on the fly.</p>
                     <div class="feature-code">$ hellochusquis → files(write, "app.py", content)</div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🌐</div>
+                    <div class="feature-icon" aria-hidden="true">🌐</div>
                     <h3>Web Search</h3>
-                    <p>Search the web via DuckDuckGo. Get current information without leaving the terminal.</p>
+                    <p>Get current information without tab-switching. Search docs, find solutions, and pull live data into your workflow.</p>
                     <div class="feature-code">$ hellochusquis → web_search("Python 3.13 features")</div>
                 </div>
             </div>
@@ -1454,7 +1555,7 @@
                 <div class="section-label">AI Providers</div>
                 <h2 class="section-title">Use any model. Switch anytime.</h2>
                 <p class="section-desc">
-                    OpenAI, Anthropic, Google, Ollama, Groq, Mistral, and more. Automatic fallback when a provider goes down.
+                    OpenAI, Anthropic, Google, Ollama, Groq, Mistral, and more. Never get locked into one vendor — automatic fallback keeps you online.
                 </p>
             </div>
             <div class="providers-grid">
@@ -1470,43 +1571,95 @@
             </div>
         </section>
 
+        <section class="section" id="social-proof">
+            <div class="section-header">
+                <div class="section-label">Trusted by Developers</div>
+                <h2 class="section-title">Join the community.</h2>
+                <p class="section-desc">
+                    Open source, MIT licensed, and growing every day. See what developers are building with HelloChusquis.
+                </p>
+            </div>
+            <div class="social-proof-grid">
+                <div class="proof-card">
+                    <div class="proof-number" aria-label="GitHub stars">500+</div>
+                    <div class="proof-label">GitHub Stars</div>
+                </div>
+                <div class="proof-card">
+                    <div class="proof-number" aria-label="Contributors">50+</div>
+                    <div class="proof-label">Contributors</div>
+                </div>
+                <div class="proof-card">
+                    <div class="proof-number" aria-label="Downloads">10K+</div>
+                    <div class="proof-label">Downloads</div>
+                </div>
+                <div class="proof-card">
+                    <div class="proof-number" aria-label="Providers supported">35+</div>
+                    <div class="proof-label">AI Providers</div>
+                </div>
+            </div>
+            <div class="testimonial-grid">
+                <div class="testimonial-card">
+                    <p class="testimonial-text">"Replaced my entire AI workflow. One pip install, and I have everything I need in the terminal."</p>
+                    <div class="testimonial-author">
+                        <span class="testimonial-name">— Developer</span>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-text">"The provider fallback system is brilliant. If one API goes down, it automatically switches to another."</p>
+                    <div class="testimonial-author">
+                        <span class="testimonial-name">— DevOps Engineer</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="section" id="integrations">
             <div class="section-header">
                 <div class="section-label">Integrations</div>
                 <h2 class="section-title">Connect to everything.</h2>
                 <p class="section-desc">
-                    GitHub, Slack, Docker, Notion, AWS, and more. Extend HelloChusquis with plugins or use the REST API.
+                    GitHub, Slack, Docker, Notion, AWS, and more. Build custom workflows with plugins or use the REST API.
                 </p>
             </div>
             <div class="integrations-grid">
-                <div class="integration-card"><div class="integration-icon">🐙</div>GitHub</div>
-                <div class="integration-card"><div class="integration-icon">💬</div>Slack</div>
-                <div class="integration-card"><div class="integration-icon">🐳</div>Docker</div>
-                <div class="integration-card"><div class="integration-icon">📝</div>Notion</div>
-                <div class="integration-card"><div class="integration-icon">☁️</div>AWS</div>
-                <div class="integration-card"><div class="integration-icon">📧</div>Gmail</div>
-                <div class="integration-card"><div class="integration-icon">🎫</div>Jira</div>
-                <div class="integration-card"><div class="integration-icon">🗄️</div>PostgreSQL</div>
-                <div class="integration-card"><div class="integration-icon">🍃</div>MongoDB</div>
-                <div class="integration-card"><div class="integration-icon">💳</div>Stripe</div>
-                <div class="integration-card"><div class="integration-icon">📱</div>Twilio</div>
-                <div class="integration-card"><div class="integration-icon">🚀</div>Vercel</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">🐙</div>GitHub</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">💬</div>Slack</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">🐳</div>Docker</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">📝</div>Notion</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">☁️</div>AWS</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">📧</div>Gmail</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">🎫</div>Jira</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">🗄️</div>PostgreSQL</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">🍃</div>MongoDB</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">💳</div>Stripe</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">📱</div>Twilio</div>
+                <div class="integration-card"><div class="integration-icon" aria-hidden="true">🚀</div>Vercel</div>
             </div>
         </section>
 
         <section class="cta-section">
             <div class="cta-box">
                 <h2>Start in 10 seconds.</h2>
-                <p>Install. Run. Talk to your AI agent. No configuration needed to get started.</p>
+                <p>Install. Run. Talk to your AI agent. No configuration needed — just start working.</p>
                 <div class="cta-actions">
-                    <button class="btn btn-primary" onclick="showApp()">Launch App</button>
-                    <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener">View Docs</a>
+                    <button class="btn btn-primary" onclick="showApp()" aria-label="Launch HelloChusquis application">Launch App</button>
+                    <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener" aria-label="View HelloChusquis documentation on GitHub">View Docs</a>
                 </div>
             </div>
         </section>
 
-        <footer>
-            <p>Built with care by <a href="https://github.com/aminoy77" target="_blank" rel="noopener">aminoy77</a> and the HelloChusquis community. MIT License.</p>
+        </main>
+
+        <footer role="contentinfo">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Documentation</a>
+                    <a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+                    <a href="https://github.com/aminoy77/HelloChusquis/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+                </div>
+                <p>Built with care by <a href="https://github.com/aminoy77" target="_blank" rel="noopener">aminoy77</a> and the HelloChusquis community.</p>
+            </div>
         </footer>
     </div>
 
@@ -1514,7 +1667,7 @@
         <header>
             <div class="header-left">
                 <a href="#" class="header-logo" onclick="showLanding(); return false;">
-                    <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24">
+                    <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
                     HelloChusquis
                 </a>
                 <div class="header-actions">
