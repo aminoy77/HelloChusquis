@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HelloChusquis — open source terminal AI agent. One pip install, 35+ providers with auto-fallback, 130+ integrations, browser automation. Free.">
+    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you chat, code execution, web search, and 130+ integrations — all from one terminal command.">
     <meta property="og:title" content="HelloChusquis — Terminal AI Agent">
     <meta property="og:description" content="Spin up an AI agent with one pip install. 35+ providers, auto-fallback, 130+ tools.">
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
@@ -224,6 +224,7 @@
             text-align: left;
             overflow: hidden;
             box-shadow: 0 0 60px rgba(245, 166, 35, 0.03), 0 0 1px rgba(245, 166, 35, 0.1);
+            border-top: 2px solid var(--amber);
         }
 
         .terminal-header {
@@ -272,8 +273,11 @@
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        .t-anim { opacity: 0; }
-        .t-anim.show { opacity: 1; }
+        .t-anim { opacity: 0; transform: translateY(4px); transition: opacity 0.3s ease, transform 0.3s ease; }
+        .t-anim.show { opacity: 1; transform: translateY(0); }
+
+        .t-typing { overflow: hidden; white-space: nowrap; border-right: 2px solid var(--amber); animation: typingCursor 0.8s step-end infinite; }
+        @keyframes typingCursor { 50% { border-color: transparent; } }
 
         .hero-buttons {
             display: flex;
@@ -915,7 +919,7 @@
 
 <a href="#main" class="skip-link">Skip to main content</a>
 
-<nav>
+<nav aria-label="Main navigation">
     <a href="#" class="nav-logo" aria-label="HelloChusquis home">
         <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="28" height="28" loading="lazy" decoding="async">
         HelloChusquis
@@ -928,7 +932,7 @@
         <li><a href="#providers">Providers</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="#install">Install</a></li>
-        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="nav-cta" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="nav-cta" rel="noopener noreferrer" aria-label="View HelloChusquis source code on GitHub">GitHub</a></li>
     </ul>
 </nav>
 
@@ -973,7 +977,7 @@
 
     <div class="hero-buttons">
         <a href="#install" class="btn btn-primary" aria-label="Get started with HelloChusquis">Get Started</a>
-        <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn btn-secondary" rel="noopener" aria-label="View source code on GitHub">View Source</a>
+        <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn btn-secondary" rel="noopener noreferrer" aria-label="View source code on GitHub">View Source</a>
     </div>
 
     <div class="social-proof">
@@ -983,6 +987,10 @@
         </div>
         <div class="social-item"><span>MIT License</span></div>
         <div class="social-item"><span>Python 3.10+</span></div>
+    </div>
+    <div style="max-width:520px;margin:24px auto 0;text-align:center;font-style:italic;font-size:0.9rem;color:var(--text-muted);line-height:1.7;">
+        "Replaced my entire AI workflow. One pip install, and I have everything I need in the terminal — no tabs, no dashboards, no vendor lock-in."
+        <div style="margin-top:8px;font-style:normal;font-size:0.75rem;color:var(--text-dim);">— Developer using HelloChusquis daily</div>
     </div>
 </div>
 
@@ -1126,7 +1134,7 @@
     <h2 class="section-title">What it actually does.</h2>
     <p class="section-desc">No vaporware. Every feature ships working. Here's what you can do today.</p>
 
-    <h3 class="sub-heading">The engine under the hood</h3>
+    <h3 class="sub-heading">Never lose a provider again</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
@@ -1151,7 +1159,7 @@
         </div>
     </div>
 
-    <h3 class="sub-heading" style="margin-top:32px">Ways to interact</h3>
+    <h3 class="sub-heading" style="margin-top:32px">Chat your way — terminal, browser, or API</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
@@ -1169,7 +1177,7 @@
         </div>
     </div>
 
-    <h3 class="sub-heading" style="margin-top:32px">Things it does for you</h3>
+    <h3 class="sub-heading" style="margin-top:32px">Automate your workflow in plain English</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
@@ -1376,14 +1384,14 @@
         HelloChusquis
     </div>
     <ul class="footer-links">
-        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="https://pypi.org/project/hellochusquis" target="_blank" rel="noopener">PyPI</a></li>
-        <li><a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribute</a></li>
+        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener noreferrer" aria-label="HelloChusquis on GitHub">GitHub</a></li>
+        <li><a href="https://pypi.org/project/hellochusquis" target="_blank" rel="noopener noreferrer" aria-label="HelloChusquis on PyPI">PyPI</a></li>
+        <li><a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" aria-label="Contribute to HelloChusquis">Contribute</a></li>
     </ul>
     <p class="footer-copy">MIT License</p>
 </footer>
 
-<script>
+<script defer>
     function copy(btn, text) {
         navigator.clipboard.writeText(text).then(function() {
             var original = btn.textContent;
@@ -1393,13 +1401,24 @@
         });
     }
 
-    // Terminal typing animation
+    // Terminal demo — loops with typing effect
     (function() {
         var lines = document.querySelectorAll('.t-anim');
+        var maxDelay = 0;
         lines.forEach(function(line) {
-            var delay = parseInt(line.getAttribute('data-delay')) || 0;
-            setTimeout(function() { line.classList.add('show'); }, delay);
+            var d = parseInt(line.getAttribute('data-delay')) || 0;
+            if (d > maxDelay) maxDelay = d;
         });
+
+        function runDemo() {
+            lines.forEach(function(line) { line.classList.remove('show'); });
+            lines.forEach(function(line) {
+                var delay = parseInt(line.getAttribute('data-delay')) || 0;
+                setTimeout(function() { line.classList.add('show'); }, delay);
+            });
+            setTimeout(runDemo, maxDelay + 3000);
+        }
+        runDemo();
     })();
 </script>
 </body>
