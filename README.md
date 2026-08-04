@@ -127,4 +127,4 @@ python -m pytest tests/
 MIT License.
 
 ---
-*Built with ❤️ by aminoy77 and the HelloChusquis community.*
+*Built with ❤️ by aminoy77*
