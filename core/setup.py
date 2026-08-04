@@ -162,7 +162,7 @@ coin: bitcoin
 Generate real documents. Never paste content as text when user asks for a file.
 ```pdf
 path: /absolute/path/output.pdf
-content: "# Title\n\nBody text"
+content: "# Title\\n\\nBody text"
 ```
 
 ### calculator
@@ -269,6 +269,42 @@ def pick_model(base_url: str, api_key: str) -> str:
         return Prompt.ask("  Model name", default="llama-3.3-70b-versatile")
 
 
+def _validate_api_key(api_key: str) -> bool:
+    """Return True if api_key is non-empty after stripping whitespace."""
+    return bool(api_key and api_key.strip())
+
+
+def _prompt_api_key(provider_name: str, existing_key: str = "") -> str:
+    """Prompt for API key with validation loop. Keeps existing key if user blanks out."""
+    while True:
+        label = f"  API Key [{existing_key[:4]}***]" if existing_key else "  API Key"
+        api_key = Prompt.ask(f"[bold]Paste your API key for {provider_name}[/bold]", password=True)
+        if not api_key or not api_key.strip():
+            if existing_key:
+                console.print(f"  [dim]Keeping existing key.[/dim]")
+                return existing_key
+            console.print("[red]API key cannot be empty. Try again or press Ctrl+C to cancel.[/red]")
+            continue
+        return api_key.strip()
+
+
+def _check_providers_valid(config: dict) -> None:
+    """Warn if config has no valid providers configured."""
+    providers = config.get("providers", [])
+    has_ollama = any(
+        "ollama" in p.get("base_url", "").lower() or p.get("api_key") == "ollama"
+        for p in providers
+    )
+    has_valid_key = any(
+        p.get("api_key") and p["api_key"] != "ollama" and len(p["api_key"].strip()) > 0
+        for p in providers
+    )
+    if not has_ollama and not has_valid_key:
+        console.print("\n[bold yellow]⚠ No valid providers configured.[/bold yellow]")
+        console.print("[yellow]Chat will fail until you add an API key.[/yellow]")
+        console.print("[dim]Run: hellochusquis config[/dim]\n")
+
+
 def run_setup():
     console.print(Panel(
         "[bold #f5a623]HelloChusquis Setup[/bold #f5a623]\n"
@@ -285,7 +321,7 @@ def run_setup():
     while True:
         console.print(f"\n[bold]Provider #{priority}[/bold]")
         provider_info = pick_provider()
-        api_key = Prompt.ask("  API Key", password=True)
+        api_key = _prompt_api_key(provider_info["name"])
         model = pick_model(provider_info["base_url"], api_key)
 
         providers.append({
@@ -343,6 +379,7 @@ def run_setup():
     config_path = config_dir / "config.yaml"
     config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
     console.print(f"\n[#5eb97e]✓ Config saved to {config_path}[/#5eb97e]")
+    _check_providers_valid(config)
     return config
 
 
@@ -428,7 +465,23 @@ def run_quick_setup() -> dict:
     else:
         link = provider_links.get(choice, "platform.openai.com/api-keys")
         console.print(f"\n[dim]Get your API key at: {link}[/dim]")
-        api_key = Prompt.ask("[bold]Paste your API key[/bold]", password=True)
+
+        # Check for existing key in current config
+        existing_key = ""
+        config_dir = Path.home() / ".hellochusquis"
+        existing_config_path = config_dir / "config.yaml"
+        if existing_config_path.exists():
+            try:
+                with open(existing_config_path) as f:
+                    old_config = yaml.safe_load(f) or {}
+                for p in old_config.get("providers", []):
+                    if p.get("name") == selected["name"] and p.get("api_key"):
+                        existing_key = p["api_key"]
+                        break
+            except Exception:
+                pass
+
+        api_key = _prompt_api_key(selected["name"], existing_key)
 
         config = {
             "providers": [{
@@ -458,6 +511,7 @@ def run_quick_setup() -> dict:
     config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
     console.print(f"\n[#5eb97e]✓ Ready. Starting HelloChusquis...[/#5eb97e]")
     console.print(f"[dim]Config saved to: {config_path}[/dim]")
+    _check_providers_valid(config)
     return config
 
 
@@ -529,7 +583,7 @@ def edit_config(section: str = None):
         priority = len(providers) + 1
         while add_new:
             provider_info = pick_provider()
-            api_key = Prompt.ask("  API Key", password=True)
+            api_key = _prompt_api_key(provider_info["name"])
             model = pick_model(provider_info["base_url"], api_key)
             providers.append({
                 "name": f"{provider_info['name']}-{priority}",
@@ -593,6 +647,7 @@ def edit_config(section: str = None):
     config_path = config_dir / "config.yaml"
     config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
     console.print(f"\n[#5eb97e]✓ Config saved to {config_path}[/#5eb97e]")
+    _check_providers_valid(config)
     return config
 
 

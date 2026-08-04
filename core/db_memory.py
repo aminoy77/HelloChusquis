@@ -1,5 +1,5 @@
 """
-Memory system port from OpenClaw to Python.
+Memory system for HelloChusquis.
 
 Provides persistent memory with:
   - Session/summary storage (backward-compatible)
@@ -10,11 +10,13 @@ Provides persistent memory with:
   - MEMORY.md bootstrap from workspace
 """
 
+import functools
 import hashlib
 import json
 import math
 import re
 import sqlite3
+import threading
 import time
 from collections import Counter
 from dataclasses import dataclass, field
@@ -98,7 +100,7 @@ class EmbeddingCache:
 
 def _connect(db_path: Path = MEMORY_DB_PATH) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -201,13 +203,18 @@ class EmbeddingProvider:
     All embeddings share the same vocabulary dimension space.
     ``fit()`` must be called on the full corpus before ``encode()``
     to guarantee consistent vector dimensions across entries.
+
+    Vocabulary and index are cached after ``fit()`` so repeated calls
+    to ``encode()`` avoid rebuilding the vocab_index dict each time.
     """
 
     def __init__(self, cache_conn: Optional[sqlite3.Connection] = None):
         self._cache_conn = cache_conn
         self._idf: Dict[str, float] = {}
         self._vocab: List[str] = []
+        self._vocab_index: Dict[str, int] = {}
         self._fitted = False
+        self._default_idf: float = 1.0
 
     # -- tokenisation -------------------------------------------------------
 
@@ -218,7 +225,10 @@ class EmbeddingProvider:
     # -- IDF fitting --------------------------------------------------------
 
     def fit(self, corpus: Sequence[str]) -> None:
-        """Fit IDF weights on *corpus*.  Call with the full entry value set."""
+        """Fit IDF weights on *corpus*.  Call with the full entry value set.
+
+        Caches ``_vocab_index`` so ``encode()`` doesn't rebuild it each call.
+        """
         doc_freq: Counter[str] = Counter()
         n_docs = max(len(corpus), 1)
         for doc in corpus:
@@ -231,6 +241,7 @@ class EmbeddingProvider:
             idf_map[term] = math.log((n_docs + 1) / (freq + 1)) + 1.0
             vocab_set.add(term)
         self._vocab = sorted(vocab_set)
+        self._vocab_index = {term: i for i, term in enumerate(self._vocab)}
         self._idf = idf_map
         self._fitted = True
         # Mean IDF for unknown terms — prevents zero vectors for OOV queries
@@ -241,6 +252,7 @@ class EmbeddingProvider:
     def encode(self, text: str) -> List[float]:
         """Encode *text* using the fitted vocabulary.
 
+        Uses cached ``_vocab_index`` — no rebuild per call.
         Unknown terms use a default IDF weight so queries with novel tokens
         still produce non-zero vectors.  Raises ``RuntimeError`` if
         ``fit()`` has not been called yet.
@@ -250,9 +262,8 @@ class EmbeddingProvider:
         tokens = self.tokenize(text)
         tf = Counter(tokens)
         vec = [0.0] * len(self._vocab)
-        vocab_index = {term: i for i, term in enumerate(self._vocab)}
         for term, count in tf.items():
-            idx = vocab_index.get(term)
+            idx = self._vocab_index.get(term)
             if idx is not None:
                 vec[idx] = count * self._idf.get(term, self._default_idf)
             # OOV terms are silently skipped — they cannot contribute to
@@ -335,32 +346,49 @@ class EmbeddingProvider:
 # MemoryStore — enhanced SQLite backend
 # ---------------------------------------------------------------------------
 
+def _locked(method):
+    """Serialize access to MemoryStore methods across threads."""
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
 class MemoryStore:
     """Persistent memory store backed by SQLite.
 
-    Manages sessions, summaries, memory entries, embeddings, and write
-    provenance.  Fully backward-compatible with the original four functions.
+    Thread-safe: ``_connect`` uses ``check_same_thread=False`` and every
+    public method runs under an ``RLock`` so the shared singleton can be
+    called from uvicorn worker threads.
     """
 
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path if db_path is not None else MEMORY_DB_PATH
         self._conn: Optional[sqlite3.Connection] = None
+        self._lock: threading.RLock = threading.RLock()
         self.embedder = EmbeddingProvider()
+        # In-memory embedding cache: entry_id -> embedding vector
+        self._embedding_cache: Dict[int, List[float]] = {}
+        # Dirty flag: set when entries change, cleared when search cache is rebuilt
+        self._dirty: bool = True
         self._ensure()
 
     # -- connection ---------------------------------------------------------
 
     def _ensure(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._conn = _connect(self.db_path)
-            _ensure_schema(self._conn)
-            self.embedder._cache_conn = self._conn
-        return self._conn
+        with self._lock:
+            if self._conn is None:
+                self._conn = _connect(self.db_path)
+                _ensure_schema(self._conn)
+                self.embedder._cache_conn = self._conn
+            return self._conn
 
     @property
     def conn(self) -> sqlite3.Connection:
         return self._ensure()
 
+    @_locked
     def close(self) -> None:
         if self._conn:
             self._conn.close()
@@ -370,6 +398,7 @@ class MemoryStore:
     # Sessions (backward-compatible)
     # =====================================================================
 
+    @_locked
     def save_session(
         self,
         messages: List[Dict[str, Any]],
@@ -387,6 +416,7 @@ class MemoryStore:
         self.conn.commit()
         return cur.lastrowid or 0
 
+    @_locked
     def load_last_session(self) -> List[Dict[str, Any]]:
         row = self.conn.execute(
             "SELECT data FROM sessions ORDER BY timestamp DESC LIMIT 1"
@@ -395,6 +425,7 @@ class MemoryStore:
             return json.loads(row[0])
         return []
 
+    @_locked
     def load_sessions(self, limit: int = 10) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
             "SELECT id, timestamp, data, metadata FROM sessions "
@@ -406,6 +437,7 @@ class MemoryStore:
             for r in rows
         ]
 
+    @_locked
     def get_session_count(self) -> int:
         row = self.conn.execute("SELECT COUNT(*) FROM sessions").fetchone()
         return row[0] if row else 0
@@ -414,6 +446,7 @@ class MemoryStore:
     # Summaries (backward-compatible)
     # =====================================================================
 
+    @_locked
     def save_summary(self, summary: str) -> None:
         updated_at = _now_iso()
         self.conn.execute("DELETE FROM summaries")
@@ -423,12 +456,14 @@ class MemoryStore:
         )
         self.conn.commit()
 
+    @_locked
     def load_summary(self) -> str:
         row = self.conn.execute(
             "SELECT content FROM summaries ORDER BY updated_at DESC LIMIT 1"
         ).fetchone()
         return row[0] if row else ""
 
+    @_locked
     def load_all_summaries(self) -> List[Dict[str, str]]:
         rows = self.conn.execute(
             "SELECT content, updated_at FROM summaries ORDER BY updated_at DESC"
@@ -439,6 +474,7 @@ class MemoryStore:
     # Memory entries
     # =====================================================================
 
+    @_locked
     def add_entry(
         self,
         key: str,
@@ -459,10 +495,12 @@ class MemoryStore:
         )
         entry_id = cur.lastrowid or 0
         self.conn.commit()
+        self._dirty = True
         if auto_embed:
-            self._embed_entry(entry_id, value)
+            self._embed_entry_incremental(entry_id, key, value, tags or [], category)
         return entry_id
 
+    @_locked
     def update_entry(
         self,
         entry_id: int,
@@ -491,9 +529,16 @@ class MemoryStore:
             f"UPDATE memory_entries SET {', '.join(sets)} WHERE id=?", params
         )
         self.conn.commit()
+        self._dirty = True
         if re_embed and value is not None:
-            self._embed_entry(entry_id, value)
+            # For updates, rebuild this entry's embedding with its current fields
+            entry = self.get_entry(entry_id)
+            if entry:
+                self._embed_entry_incremental(
+                    entry_id, entry.key, entry.value, entry.tags, entry.category
+                )
 
+    @_locked
     def get_entry(self, entry_id: int) -> Optional[MemoryEntry]:
         row = self.conn.execute(
             "SELECT id, session_id, key, value, tags, category, importance, created_at, updated_at "
@@ -502,10 +547,14 @@ class MemoryStore:
         ).fetchone()
         return self._row_to_entry(row) if row else None
 
+    @_locked
     def delete_entry(self, entry_id: int) -> None:
         self.conn.execute("DELETE FROM memory_entries WHERE id=?", (entry_id,))
         self.conn.commit()
+        self._embedding_cache.pop(entry_id, None)
+        self._dirty = True
 
+    @_locked
     def list_entries(
         self,
         category: Optional[str] = None,
@@ -526,6 +575,7 @@ class MemoryStore:
         rows = self.conn.execute(query, params).fetchall()
         return [self._row_to_entry(r) for r in rows]
 
+    @_locked
     def search_entries_keyword(self, query: str, limit: int = 20) -> List[MemoryEntry]:
         tokens = re.findall(r"[\w\u00C0-\u024F]+", query.lower())
         if not tokens:
@@ -543,6 +593,7 @@ class MemoryStore:
         ).fetchall()
         return [self._row_to_entry(r) for r in rows]
 
+    @_locked
     def get_entry_count(self) -> int:
         row = self.conn.execute("SELECT COUNT(*) FROM memory_entries").fetchone()
         return row[0] if row else 0
@@ -551,6 +602,7 @@ class MemoryStore:
     # Write provenance
     # =====================================================================
 
+    @_locked
     def record_provenance(
         self,
         entry_id: int,
@@ -569,6 +621,7 @@ class MemoryStore:
         self.conn.commit()
         return cur.lastrowid or 0
 
+    @_locked
     def get_provenance(self, entry_id: int) -> List[WriteProvenance]:
         rows = self.conn.execute(
             "SELECT id, entry_id, writer, origin_class, observed_at, reason, content_before, content_after "
@@ -583,6 +636,7 @@ class MemoryStore:
             for r in rows
         ]
 
+    @_locked
     def get_provenance_for_entry(self, entry_id: int) -> Optional[WriteProvenance]:
         provs = self.get_provenance(entry_id)
         return provs[0] if provs else None
@@ -591,11 +645,13 @@ class MemoryStore:
     # Embedding helpers
     # =====================================================================
 
+    @_locked
     def build_vocabulary(self) -> None:
         """Fit the embedding vocabulary on all stored entry values.
 
         Must be called before any encoding to ensure all vectors share
-        the same dimensionality.
+        the same dimensionality.  Uses the embedder's cached vocab_index
+        so subsequent encode() calls are fast.
         """
         rows = self.conn.execute(
             "SELECT key, value, tags, category FROM memory_entries"
@@ -619,66 +675,78 @@ class MemoryStore:
         if corpus:
             self.embedder.fit(corpus)
 
-    def _embed_entry(self, entry_id: int, text: str) -> None:
-        """Encode *text* and upsert the embedding for *entry_id*.
+    @_locked
+    def _embed_entry_incremental(
+        self,
+        entry_id: int,
+        key: str,
+        value: str,
+        tags: List[str],
+        category: str,
+    ) -> None:
+        """Embed a SINGLE new/updated entry without re-encoding all entries.
 
-        Rebuilds vocabulary from the full corpus and re-encodes **all**
-        entries so every embedding lives in the same vector space.
+        Builds vocabulary from the full corpus (required for consistent dims),
+        but only encodes and stores the one entry.  Previous embeddings in
+        the DB are left untouched — they remain valid as long as the vocab
+        doesn't change drastically.  Call ``reindex_all_embeddings()`` for
+        a full rebuild when needed.
         """
+        # Build corpus for vocabulary (needed for dimension consistency)
         rows = self.conn.execute(
-            "SELECT id, key, value, tags, category FROM memory_entries"
+            "SELECT key, value, tags, category FROM memory_entries"
         ).fetchall()
         if not rows:
             return
-        # Build corpus from all text fields for consistent vocabulary
         corpus: List[str] = []
-        for _, key, value, tags_json, category in rows:
-            corpus.append(value)
-            if key:
-                corpus.append(key)
-            if category:
-                corpus.append(category)
+        for _, k, v, tags_json, cat in rows:
+            corpus.append(v)
+            if k:
+                corpus.append(k)
+            if cat:
+                corpus.append(cat)
             if tags_json:
                 try:
-                    tags = json.loads(tags_json)
-                    if isinstance(tags, list):
-                        corpus.extend(str(t) for t in tags)
+                    parsed = json.loads(tags_json)
+                    if isinstance(parsed, list):
+                        corpus.extend(str(t) for t in parsed)
                 except (json.JSONDecodeError, TypeError):
                     pass
         self.embedder.fit(corpus)
+
+        # Encode ONLY this entry's combined text
+        parts = [value]
+        if key:
+            parts.append(key)
+        if category:
+            parts.append(category)
+        if tags:
+            parts.extend(str(t) for t in tags)
+        embedding = self.embedder.encode(" ".join(parts))
+        blob = json.dumps(embedding)
+
+        # Upsert embedding for this single entry
+        existing = self.conn.execute(
+            "SELECT id FROM embeddings WHERE entry_id=?", (entry_id,)
+        ).fetchone()
         now = _now_ms()
-        for rid, key, value, tags_json, category in rows:
-            # Encode combined text so the stored vector matches query semantics
-            parts = [value]
-            if key:
-                parts.append(key)
-            if category:
-                parts.append(category)
-            if tags_json:
-                try:
-                    tags = json.loads(tags_json)
-                    if isinstance(tags, list):
-                        parts.extend(str(t) for t in tags)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-            embedding = self.embedder.encode(" ".join(parts))
-            blob = json.dumps(embedding)
-            existing = self.conn.execute(
-                "SELECT id FROM embeddings WHERE entry_id=?", (rid,)
-            ).fetchone()
-            if existing:
-                self.conn.execute(
-                    "UPDATE embeddings SET embedding_json=?, dimensions=?, created_at=? WHERE entry_id=?",
-                    (blob, len(embedding), now, rid),
-                )
-            else:
-                self.conn.execute(
-                    "INSERT INTO embeddings (entry_id, embedding_json, model, dimensions, created_at) "
-                    "VALUES (?, ?, 'tfidf', ?, ?)",
-                    (rid, blob, len(embedding), now),
-                )
+        if existing:
+            self.conn.execute(
+                "UPDATE embeddings SET embedding_json=?, dimensions=?, created_at=? WHERE entry_id=?",
+                (blob, len(embedding), now, entry_id),
+            )
+        else:
+            self.conn.execute(
+                "INSERT INTO embeddings (entry_id, embedding_json, model, dimensions, created_at) "
+                "VALUES (?, ?, 'tfidf', ?, ?)",
+                (entry_id, blob, len(embedding), now),
+            )
         self.conn.commit()
 
+        # Update in-memory cache
+        self._embedding_cache[entry_id] = embedding
+
+    @_locked
     def reindex_all_embeddings(self) -> int:
         """Rebuild every embedding from scratch using the full corpus."""
         rows = self.conn.execute(
@@ -704,6 +772,8 @@ class MemoryStore:
         self.embedder.fit(corpus)
         count = 0
         now = _now_ms()
+        # Clear in-memory cache before rebuild
+        self._embedding_cache.clear()
         for rid, key, value, tags_json, category in rows:
             parts = [value]
             if key:
@@ -733,9 +803,19 @@ class MemoryStore:
                     "VALUES (?, ?, 'tfidf', ?, ?)",
                     (rid, blob, len(embedding), now),
                 )
+            # Populate in-memory cache
+            self._embedding_cache[rid] = embedding
             count += 1
         self.conn.commit()
+        self._dirty = False
         return count
+
+    @_locked
+    def _ensure_embedding_cache(self) -> Dict[int, List[float]]:
+        """Return in-memory embedding cache, rebuilding from DB if dirty or empty."""
+        if self._dirty or not self._embedding_cache:
+            self.reindex_all_embeddings()
+        return self._embedding_cache
 
     # =====================================================================
     # Internal helpers
@@ -785,14 +865,17 @@ class MemorySearch:
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
     ) -> List[SearchResult]:
+        # Ensure vocab is fitted (fast if already cached)
         self.store.build_vocabulary()
         qvec = self.store.embedder.encode(query)
-        all_embs = self.store.embedder.load_all_embeddings(self.store.conn)
-        if not all_embs:
+
+        # Use in-memory embedding cache to avoid re-fetching + json.loads all rows
+        emb_cache = self.store._ensure_embedding_cache()
+        if not emb_cache:
             return []
 
         scored: List[Tuple[int, float]] = []
-        for entry_id, evec in all_embs:
+        for entry_id, evec in emb_cache.items():
             sim = EmbeddingProvider.cosine_similarity(qvec, evec)
             if sim >= min_score:
                 scored.append((entry_id, sim))
@@ -954,8 +1037,6 @@ class MemorySearch:
 
 class MemoryBootstrap:
     """Loads and seeds context from MEMORY.md files in the workspace.
-
-    Mirrors OpenClaw's project-memory-bootstrap and root-memory-files.
     """
 
     def __init__(self, store: MemoryStore, workspace_dir: Optional[Path] = None):

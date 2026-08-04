@@ -1,5 +1,5 @@
 """
-Media processing module for HelloChusquis — port of OpenClaw's media system.
+Media processing module for HelloChusquis.
 
 Pure stdlib + subprocess (ffmpeg, pdftotext, ghostscript). No PIL/Pillow required.
 Image operations use subprocess calls to ImageMagick (convert/identify) or ffmpeg.
@@ -195,11 +195,9 @@ class ImageResizeParams:
 
 
 class ImageProcessor:
-    """Image manipulation via ffmpeg/convert subprocess calls.
-
-    Mirrors OpenClaw's image-ops.ts: resize, crop, rotate, flip,
-    format conversion, thumbnails, EXIF extraction, base64 encode/decode,
-    QR generation, and vision-model analysis.
+    """    Image manipulation via ffmpeg/convert subprocess calls:
+    resize, crop, rotate, flip, format conversion, thumbnails, EXIF extraction,
+    base64 encode/decode, QR generation, and vision-model analysis.
     """
 
     def __init__(self, tmp_dir: str | None = None):
@@ -355,7 +353,7 @@ class ImageProcessor:
         quality: int = 85,
         enlarge: bool = False,
     ) -> bytes:
-        """Resize or encode image bytes as JPEG. Mirrors OpenClaw resizeToJpeg."""
+        """Resize or encode image bytes as JPEG."""
         return self.resize(data, max_side=max_side, quality=quality, output_format="jpeg", enlarge=enlarge)
 
     # ----------------------------------------------------------------
@@ -897,8 +895,7 @@ class PdfExtractionResult:
 class PDFExtractor:
     """PDF text/metadata extraction, to-image conversion, merge/split.
 
-    Uses pdftotext (poppler-utils) and ghostscript. Mirrors OpenClaw's
-    pdf-extract.ts and document-extractors.runtime.ts.
+    Uses pdftotext (poppler-utils) and ghostscript for text extraction.
     """
 
     def __init__(self, tmp_dir: str | None = None):
@@ -1277,8 +1274,8 @@ class AudioMetadata:
 
 
 class AudioProcessor:
-    """Audio processing via ffmpeg/ffprobe. Mirrors OpenClaw's audio.ts
-    and media-probe.ts: format detection, duration, transcription, chunking.
+    """    Audio processing via ffmpeg/ffprobe: format detection, duration,
+    transcription, chunking.
     """
 
     def __init__(self, tmp_dir: str | None = None):
@@ -1559,7 +1556,7 @@ class AudioProcessor:
 class QRGenerator:
     """QR code generation using qrencode subprocess or qrcode Python package.
 
-    Mirrors OpenClaw's qr-image.ts with bounded scale/margin and temp-file output.
+    Bounded scale/margin options with temp-file output.
     """
 
     def __init__(self, tmp_dir: str | None = None):
@@ -1567,7 +1564,7 @@ class QRGenerator:
         self._bin_qrencode = _which("qrencode")
 
     def _validate_int(self, name: str, value: int, default: int, min_val: int, max_val: int) -> int:
-        """Validate bounded integer option, mirroring OpenClaw resolveQrPngIntegerOption."""
+        """Validate bounded integer option for QR generation."""
         if value is None:
             return default
         if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
@@ -1700,8 +1697,7 @@ class MediaEntry:
 class MediaStore:
     """Media file storage with caching, cleanup, and type detection.
 
-    Mirrors OpenClaw's media store patterns: keyed storage, cache TTL,
-    temp cleanup, content-based MIME detection.
+    Keyed storage, cache TTL, temp cleanup, content-based MIME detection.
     """
 
     def __init__(

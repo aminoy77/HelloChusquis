@@ -9,6 +9,9 @@
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="HelloChusquis - AI Terminal Agent">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="HelloChusquis — Terminal AI Agent">
     <meta name="twitter:description" content="One pip install. 35+ providers. 130+ tools. Auto-fallback.">
@@ -30,8 +33,8 @@
             --amber-dim: #c4841c;
             --amber-glow: rgba(245, 166, 35, 0.06);
             --text: #e8e3d8;
-            --text-muted: #8a8578;
-            --text-dim: #4a4840;
+            --text-muted: #a09a8e;
+            --text-dim: #6e6a60;
             --border: #1e1d1a;
             --green: #5eb97e;
             --blue: #7eb8d4;
@@ -515,6 +518,110 @@
 
         .tool-tag:hover { border-color: var(--amber); color: var(--amber); }
 
+        /* COMMANDS SECTION */
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .cmd-category {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 24px;
+        }
+
+        .cmd-category h4 {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--amber);
+            margin-bottom: 12px;
+        }
+
+        .cmd-list {
+            list-style: none;
+        }
+
+        .cmd-list li {
+            display: flex;
+            gap: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.75rem;
+            align-items: baseline;
+        }
+
+        .cmd-list li:last-child { border-bottom: none; }
+
+        .cmd-name {
+            font-family: var(--mono);
+            color: var(--green);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .cmd-desc {
+            color: var(--text-muted);
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .tip-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--amber);
+            padding: 20px;
+        }
+
+        .tip-card h4 {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .tip-card p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .tip-card code {
+            background: var(--bg);
+            padding: 1px 5px;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--green);
+        }
+
+        /* ANIMATED HERO GLOW */
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(245, 166, 35, 0.06) 0%, transparent 70%);
+            animation: heroGlow 4s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes heroGlow {
+            0% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+        }
+
         /* CODE EXAMPLE */
         .code-example {
             background: var(--surface);
@@ -740,6 +847,8 @@
             .hero { padding: 100px 24px 60px; }
             section { padding: 64px 24px; }
             .how-grid { grid-template-columns: 1fr; }
+            .commands-grid { grid-template-columns: 1fr; }
+            .tips-grid { grid-template-columns: 1fr; }
             .faq-grid { grid-template-columns: 1fr; }
             .stats-bar { gap: 40px; padding: 32px 24px; }
             .social-proof { flex-direction: column; gap: 16px; }
@@ -808,11 +917,12 @@
 
 <nav>
     <a href="#" class="nav-logo" aria-label="HelloChusquis home">
-        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="28" height="28">
+        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="28" height="28" loading="lazy" decoding="async">
         HelloChusquis
     </a>
     <ul class="nav-links">
         <li><a href="#how">How It Works</a></li>
+        <li><a href="#commands">Commands</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#demo">Demo</a></li>
         <li><a href="#providers">Providers</a></li>
@@ -833,7 +943,7 @@
     <p class="hero-desc">
         One command to install. 35+ AI providers with automatic failover.
         130+ tools. Browser automation. Persistent memory.
-        No cloud account needed.
+        No cloud account needed. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
     </p>
 
     <div class="demo-wrapper">
@@ -879,7 +989,7 @@
 <!-- STATS -->
 <div class="stats-bar">
     <div class="stat"><span class="stat-value">35+</span><span class="stat-label">AI Providers</span></div>
-    <div class="stat"><span class="stat-value">150+</span><span class="stat-label">Integrations</span></div>
+    <div class="stat"><span class="stat-value">130+</span><span class="stat-label">Integrations</span></div>
     <div class="stat"><span class="stat-value">100%</span><span class="stat-label">Open Source</span></div>
     <div class="stat"><span class="stat-value">0</span><span class="stat-label">Cloud Accounts</span></div>
 </div>
@@ -921,84 +1031,173 @@
 
 <hr class="divider">
 
+<!-- COMMANDS -->
+<section id="commands">
+    <p class="section-label">Commands Reference</p>
+    <h2 class="section-title">Every command at your fingertips.</h2>
+    <p class="section-desc">From install to advanced workflows — here's how to get things done fast.</p>
+
+    <div class="commands-grid">
+        <div class="cmd-category">
+            <h4>Terminal Commands</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">hellochusquis</span> <span class="cmd-desc">Start interactive chat</span></li>
+                <li><span class="cmd-name">hellochusquis web</span> <span class="cmd-desc">Open web interface (localhost:8000)</span></li>
+                <li><span class="cmd-name">hellochusquis api</span> <span class="cmd-desc">Start REST API server (port 8080)</span></li>
+                <li><span class="cmd-name">hellochusquis config</span> <span class="cmd-desc">Open setup wizard</span></li>
+                <li><span class="cmd-name">hellochusquis config --show</span> <span class="cmd-desc">Display current configuration</span></li>
+                <li><span class="cmd-name">hellochusquis config --api-keys</span> <span class="cmd-desc">Edit API keys only</span></li>
+                <li><span class="cmd-name">hellochusquis config --providers</span> <span class="cmd-desc">Edit providers only</span></li>
+                <li><span class="cmd-name">hellochusquis --quick</span> <span class="cmd-desc">Quick setup with OpenRouter</span></li>
+                <li><span class="cmd-name">hellochusquis --full</span> <span class="cmd-desc">Full setup with all providers</span></li>
+            </ul>
+        </div>
+        <div class="cmd-category">
+            <h4>In-Chat Slash Commands</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">/help</span> <span class="cmd-desc">Show all available commands</span></li>
+                <li><span class="cmd-name">/status</span> <span class="cmd-desc">Provider status and response times</span></li>
+                <li><span class="cmd-name">/clear</span> <span class="cmd-desc">Clear conversation history</span></li>
+                <li><span class="cmd-name">/plan &lt;task&gt;</span> <span class="cmd-desc">Force multi-step plan for complex tasks</span></li>
+                <li><span class="cmd-name">👍 / +</span> <span class="cmd-desc">Positive feedback — helps the agent learn</span></li>
+                <li><span class="cmd-name">👎 / -</span> <span class="cmd-desc">Negative feedback — flags mistakes</span></li>
+                <li><span class="cmd-name">exit</span> <span class="cmd-desc">Quit the session</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="commands-grid" style="margin-top:16px;">
+        <div class="cmd-category">
+            <h4>Plugin Management</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">hellochusquis install &lt;plugin&gt;</span> <span class="cmd-desc">Install a community plugin</span></li>
+                <li><span class="cmd-name">hellochusquis uninstall &lt;plugin&gt;</span> <span class="cmd-desc">Remove a plugin</span></li>
+                <li><span class="cmd-name">hellochusquis plugins</span> <span class="cmd-desc">List installed plugins</span></li>
+                <li><span class="cmd-name">hellochusquis build</span> <span class="cmd-desc">Build the project</span></li>
+                <li><span class="cmd-name">hellochusquis learn</span> <span class="cmd-desc">Run learning pipeline</span></li>
+            </ul>
+        </div>
+        <div class="cmd-category">
+            <h4>CLI Flags</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">--port PORT</span> <span class="cmd-desc">Port for API/web (default: 8080/8000)</span></li>
+                <li><span class="cmd-name">--host HOST</span> <span class="cmd-desc">Host for API/web (default: 0.0.0.0/127.0.0.1)</span></li>
+                <li><span class="cmd-name">--quick</span> <span class="cmd-desc">Quick setup with OpenRouter only</span></li>
+                <li><span class="cmd-name">--full</span> <span class="cmd-desc">Full setup wizard with all providers</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Productivity Tips -->
+    <h3 class="sub-heading" style="margin-top:40px">Get more done</h3>
+    <div class="tips-grid">
+        <div class="tip-card">
+            <h4>Multi-step tasks with /plan</h4>
+            <p>Complex tasks get auto-detected, but you can force a plan: <code>/plan deploy my app to AWS with monitoring</code>. Review steps before execution.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Web interface</h4>
+            <p>Run <code>hellochusquis web</code> to chat from your browser at <code>localhost:8000</code>. Supports voice input/output, theme switching, and chat export.</p>
+        </div>
+        <div class="tip-card">
+            <h4>REST API with streaming</h4>
+            <p>Expose your agent over HTTP: <code>hellochusquis api --port 8080</code>. SSE streaming, rate limiting, health checks at <code>/health</code>.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Environment variables</h4>
+            <p><code>HELLOCHUSQUIS_API_KEY=secret</code> enables auth. <code>DEBUG=1</code> for verbose logs. <code>HELLOCHUSQUIS_UNSAFE_MODE=1</code> to skip security checks.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Provider failover</h4>
+            <p>Add multiple providers. If one hits rate limits or goes down, the agent automatically switches to the next. Zero downtime.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Persistent memory</h4>
+            <p>The agent remembers past sessions. Use 👍/👎 feedback to help it learn. Memory persists in <code>~/.hellochusquis/</code>.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
 <!-- FEATURES -->
 <section id="features">
     <p class="section-label">Features</p>
     <h2 class="section-title">What it actually does.</h2>
-    <p class="section-desc">No vaporware. Every feature ships working.</p>
+    <p class="section-desc">No vaporware. Every feature ships working. Here's what you can do today.</p>
 
-    <h3 class="sub-heading">Agent Core</h3>
+    <h3 class="sub-heading">The engine under the hood</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🔄</div>
                 <div class="feature-title">Multi-provider fallback</div>
             </div>
-            <div class="feature-desc">Configure Groq, OpenRouter, Ollama, OpenAI, and more. If one fails, the next picks up.</div>
+            <div class="feature-desc">Configure Groq, OpenRouter, Ollama, OpenAI, and more. If one fails, the next picks up. Your workflow never stops.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🧠</div>
                 <div class="feature-title">Persistent memory</div>
             </div>
-            <div class="feature-desc">Remembers past sessions. Learns from mistakes. Gets better every time you use it.</div>
+            <div class="feature-desc">Remembers past sessions and learns from your feedback. Tell it once, it remembers forever.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">📋</div>
                 <div class="feature-title">Task planner</div>
             </div>
-            <div class="feature-desc">Complex tasks broken into steps. You review the plan, then the agent executes.</div>
+            <div class="feature-desc">Complex tasks broken into steps. You review the plan, then the agent executes — no surprises.</div>
         </div>
     </div>
 
-    <h3 class="sub-heading" style="margin-top:32px">Interfaces</h3>
+    <h3 class="sub-heading" style="margin-top:32px">Ways to interact</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🌐</div>
                 <div class="feature-title">Web interface</div>
             </div>
-            <div class="feature-desc">Chat from your browser at localhost:8000. Provider status, plugins, memory stats.</div>
+            <div class="feature-desc">Chat from your browser at localhost:8000. Voice input/output, themes, chat export, provider status.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">📡</div>
                 <div class="feature-title">REST API with streaming</div>
             </div>
-            <div class="feature-desc">Expose your agent over HTTP. SSE streaming. Rate limiting included.</div>
+            <div class="feature-desc">Expose your agent over HTTP. SSE streaming for real-time responses. Rate limiting included.</div>
         </div>
     </div>
 
-    <h3 class="sub-heading" style="margin-top:32px">Automation</h3>
+    <h3 class="sub-heading" style="margin-top:32px">Things it does for you</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🔍</div>
                 <div class="feature-title">Browser automation</div>
             </div>
-            <div class="feature-desc">Open URLs, click buttons, fill forms, take screenshots. Real Playwright, not a toy wrapper.</div>
+            <div class="feature-desc">Open URLs, click buttons, fill forms, take screenshots. Real Playwright with anti-detection stealth.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🔒</div>
                 <div class="feature-title">Workspace permissions</div>
             </div>
-            <div class="feature-desc">Only accesses directories you allow. Runtime prompts for new paths.</div>
+            <div class="feature-desc">Only accesses directories you allow. Runtime prompts for new paths. Nothing runs without your say-so.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🧩</div>
                 <div class="feature-title">Plugin system</div>
             </div>
-            <div class="feature-desc">Community plugins or build your own. The agent can build integrations on demand.</div>
+            <div class="feature-desc">Community plugins or build your own. The agent can even build integrations on demand.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
                 <div class="feature-icon">🛡️</div>
                 <div class="feature-title">Security checks</div>
             </div>
-            <div class="feature-desc">AI-powered safety evaluator blocks dangerous commands. Configurable strictness.</div>
+            <div class="feature-desc">AI-powered safety evaluator blocks dangerous commands before they run. Configurable strictness levels.</div>
         </div>
     </div>
 
@@ -1059,11 +1258,23 @@
             <div style="margin-top:12px"><span class="comment"># 3 tools, 3 systems, zero manual wiring.</span></div>
         </div>
     </div>
+
+    <div class="why-box" style="margin-top:40px">
+        <h3>Real use case: Deploying a side project</h3>
+        <p>
+            You built a Flask API. It works locally. Now you need to deploy it. Instead of copy-pasting between ChatGPT, your terminal, and AWS docs, you just say:
+        </p>
+        <div class="code-block" style="margin:16px 0; position:relative;">
+            <span style="color:var(--amber)">You:</span> <span style="color:var(--text)">deploy my Flask API to AWS EC2 with a PostgreSQL database and set up daily backups</span>
+        </div>
+        <p>
+            The agent builds the Docker image, provisions the EC2 instance, sets up PostgreSQL, configures security groups, writes a backup script, and schedules it with cron — all in one conversation. You review each step before it runs. No dashboards. No YAML. No tab-switching.
+        </p>
+    </div>
 </section>
 
 <hr class="divider">
 
-<!-- PROVIDERS -->
 <section id="providers">
     <p class="section-label">AI Providers</p>
     <h2 class="section-title">35+ providers. Automatic failover.</h2>
@@ -1113,7 +1324,7 @@
         </div>
         <div class="faq-item">
             <div class="faq-q">What can it actually do?</div>
-            <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 150+ APIs.</div>
+            <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 130+ APIs.</div>
         </div>
     </div>
 </section>
@@ -1161,7 +1372,7 @@
 
 <footer>
     <div class="footer-logo">
-        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24">
+        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
         HelloChusquis
     </div>
     <ul class="footer-links">

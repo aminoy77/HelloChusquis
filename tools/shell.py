@@ -1,5 +1,5 @@
 """
-Enhanced shell execution system ported from OpenClaw.
+Enhanced shell execution system for HelloChusquis.
 
 Provides:
 - ShellTool: Command execution with timeout, PTY, background, streaming, env isolation
@@ -46,6 +46,7 @@ from typing import (
 )
 
 from tools.base import BaseTool, ToolResult
+from core.security_evaluator import evaluate_command_safety
 
 logger = logging.getLogger(__name__)
 
@@ -171,17 +172,34 @@ DEFAULT_SAFE_BINS: Set[str] = {
     "sh", "bash", "zsh", "fish",
 }
 
-# Dangerous command patterns that require elevated review.
-DANGEROUS_PATTERNS: List[Tuple[str, str]] = [
+# Dangerous command patterns — split into catastrophic (DENY) and medium (ASK).
+CATASTROPHIC_PATTERNS: List[Tuple[str, str]] = [
     (r"\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\b", "recursive force delete"),
     (r"\brm\s+-rf\s+/", "root filesystem delete"),
-    (r"\bmkfs\b", "filesystem formatting"),
+    (r"\brm\s+-fr\s+/", "root filesystem delete"),
+    (r"\brm\s+-r\s+-f\s+/", "root filesystem delete"),
+    (r"\brm\s+-f\s+-r\s+/", "root filesystem delete"),
+    (r"\brm\s+.*\s+/", "delete root path"),
     (r"\bdd\s+.*of=/dev/", "raw disk write"),
     (r">\s*/dev/sd", "raw disk overwrite"),
+    (r">\s*/dev/nvme", "raw disk overwrite"),
+    (r":\(\)\s*\{.*\|.*&", "fork bomb"),
+    (r"\bmkfs\b", "filesystem formatting"),
+    (r"\bformat\b.*\b(c:|/dev/)", "filesystem formatting"),
+    (r"\bchmod\s+-R\s+777\s+/", "recursive world-writable on root"),
+    (r"\bmv\s+/\s+/", "move root filesystem"),
+    (r"\bshutdown\b", "system shutdown"),
+    (r"\breboot\b", "system reboot"),
+    (r"\binit\s+0\b", "init 0 shutdown"),
+    (r"\b(fdisk|parted|gdisk)\b", "partition manipulation"),
+    (r"\bcurl\b.*\|\s*(ba)?sh\b", "remote code execution via pipe"),
+    (r"\bwget\b.*\|\s*(ba)?sh\b", "remote code execution via pipe"),
+]
+
+# Legacy list kept for backward compat with any direct callers
+DANGEROUS_PATTERNS: List[Tuple[str, str]] = CATASTROPHIC_PATTERNS + [
     (r"\bchmod\s+777\b", "world-writable permissions"),
     (r"\bchmod\s+-R\s+777\b", "recursive world-writable"),
-    (r"\bcurl\b.*\|\s*(ba)?sh", "remote code execution via pipe"),
-    (r"\bwget\b.*\|\s*(ba)?sh", "remote code execution via pipe"),
     (r"\beval\b", "dynamic code evaluation"),
     (r"\bsudo\b", "elevated privileges"),
     (r"\bsu\s+-", "user switching"),
@@ -189,11 +207,8 @@ DANGEROUS_PATTERNS: List[Tuple[str, str]] = [
     (r"\bpkill\b.*-9", "force kill all matching"),
     (r"\b(iptables|nft)\b", "firewall modification"),
     (r"\b(systemctl|service)\s+(stop|disable|mask)\b", "service disruption"),
-    (r"\bshutdown\b", "system shutdown"),
-    (r"\breboot\b", "system reboot"),
     (r"\bmount\b", "filesystem mounting"),
     (r"\bumount\b", "filesystem unmounting"),
-    (r"\b(fdisk|parted|gdisk)\b", "partition manipulation"),
 ]
 
 # Profile-based safety rules: maps profile name -> config
@@ -244,6 +259,10 @@ class SafeBinPolicy:
             self.safe_bins -= extra_blocked
         self.profile = SAFETY_PROFILES.get(profile, SAFETY_PROFILES["standard"])
         self.profile_name = profile
+        self._compiled_catastrophic = [
+            (re.compile(pattern, re.IGNORECASE), desc)
+            for pattern, desc in CATASTROPHIC_PATTERNS
+        ]
         self._compiled_dangerous = [
             (re.compile(pattern, re.IGNORECASE), desc)
             for pattern, desc in DANGEROUS_PATTERNS
@@ -255,25 +274,66 @@ class SafeBinPolicy:
 
     def check_dangerous_patterns(self, command: str) -> List[Tuple[str, str]]:
         violations = []
+        seen = set()
         for regex, desc in self._compiled_dangerous:
-            if regex.search(command):
+            if regex.search(command) and desc not in seen:
                 violations.append((regex.pattern, desc))
+                seen.add(desc)
         return violations
 
+    def _is_catastrophic(self, command: str) -> Optional[str]:
+        """Return reason if command matches a catastrophic pattern, else None."""
+        for regex, desc in self._compiled_catastrophic:
+            if regex.search(command):
+                return desc
+        return None
+
+    @staticmethod
+    def _has_tty() -> bool:
+        """Check if stdin is a terminal (interactive session)."""
+        return hasattr(sys.stdin, "isatty") and sys.stdin.isatty()
+
     def evaluate(self, command: str, workdir: Optional[str] = None) -> ExecReviewResult:
-        violations = self.check_dangerous_patterns(command)
+        """Evaluate command safety.
+
+        Catastrophic patterns → DENY always.
+        Medium-risk patterns  → ASK (but ASK becomes DENY if no TTY).
+        """
         first_token = command.split()[0] if command.split() else ""
 
+        # Phase 1: catastrophic → hard DENY
+        cat_reason = self._is_catastrophic(command)
+        if cat_reason:
+            return ExecReviewResult(
+                decision=ExecDecision.DENY,
+                risk=ExecRisk.HIGH,
+                rationale=f"Catastrophic: {cat_reason}",
+            )
+
+        # Phase 2: dangerous patterns → ASK
+        violations = self.check_dangerous_patterns(command)
         if violations:
             risk = ExecRisk.HIGH
             rationale = f"Dangerous patterns: {'; '.join(d for _, d in violations)}"
+            decision = ExecDecision.ASK
+
+            # Non-interactive context: ASK → DENY
+            if not self._has_tty():
+                return ExecReviewResult(
+                    decision=ExecDecision.DENY,
+                    risk=risk,
+                    rationale=f"Blocked (non-interactive): {rationale}",
+                    suggestions=["Requires interactive approval"],
+                )
+
             return ExecReviewResult(
-                decision=ExecDecision.ASK,
+                decision=decision,
                 risk=risk,
                 rationale=rationale,
                 suggestions=["Consider using a safer alternative", "Review command intent"],
             )
 
+        # Phase 3: profile-based checks
         if not self.profile.get("allow_shell", True):
             if any(sh in first_token for sh in ["sh", "bash", "zsh"]):
                 return ExecReviewResult(
@@ -314,7 +374,6 @@ class SafeBinPolicy:
 class ExecAutoReviewer:
     """Post-execution heuristic code review. Suggests improvements, detects issues."""
 
-    # Patterns indicating potential issues in command output or structure
     ISSUE_PATTERNS: List[Tuple[str, str, str]] = [
         (r"warning:", "Compiler/linter warning detected", "Review warnings and fix root cause"),
         (r"deprecat(ed|ion)", "Deprecated API or feature used", "Migrate to recommended replacement"),
@@ -367,23 +426,19 @@ class ExecAutoReviewer:
         issues: List[str] = []
         suggestions: List[str] = []
 
-        # Detect issues in output
         for regex, desc, fix in self._compiled_issues:
             if regex.search(combined_output):
                 issues.append(desc)
                 suggestions.append(fix)
 
-        # Detect improvement opportunities in the command itself
         for regex, desc, fix in self._compiled_improvements:
             if regex.search(command):
                 suggestions.append(f"{desc}: {fix}")
 
-        # Non-zero exit code without captured stderr patterns
         if exit_code and exit_code != 0 and not stderr.strip():
             issues.append(f"Non-zero exit code ({exit_code}) with no stderr")
             suggestions.append("Check command arguments and working directory")
 
-        # Evaluate risk level
         if issues:
             risk = ExecRisk.MEDIUM if len(issues) <= 2 else ExecRisk.HIGH
             decision = ExecDecision.ASK
@@ -464,7 +519,6 @@ class ProcessManager:
 
         try:
             if use_pty and pty_slave_fd is not None:
-                # Set non-blocking on master
                 flags = fcntl.fcntl(pty_master_fd, fcntl.F_GETFL)
                 fcntl.fcntl(pty_master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
@@ -476,7 +530,7 @@ class ProcessManager:
                     stdin=pty_slave_fd,
                     stdout=pty_slave_fd,
                     stderr=pty_slave_fd,
-                    preexec_fn=os.setsid,  # new process group
+                    preexec_fn=os.setsid,
                 )
                 os.close(pty_slave_fd)
                 session.pty_slave = None
@@ -489,7 +543,7 @@ class ProcessManager:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     stdin=subprocess.PIPE if pipe_stdin else subprocess.DEVNULL,
-                    preexec_fn=os.setsid,  # new process group
+                    preexec_fn=os.setsid,
                 )
 
             session.pid = proc.pid
@@ -557,7 +611,6 @@ class ProcessManager:
         if new_output:
             session.aggregated += new_output
 
-        # Check if process exited
         if session.process.poll() is not None and not session.ended_at:
             session.ended_at = time.time()
             session.exit_code = session.process.returncode
@@ -583,7 +636,6 @@ class ProcessManager:
                 if session.ended_at:
                     break
             if timeout and (time.time() - start) >= timeout:
-                # Mark as timeout before killing
                 with self._lock:
                     session = self._sessions.get(session_id)
                     if session and not session.ended_at:
@@ -625,10 +677,8 @@ class ProcessManager:
         if not session or session.ended_at:
             return session
 
-        # Try SIGTERM first
         self.send_signal(session_id, signal.SIGTERM)
 
-        # Wait grace period, then SIGKILL
         time.sleep(self.kill_grace_ms / 1000.0)
         with self._lock:
             session = self._sessions.get(session_id)
@@ -650,12 +700,10 @@ class ProcessManager:
         return self.get_session(session_id)
 
     def _finalize(self, session_id: str) -> None:
-        """Move session from active to finished, close FDs."""
         session = None
         with self._lock:
             session = self._sessions.pop(session_id, None)
         if session:
-            # Wait outside lock to avoid blocking other threads
             if session.process and session.process.poll() is None:
                 try:
                     session.process.wait(timeout=2)
@@ -671,7 +719,6 @@ class ProcessManager:
                 self._finished[session_id] = session
 
     def cleanup_zombies(self) -> int:
-        """Reap zombie child processes. Returns count cleaned."""
         cleaned = 0
         with self._lock:
             active_ids = list(self._sessions.keys())
@@ -737,7 +784,6 @@ class CommandQueue:
         workdir: Optional[str] = None,
         on_wait: Optional[Callable[[float, int], None]] = None,
     ) -> Any:
-        """Enqueue a task and block until it completes. Raises QueueFullError if at capacity."""
         with self._lock:
             lane_state = self._get_lane(lane)
             total_depth = sum(
@@ -774,7 +820,6 @@ class CommandQueue:
 
         with self._lock:
             lane_state.queue.append(entry)
-            # Sort by priority (higher first), then sequence
             lane_state.queue.sort(key=lambda e: (-e.priority, e.enqueued_at))
 
         self._drain_lane(lane)
@@ -791,7 +836,6 @@ class CommandQueue:
         priority: Priority = Priority.NORMAL,
         timeout: Optional[int] = None,
     ) -> Any:
-        """Async version of enqueue."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             None,
@@ -799,7 +843,6 @@ class CommandQueue:
         )
 
     def _drain_lane(self, lane: str) -> None:
-        """Start queued tasks that have capacity."""
         with self._lock:
             lane_state = self._get_lane(lane)
             while (
@@ -867,11 +910,11 @@ class QueueFullError(Exception):
 
 class ShellTool(BaseTool):
     """
-    Enhanced shell execution tool ported from OpenClaw.
+    Enhanced shell execution tool for HelloChusquis.
 
     Backward compatible: run(command) and arun(command) still work.
     New features: PTY, background, streaming, env isolation, process tracking,
-    command queue, auto-review, safe-bin policy.
+    command queue, auto-review, safe-bin policy, security evaluator gate.
     """
 
     name = "shell"
@@ -902,6 +945,44 @@ class ShellTool(BaseTool):
         self.safe_policy = SafeBinPolicy(profile=profile)
         self.auto_reviewer = ExecAutoReviewer(enabled=auto_review)
         self._sessions: Dict[str, ProcessSession] = {}
+
+    # ------------------------------------------------------------------
+    # Safety gate (shared between foreground and background)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_unsafe_mode() -> bool:
+        """Check if user explicitly opted out of safety checks."""
+        return os.getenv("HELLOCHUSQUIS_UNSAFE_MODE") == "1"
+
+    def _safety_gate(self, command: str) -> Optional[ToolResult]:
+        """Run all safety checks before execution.
+
+        Returns ToolResult with error if blocked, None if safe to proceed.
+        """
+        # Unsafe mode escape hatch
+        if self._is_unsafe_mode():
+            return None
+
+        # 1. Security evaluator (deterministic critical patterns + LLM fallback)
+        safety = evaluate_command_safety(command, pool=None)
+        if not safety.get("safe", True):
+            return ToolResult(
+                success=False,
+                output="",
+                error=f"Blocked: {safety.get('reason', 'unsafe command')}",
+            )
+
+        # 2. Safe-bin policy (catastrophic → DENY, medium → ASK/DENY)
+        policy_result = self.safe_policy.evaluate(command)
+        if policy_result.decision == ExecDecision.DENY:
+            return ToolResult(
+                success=False,
+                output="",
+                error=f"Blocked by policy: {policy_result.rationale}",
+            )
+
+        return None
 
     # ------------------------------------------------------------------
     # Backward-compatible interface
@@ -971,14 +1052,10 @@ class ShellTool(BaseTool):
 
         effective_timeout = timeout or self.default_timeout
 
-        # Safe-bin policy check
-        policy_result = self.safe_policy.evaluate(command, workdir)
-        if policy_result.decision == ExecDecision.DENY:
-            return ToolResult(
-                success=False,
-                output="",
-                error=f"Command blocked by policy: {policy_result.rationale}",
-            )
+        # Safety gate — blocks before execution
+        blocked = self._safety_gate(command)
+        if blocked is not None:
+            return blocked
 
         # Execute through process manager
         try:
@@ -1049,13 +1126,10 @@ class ShellTool(BaseTool):
         if not command.strip():
             return ToolResult(success=False, output="", error="No command provided")
 
-        policy_result = self.safe_policy.evaluate(command, workdir)
-        if policy_result.decision == ExecDecision.DENY:
-            return ToolResult(
-                success=False,
-                output="",
-                error=f"Command blocked by policy: {policy_result.rationale}",
-            )
+        # Safety gate — blocks before execution
+        blocked = self._safety_gate(command)
+        if blocked is not None:
+            return blocked
 
         try:
             session = self.process_manager.create_session(
@@ -1138,7 +1212,6 @@ class ShellTool(BaseTool):
         if not session:
             return ToolResult(success=False, output="", error=f"No session: {session_id}")
 
-        # Auto-poll for fresh output before reading aggregated
         if not session.ended_at:
             self.process_manager.poll_output(session_id)
             session = self.process_manager.get_session(session_id) or session

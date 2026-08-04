@@ -80,6 +80,7 @@ hellochusquis config --providers  # Edit providers
 - **code** - Run Python code
 - **files** - Read/write files (read, write, delete, list, create_dir)
 - **web_search** - Search the web via DuckDuckGo
+- **browser** - Browser automation (navigate, click, type, screenshot)
 
 ### Available Integrations:
 GitHub, Slack, Discord, Docker, Notion, AWS, Gmail, Jira, PostgreSQL, MongoDB, Stripe, Twilio, Supabase, Vercel, HubSpot, Shopify, Mailchimp, Airtable, Linear, Kubernetes, Terraform, and more.

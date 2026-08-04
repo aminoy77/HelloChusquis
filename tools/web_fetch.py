@@ -1,5 +1,5 @@
 """
-web_fetch tool — Python port of OpenClaw's web_fetch.
+web_fetch tool — fetches HTTP(S) content for HelloChusquis.
 
 Fetches HTTP(S) content through SSRF guards, caching, and bounded extraction.
 Dependencies: requests, beautifulsoup4 (already in project deps).
@@ -783,7 +783,6 @@ def format_fetch_error(status: int, detail: str, content_type: str | None = None
 class WebFetchTool(BaseTool):
     """
     Fetch URL content with SSRF protection, caching, and markdown extraction.
-    Python port of OpenClaw's web_fetch.
     """
 
     name = "web_fetch"
@@ -914,25 +913,54 @@ class WebFetchTool(BaseTool):
     def _fetch_and_extract(
         self, url: str, extract_mode: str, max_chars: int,
     ) -> dict[str, Any]:
-        """Perform the HTTP request and extract content."""
+        """Perform the HTTP request and extract content.
+
+        Redirects are followed manually so each hop is validated for SSRF.
+        """
         headers = {
             "Accept": "text/markdown, text/html;q=0.9, */*;q=0.1",
             "User-Agent": self.user_agent,
             "Accept-Language": "en-US,en;q=0.9",
         }
 
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=self.timeout_seconds,
-            allow_redirects=True,
-        )
+        # --- Manual redirect loop with SSRF validation per hop ---
+        REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+        current_url = url
+        response: requests.Response | None = None
+        redirect_count = 0
 
-        # Limit redirects manually
-        if len(response.history) > self.max_redirects:
-            raise ValueError(
-                f"Too many redirects ({len(response.history)} > {self.max_redirects})"
+        while True:
+            response = requests.get(
+                current_url,
+                headers=headers,
+                timeout=self.timeout_seconds,
+                allow_redirects=False,  # Never auto-follow; we validate each hop
             )
+
+            if response.status_code not in REDIRECT_STATUSES:
+                break  # Final (non-redirect) response
+
+            location = response.headers.get("Location", "")
+            if not location:
+                break  # 3xx but no Location header — treat as final
+
+            redirect_count += 1
+            if redirect_count > self.max_redirects:
+                raise ValueError(
+                    f"Too many redirects ({redirect_count} > {self.max_redirects})"
+                )
+
+            # Resolve relative Location against the current URL
+            next_url = urljoin(current_url, location)
+
+            # Validate the REDIRECT TARGET for SSRF (re-resolves DNS, checks IPs)
+            validate_url_safety(next_url, allow_private=self.allow_private_network)
+
+            current_url = next_url
+            # Loop continues with the new URL
+
+        if response is None:
+            raise ValueError("No response received from fetch")
 
         final_url = response.url
         status = response.status_code

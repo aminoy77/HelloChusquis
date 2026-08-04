@@ -1,7 +1,7 @@
 """
 Plugin system for HelloChusquis.
 
-Ported from OpenClaw's plugin architecture:
+Declarative plugin system:
 - PluginManifest: declarative plugin metadata
 - PluginLoader: filesystem discovery + module loading
 - PluginRegistry: lifecycle management + state
@@ -91,7 +91,7 @@ class ToolDeclaration:
 
 @dataclass
 class PluginManifest:
-    """Declarative plugin metadata (ported from openclaw.plugin.json)."""
+    """Declarative plugin metadata (JSON manifest)."""
     name: str
     version: str = "0.1.0"
     description: str = ""

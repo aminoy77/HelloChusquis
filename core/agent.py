@@ -1035,7 +1035,7 @@ class Agent:
         self.plugins = load_plugins()
         self.tools_schema = _build_tools_schema(self.plugins)
 
-        # --- OpenClaw modules integration ---
+        # --- Core modules integration ---
 
         # WebFetch tool instance
         self.web_fetch = WebFetchTool()

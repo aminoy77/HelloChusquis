@@ -44,7 +44,7 @@
             --amber-glow: rgba(245, 166, 35, 0.12);
             --text: #f0ece3;
             --text-muted: #b8b0a4;
-            --text-dim: #7a766e;
+            --text-dim: #7e7a72;
             --border: #2a2926;
             --green: #6bc98a;
             --blue: #7eb8d4;
@@ -443,6 +443,153 @@
             border: 1px solid var(--border);
             border-radius: 6px;
             font-size: 0.72rem;
+            color: var(--green);
+        }
+
+        /* HOW TO USE */
+        .howto-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .howto-step {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .howto-step:hover {
+            border-color: var(--amber);
+            transform: translateY(-2px);
+        }
+
+        .howto-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--amber);
+            opacity: 0.2;
+            position: absolute;
+            top: 12px;
+            right: 20px;
+        }
+
+        .howto-step h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .howto-step p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .howto-terminal {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 0.72rem;
+            line-height: 1.8;
+            overflow-x: auto;
+        }
+
+        .howto-terminal .ht-p { color: var(--green); }
+        .howto-terminal .ht-c { color: var(--text); }
+        .howto-terminal .ht-o { color: var(--text-muted); }
+        .howto-terminal .ht-h { color: var(--amber); }
+        .howto-terminal .ht-d { color: var(--text-dim); }
+
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .cmd-category {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .cmd-category h4 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--amber);
+            margin-bottom: 12px;
+        }
+
+        .cmd-list {
+            list-style: none;
+        }
+
+        .cmd-list li {
+            display: flex;
+            gap: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.75rem;
+            align-items: baseline;
+        }
+
+        .cmd-list li:last-child { border-bottom: none; }
+
+        .cmd-name {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--green);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .cmd-desc {
+            color: var(--text-muted);
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .tip-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--amber);
+            border-radius: 0 12px 12px 0;
+            padding: 20px;
+        }
+
+        .tip-card h4 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .tip-card p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .tip-card code {
+            background: var(--bg);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.7rem;
             color: var(--green);
         }
 
@@ -1436,6 +1583,9 @@
             .integrations-grid { grid-template-columns: repeat(2, 1fr); }
             .social-proof-grid { grid-template-columns: repeat(2, 1fr); }
             .testimonial-grid { grid-template-columns: 1fr; }
+            .howto-grid { grid-template-columns: 1fr; }
+            .commands-grid { grid-template-columns: 1fr; }
+            .tips-grid { grid-template-columns: 1fr; }
             nav { display: none; }
             .messages { padding: 20px; }
             .input-area { padding: 12px 20px; }
@@ -1453,6 +1603,7 @@
                     HelloChusquis
                 </a>
                 <nav aria-label="Main navigation">
+                    <a href="#howto">How To Use</a>
                     <a href="#features">Features</a>
                     <a href="#social-proof">Community</a>
                     <a href="#providers">Providers</a>
@@ -1510,6 +1661,139 @@
                     <div class="term-line"><span class="term-output">✓ Created api.py with 4 endpoints</span></div>
                     <div class="term-line"><span class="term-dim">──────────────────────────────────</span></div>
                     <div class="term-line"><span class="term-prompt">You: </span><span class="term-cursor"></span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="howto">
+            <div class="section-header">
+                <div class="section-label">How To Use</div>
+                <h2 class="section-title">Your first 5 minutes with HelloChusquis.</h2>
+                <p class="section-desc">
+                    Install, configure, and start working. Here's everything you need to get productive fast.
+                </p>
+            </div>
+
+            <!-- Step by step -->
+            <div class="howto-grid">
+                <div class="howto-step">
+                    <div class="howto-number">01</div>
+                    <h3>Install</h3>
+                    <p>One command. Works on macOS, Linux, and Windows.</p>
+                    <div class="howto-terminal">
+                        <div><span class="ht-p">$</span> <span class="ht-c">pip install hellochusquis</span></div>
+                        <div><span class="ht-o">Successfully installed hellochusquis-1.4.3</span></div>
+                    </div>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-number">02</div>
+                    <h3>First run</h3>
+                    <p>Launch and follow the setup wizard to add your first API key.</p>
+                    <div class="howto-terminal">
+                        <div><span class="ht-p">$</span> <span class="ht-c">hellochusquis</span></div>
+                        <div><span class="ht-h">┌─ Setup Wizard ─────────────────┐</span></div>
+                        <div><span class="ht-h">│</span> <span class="ht-o">Choose a provider:</span></div>
+                        <div><span class="ht-h">│</span> <span class="ht-c">1. OpenRouter (recommended)</span></div>
+                        <div><span class="ht-h">│</span> <span class="ht-c">2. Groq (free)</span></div>
+                        <div><span class="ht-h">│</span> <span class="ht-c">3. Ollama (local)</span></div>
+                        <div><span class="ht-h">└────────────────────────────────┘</span></div>
+                    </div>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-number">03</div>
+                    <h3>Start chatting</h3>
+                    <p>Type naturally. The agent picks the right tools automatically.</p>
+                    <div class="howto-terminal">
+                        <div><span class="ht-p">You:</span> <span class="ht-c">search for the latest Python releases</span></div>
+                        <div><span class="ht-d">→ web_search("latest Python releases 2026")</span></div>
+                        <div><span class="ht-o">Found 5 results. Python 3.13 released Mar 2026.</span></div>
+                        <div><span class="ht-p">You:</span> <span class="ht-c">create a REST API for todos</span></div>
+                        <div><span class="ht-d">→ code(python, "from flask import Flask...")</span></div>
+                        <div><span class="ht-o">Created api.py with 4 endpoints.</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLI Commands -->
+            <h3 style="font-size:0.85rem; font-weight:600; color:var(--text); margin-bottom:16px;">CLI Commands</h3>
+            <div class="commands-grid">
+                <div class="cmd-category">
+                    <h4>Terminal Commands</h4>
+                    <ul class="cmd-list">
+                        <li><span class="cmd-name">hellochusquis</span> <span class="cmd-desc">Start interactive chat</span></li>
+                        <li><span class="cmd-name">hellochusquis web</span> <span class="cmd-desc">Open web interface (localhost:8000)</span></li>
+                        <li><span class="cmd-name">hellochusquis api</span> <span class="cmd-desc">Start REST API server (port 8080)</span></li>
+                        <li><span class="cmd-name">hellochusquis config</span> <span class="cmd-desc">Open setup wizard</span></li>
+                        <li><span class="cmd-name">hellochusquis config --show</span> <span class="cmd-desc">Display current configuration</span></li>
+                        <li><span class="cmd-name">hellochusquis config --api-keys</span> <span class="cmd-desc">Edit API keys only</span></li>
+                        <li><span class="cmd-name">hellochusquis config --providers</span> <span class="cmd-desc">Edit providers only</span></li>
+                        <li><span class="cmd-name">hellochusquis --quick</span> <span class="cmd-desc">Quick setup with OpenRouter</span></li>
+                        <li><span class="cmd-name">hellochusquis --full</span> <span class="cmd-desc">Full setup wizard with all providers</span></li>
+                    </ul>
+                </div>
+                <div class="cmd-category">
+                    <h4>In-Chat Slash Commands</h4>
+                    <ul class="cmd-list">
+                        <li><span class="cmd-name">/help</span> <span class="cmd-desc">Show all available commands</span></li>
+                        <li><span class="cmd-name">/status</span> <span class="cmd-desc">Provider status and response times</span></li>
+                        <li><span class="cmd-name">/clear</span> <span class="cmd-desc">Clear conversation history</span></li>
+                        <li><span class="cmd-name">/plan &lt;task&gt;</span> <span class="cmd-desc">Force multi-step plan for complex tasks</span></li>
+                        <li><span class="cmd-name">👍 / +</span> <span class="cmd-desc">Positive feedback — helps the agent learn</span></li>
+                        <li><span class="cmd-name">👎 / -</span> <span class="cmd-desc">Negative feedback — flags mistakes</span></li>
+                        <li><span class="cmd-name">exit</span> <span class="cmd-desc">Quit the session</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Plugin commands -->
+            <div class="commands-grid" style="margin-top:16px;">
+                <div class="cmd-category">
+                    <h4>Plugin Management</h4>
+                    <ul class="cmd-list">
+                        <li><span class="cmd-name">hellochusquis install &lt;plugin&gt;</span> <span class="cmd-desc">Install a community plugin</span></li>
+                        <li><span class="cmd-name">hellochusquis uninstall &lt;plugin&gt;</span> <span class="cmd-desc">Remove a plugin</span></li>
+                        <li><span class="cmd-name">hellochusquis plugins</span> <span class="cmd-desc">List installed plugins</span></li>
+                        <li><span class="cmd-name">hellochusquis build</span> <span class="cmd-desc">Build the project</span></li>
+                        <li><span class="cmd-name">hellochusquis learn</span> <span class="cmd-desc">Run learning pipeline</span></li>
+                    </ul>
+                </div>
+                <div class="cmd-category">
+                    <h4>CLI Flags</h4>
+                    <ul class="cmd-list">
+                        <li><span class="cmd-name">--port PORT</span> <span class="cmd-desc">Port for API/web (default: 8080/8000)</span></li>
+                        <li><span class="cmd-name">--host HOST</span> <span class="cmd-desc">Host for API/web (default: 0.0.0.0/127.0.0.1)</span></li>
+                        <li><span class="cmd-name">--quick</span> <span class="cmd-desc">Quick setup with OpenRouter only</span></li>
+                        <li><span class="cmd-name">--full</span> <span class="cmd-desc">Full setup wizard with all providers</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Productivity Tips -->
+            <h3 style="font-size:0.85rem; font-weight:600; color:var(--text); margin:32px 0 16px;">Productivity Tips</h3>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <h4>Multi-step tasks with /plan</h4>
+                    <p>Complex tasks get auto-detected, but you can force a plan: <code>/plan deploy my app to AWS with monitoring</code>. Review steps before execution.</p>
+                </div>
+                <div class="tip-card">
+                    <h4>Web interface</h4>
+                    <p>Run <code>hellochusquis web</code> to chat from your browser at <code>localhost:8000</code>. Supports voice input/output, theme switching, and chat export.</p>
+                </div>
+                <div class="tip-card">
+                    <h4>REST API with streaming</h4>
+                    <p>Expose your agent over HTTP: <code>hellochusquis api --port 8080</code>. Supports SSE streaming, rate limiting, and health checks at <code>/health</code>.</p>
+                </div>
+                <div class="tip-card">
+                    <h4>Environment variables</h4>
+                    <p><code>HELLOCHUSQUIS_API_KEY=secret</code> enables auth. <code>DEBUG=1</code> for verbose logs. <code>HELLOCHUSQUIS_UNSAFE_MODE=1</code> to skip security checks.</p>
+                </div>
+                <div class="tip-card">
+                    <h4>Provider failover</h4>
+                    <p>Add multiple providers. If one hits rate limits or goes down, the agent automatically switches to the next one. Zero downtime.</p>
+                </div>
+                <div class="tip-card">
+                    <h4>Persistent memory</h4>
+                    <p>The agent remembers past sessions. Use 👍/👎 feedback to help it learn your preferences. Memory persists across sessions in <code>~/.hellochusquis/</code>.</p>
                 </div>
             </div>
         </section>
@@ -2058,26 +2342,38 @@
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
+        function esc(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
         async function loadStatus() {
             try {
                 const res = await fetch('/status', { headers: authHeaders() });
+                if (!res.ok) { clearStatusPanels(); return; }
                 const data = await res.json();
                 document.getElementById('providers-list').innerHTML = data.providers.map(p => `
                     <div class="sidebar-item">
-                        <div class="indicator ${p.status}"></div>
-                        <span>${p.name}</span>
+                        <div class="indicator ${esc(p.status)}"></div>
+                        <span>${esc(p.name)}</span>
                     </div>
                 `).join('');
                 document.getElementById('plugins-list').innerHTML = data.plugins.length
-                    ? data.plugins.map(p => `<div class="sidebar-item"><div class="indicator plugin"></div><span>${p.name}</span></div>`).join('')
+                    ? data.plugins.map(p => `<div class="sidebar-item"><div class="indicator plugin"></div><span>${esc(p.name)}</span></div>`).join('')
                     : '<div class="sidebar-item" style="color:var(--text-dim)">No plugins</div>';
                 document.getElementById('memory-info').innerHTML = `
-                    <div class="memory-stat">Sessions: <span>${data.memory.sessions}</span></div>
+                    <div class="memory-stat">Sessions: <span>${esc(data.memory.sessions)}</span></div>
                     <div class="memory-stat">Summary: <span>${data.memory.summary ? 'Available' : 'None yet'}</span></div>`;
                 document.getElementById('learnings-info').innerHTML = `
-                    <div class="memory-stat">Patterns: <span>${data.learnings.patterns}</span></div>
-                    <div class="memory-stat">Rules: <span>${data.learnings.improvements}</span></div>`;
-            } catch(e) {}
+                    <div class="memory-stat">Patterns: <span>${esc(data.learnings.patterns)}</span></div>
+                    <div class="memory-stat">Rules: <span>${esc(data.learnings.improvements)}</span></div>`;
+            } catch(e) { clearStatusPanels(); }
+        }
+
+        function clearStatusPanels() {
+            document.getElementById('providers-list').innerHTML = '<div class="sidebar-item" style="color:var(--text-dim)">Unavailable</div>';
+            document.getElementById('plugins-list').innerHTML = '<div class="sidebar-item" style="color:var(--text-dim)">Unavailable</div>';
+            document.getElementById('memory-info').innerHTML = '';
+            document.getElementById('learnings-info').innerHTML = '';
         }
 
         function addMessage(role, content, toolCalls = []) {
@@ -2131,12 +2427,13 @@
             const lastMsg = document.querySelector('.message.assistant:last-child .message-bubble');
             if (!lastMsg) return;
             try {
-                await fetch('/feedback', {
+                const res = await fetch('/feedback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...authHeaders() },
                     body: JSON.stringify({ type, context: lastMsg.textContent })
                 });
-                showToast(type === 'positive' ? 'Thanks for the positive feedback!' : "Thanks for the feedback. I'll learn from this.");
+                if (res.ok) showToast(type === 'positive' ? 'Thanks for the positive feedback!' : "Thanks for the feedback. I'll learn from this.");
+                else showToast('Could not save feedback (' + res.status + ')');
             } catch(e) { showToast('Could not save feedback'); }
         }
 
@@ -2163,6 +2460,21 @@
                     headers: { 'Content-Type': 'application/json', ...authHeaders() },
                     body: JSON.stringify({ message: text, config })
                 });
+                if (!res.ok) {
+                    thinking.remove();
+                    let msg = 'Request failed (' + res.status + ')';
+                    try {
+                        const err = await res.json();
+                        if (err && err.detail) msg = typeof err.detail === 'string' ? err.detail : msg;
+                    } catch {}
+                    if (res.status === 401) {
+                        clearToken(); updateBanner(); msg = 'Invalid API key. Enter your token to connect.';
+                    } else if (res.status === 429) {
+                        msg = 'Rate limit reached. Wait a moment and try again.';
+                    }
+                    addMessage('assistant', msg);
+                    return;
+                }
                 const data = await res.json();
                 thinking.remove();
                 addMessage('assistant', data.response, data.tool_calls || []);
@@ -2183,7 +2495,8 @@
 
         async function clearHistory() {
             try {
-                await fetch('/clear', { method: 'POST', headers: authHeaders() });
+                const res = await fetch('/clear', { method: 'POST', headers: authHeaders() });
+                if (!res.ok) { showToast('Could not clear history (' + res.status + ')'); return; }
                 messagesEl.innerHTML = '';
                 showToast('History cleared!');
                 loadStatus();
@@ -2244,13 +2557,14 @@
             if (!token) { showToast('Enter a token'); return; }
             setToken(token);
             try {
-                const res = await fetch('/chat', {
+                const res = await fetch('/auth/verify', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-                    body: JSON.stringify({ message: '/status' })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: token })
                 });
                 if (res.status === 401) { clearToken(); showToast('Invalid API key'); return; }
-            } catch {}
+                if (!res.ok) { clearToken(); showToast('Verify failed (' + res.status + ')'); return; }
+            } catch { clearToken(); showToast('Connection error'); return; }
             input.value = '';
             updateBanner();
             showToast('Connected');
@@ -2509,6 +2823,7 @@
                             config: config
                         })
                     });
+                    if (!res.ok) { addMessage('assistant', 'Request failed (' + res.status + ')'); return; }
                     const data = await res.json();
                     addMessage('assistant', data.response || 'Browser opened.', data.tool_calls || []);
                 } catch(e) {

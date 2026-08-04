@@ -1,5 +1,5 @@
 """
-Cron scheduling system ported from OpenClaw's TypeScript implementation.
+Cron scheduling system for HelloChusquis.
 
 Provides:
   - CronSchedule: cron expression parsing, interval-based schedules, next-run computation
@@ -1124,8 +1124,6 @@ class AgentExecutor(Protocol):
 class CronService:
     """Full cron scheduling service with persistence, pacing, heartbeat
     monitoring, and failure alerting.
-
-    Ported from OpenClaw's CronService + store + heartbeat-monitor.
     """
 
     def __init__(
@@ -1419,8 +1417,6 @@ class CronService:
         interval_s: float = 1800.0,
     ) -> list[dict[str, Any]]:
         """Resolve heartbeat monitor job specs for given agents.
-
-        Ported from OpenClaw's resolveHeartbeatMonitorSpecs.
         """
         specs: list[dict[str, Any]] = []
         for agent_id in agent_ids:

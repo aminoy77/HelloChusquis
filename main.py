@@ -83,8 +83,22 @@ def handle_feedback(user_input: str, history):
 
 
 def main():
-    config = ensure_config()
-    agent = Agent(config)
+    try:
+        config = ensure_config()
+    except KeyboardInterrupt:
+        console.print("\n[dim]Setup cancelled.[/dim]")
+        return 1
+
+    try:
+        agent = Agent(config)
+    except FileNotFoundError as e:
+        console.print("[red]No LLM providers configured. Run 'hellochusquis config' to set up.[/red]")
+        console.print(f"[dim]{e}[/dim]")
+        return 1
+    except Exception as e:
+        console.print(f"[red]Failed to initialize agent: {e}[/red]")
+        return 1
+
     retention_days = config["settings"].get("memory_retention_days", 30)
 
     # Install signal handlers for graceful shutdown
@@ -113,14 +127,15 @@ def main():
   👎 / -     — Negative feedback
   exit       — Exit
 
-[bold]Terminal:[/bold]
-  hellochusquis install <plugin>
-  hellochusquis uninstall <plugin>
-  hellochusquis plugins
-  hellochusquis build
-  hellochusquis learn
-  hellochusquis web
-  hellochusquis daemon [start|stop|status|install|add|tasks|log]
+[bold]CLI (from terminal):[/bold]
+  hellochusquis                  Start chat (default)
+  hellochusquis web              Launch web UI
+  hellochusquis api              Launch REST API
+  hellochusquis config           Edit configuration
+  hellochusquis setup            Run setup wizard
+  hellochusquis doctor           Check providers & deps
+  hellochusquis version          Show version
+  hellochusquis help             Show CLI help
 """)
 
             elif user_input == "/status":
@@ -177,7 +192,7 @@ def main():
                     console.print("[dim]  1. OpenRouter: https://openrouter.ai/keys[/dim]")
                     console.print("[dim]  2. Groq: https://console.groq.com/keys[/dim]")
                     console.print("[dim]  3. Ollama (local, no key needed)[/dim]")
-                    console.print("[dim]Edit config: nano ~/.hellochusquis/config.yaml[/dim]")
+                    console.print("[dim]Edit config: hellochusquis config[/dim]")
 
             user_input = get_input()
 

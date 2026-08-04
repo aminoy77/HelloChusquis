@@ -1,7 +1,7 @@
 """
 MCP (Model Context Protocol) implementation for HelloChusquis.
 
-Ported from OpenClaw's TypeScript MCP system. Provides:
+Implements the Model Context Protocol. Provides:
 - Transport classes (Stdio, HTTP, SSE)
 - MCPServer: host MCP server exposing tools via JSON-RPC 2.0
 - MCPClient: connect to multiple MCP servers, auto-discover tools
@@ -532,7 +532,7 @@ class MCPServerSecurityPolicy:
 
     @staticmethod
     def filter_env(env: dict[str, str]) -> dict[str, str]:
-        """Drop dangerous inherited env vars per OpenClaw security model."""
+        """Drop dangerous inherited env vars before spawning subprocesses."""
         safe: dict[str, str] = {}
         for key, value in env.items():
             upper = key.upper()

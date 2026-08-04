@@ -1,6 +1,6 @@
 """
 Tool policy, loop detection, dangerous tool detection, sandbox execution, and
-security auditing — ported from OpenClaw TypeScript to Python stdlib.
+security auditing — pure Python stdlib.
 
 Architecture:
   - ToolPolicy: allow/deny resolution with groups, aliases, plugin expansion
@@ -104,7 +104,7 @@ DEFAULT_GATEWAY_HTTP_TOOL_DENY: FrozenSet[str] = frozenset({
     "nodes",
     "computer",
     "mobile_ui",
-    "openclaw",
+    "hellochusquis",
 })
 
 # Control-plane tools that require owner identity
@@ -120,7 +120,7 @@ GATEWAY_OWNER_ONLY_CORE_TOOLS: FrozenSet[str] = frozenset({
     "nodes",
     "computer",
     "mobile_ui",
-    "openclaw",
+    "hellochusquis",
 })
 
 # Known poll-like tools (for loop detection heuristics)
@@ -1161,8 +1161,7 @@ class DangerousToolDetector:
     Flags dangerous tool combinations that could escalate privileges,
     enable RCE, or cause data loss.
 
-    Ported from OpenClaw's dangerous-tools.ts and extended with
-    combination-based detection.
+    Extended from the dangerous-tools reference with combination-based detection.
     """
 
     # Tools that individually are high-risk

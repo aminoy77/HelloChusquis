@@ -1,8 +1,8 @@
 """
 Session management, conversation compaction, context-window guarding, and prompt
-composition for HelloChusquis — ported from OpenClaw's TypeScript architecture.
+composition for HelloChusquis.
 
-Dependencies: stdlib only (sqlite3, hashlib, json, time, uuid, re, textwrap).
+Dependencies: stdlib only (sqlite3, hashlib, json, time, uuid, re, textwrap, threading).
 Optional: tiktoken for accurate token counts (falls back to char/4 estimation).
 """
 
@@ -13,6 +13,7 @@ import json
 import re
 import sqlite3
 import textwrap
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -180,6 +181,9 @@ CREATE TABLE IF NOT EXISTS compaction_log (
 class SessionManager:
     """Full session lifecycle backed by SQLite.
 
+    Thread-safe: uses ``check_same_thread=False`` and an ``RLock`` so the
+    same instance can be shared across uvicorn worker threads.
+
     Usage::
 
         mgr = SessionManager("/path/to/sessions.db")
@@ -192,13 +196,16 @@ class SessionManager:
     def __init__(self, db_path: str | Path) -> None:
         self._db_path = str(db_path)
         self._conn: sqlite3.Connection | None = None
+        self._lock: threading.RLock = threading.RLock()
         self._ensure_connection()
 
     # -- connection helpers --------------------------------------------------
 
     def _ensure_connection(self) -> sqlite3.Connection:
         if self._conn is None:
-            self._conn = sqlite3.connect(self._db_path)
+            self._conn = sqlite3.connect(
+                self._db_path, check_same_thread=False
+            )
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")
@@ -207,9 +214,10 @@ class SessionManager:
 
     def close(self) -> None:
         """Close the underlying SQLite connection."""
-        if self._conn:
-            self._conn.close()
-            self._conn = None
+        with self._lock:
+            if self._conn:
+                self._conn.close()
+                self._conn = None
 
     # -- session CRUD --------------------------------------------------------
 
@@ -224,33 +232,35 @@ class SessionManager:
         """Create a new session and return its ID."""
         session_id = _generate_session_id(agent_id)
         now = time.time()
-        conn = self._ensure_connection()
-        conn.execute(
-            """INSERT INTO sessions
-               (session_id, agent_id, title, created_at, updated_at, status,
-                model, context_window, extra)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                session_id,
-                agent_id,
-                title,
-                now,
-                now,
-                SessionStatus.ACTIVE.value,
-                model,
-                context_window,
-                json.dumps(extra or {}),
-            ),
-        )
-        conn.commit()
+        with self._lock:
+            conn = self._ensure_connection()
+            conn.execute(
+                """INSERT INTO sessions
+                   (session_id, agent_id, title, created_at, updated_at, status,
+                    model, context_window, extra)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    session_id,
+                    agent_id,
+                    title,
+                    now,
+                    now,
+                    SessionStatus.ACTIVE.value,
+                    model,
+                    context_window,
+                    json.dumps(extra or {}),
+                ),
+            )
+            conn.commit()
         return session_id
 
     def get_session(self, session_id: str) -> SessionMetadata | None:
         """Return metadata for *session_id*, or ``None`` if not found."""
-        conn = self._ensure_connection()
-        row = conn.execute(
-            "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
-        ).fetchone()
+        with self._lock:
+            conn = self._ensure_connection()
+            row = conn.execute(
+                "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
+            ).fetchone()
         if row is None:
             return None
         return SessionMetadata(
@@ -272,18 +282,19 @@ class SessionManager:
         limit: int = 50,
     ) -> list[SessionMetadata]:
         """List sessions with optional filters."""
-        conn = self._ensure_connection()
-        query = "SELECT * FROM sessions WHERE 1=1"
-        params: list[Any] = []
-        if agent_id:
-            query += " AND agent_id = ?"
-            params.append(agent_id)
-        if status:
-            query += " AND status = ?"
-            params.append(status.value)
-        query += " ORDER BY updated_at DESC LIMIT ?"
-        params.append(limit)
-        rows = conn.execute(query, params).fetchall()
+        with self._lock:
+            conn = self._ensure_connection()
+            query = "SELECT * FROM sessions WHERE 1=1"
+            params: list[Any] = []
+            if agent_id:
+                query += " AND agent_id = ?"
+                params.append(agent_id)
+            if status:
+                query += " AND status = ?"
+                params.append(status.value)
+            query += " ORDER BY updated_at DESC LIMIT ?"
+            params.append(limit)
+            rows = conn.execute(query, params).fetchall()
         return [
             SessionMetadata(
                 session_id=r["session_id"],
@@ -310,31 +321,32 @@ class SessionManager:
         extra: dict[str, Any] | None = None,
     ) -> bool:
         """Update session fields. Returns ``True`` if a row was changed."""
-        conn = self._ensure_connection()
-        sets: list[str] = ["updated_at = ?"]
-        params: list[Any] = [time.time()]
-        if title is not None:
-            sets.append("title = ?")
-            params.append(title)
-        if model is not None:
-            sets.append("model = ?")
-            params.append(model)
-        if context_window is not None:
-            sets.append("context_window = ?")
-            params.append(context_window)
-        if status is not None:
-            sets.append("status = ?")
-            params.append(status.value)
-        if extra is not None:
-            sets.append("extra = ?")
-            params.append(json.dumps(extra))
-        params.append(session_id)
-        cur = conn.execute(
-            f"UPDATE sessions SET {', '.join(sets)} WHERE session_id = ?",
-            params,
-        )
-        conn.commit()
-        return cur.rowcount > 0
+        with self._lock:
+            conn = self._ensure_connection()
+            sets: list[str] = ["updated_at = ?"]
+            params: list[Any] = [time.time()]
+            if title is not None:
+                sets.append("title = ?")
+                params.append(title)
+            if model is not None:
+                sets.append("model = ?")
+                params.append(model)
+            if context_window is not None:
+                sets.append("context_window = ?")
+                params.append(context_window)
+            if status is not None:
+                sets.append("status = ?")
+                params.append(status.value)
+            if extra is not None:
+                sets.append("extra = ?")
+                params.append(json.dumps(extra))
+            params.append(session_id)
+            cur = conn.execute(
+                f"UPDATE sessions SET {', '.join(sets)} WHERE session_id = ?",
+                params,
+            )
+            conn.commit()
+            return cur.rowcount > 0
 
     def close_session(self, session_id: str) -> bool:
         """Mark session as closed."""
@@ -342,13 +354,14 @@ class SessionManager:
 
     def delete_session(self, session_id: str) -> bool:
         """Delete session and all its messages."""
-        conn = self._ensure_connection()
-        conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
-        cur = conn.execute(
-            "DELETE FROM sessions WHERE session_id = ?", (session_id,)
-        )
-        conn.commit()
-        return cur.rowcount > 0
+        with self._lock:
+            conn = self._ensure_connection()
+            conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            cur = conn.execute(
+                "DELETE FROM sessions WHERE session_id = ?", (session_id,)
+            )
+            conn.commit()
+            return cur.rowcount > 0
 
     # -- message operations --------------------------------------------------
 
@@ -366,27 +379,28 @@ class SessionManager:
         tokens = estimate_tokens(content)
         if priority is None:
             priority = PRIORITY_WEIGHTS.get(role, 1.0)
-        conn = self._ensure_connection()
-        cur = conn.execute(
-            """INSERT INTO messages
-               (session_id, role, content, timestamp, token_count, priority, metadata)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (
-                session_id,
-                role,
-                content,
-                now,
-                tokens,
-                priority,
-                json.dumps(metadata or {}),
-            ),
-        )
-        conn.execute(
-            "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
-            (now, session_id),
-        )
-        conn.commit()
-        return cur.lastrowid or 0  # type: ignore[return-value]
+        with self._lock:
+            conn = self._ensure_connection()
+            cur = conn.execute(
+                """INSERT INTO messages
+                   (session_id, role, content, timestamp, token_count, priority, metadata)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    session_id,
+                    role,
+                    content,
+                    now,
+                    tokens,
+                    priority,
+                    json.dumps(metadata or {}),
+                ),
+            )
+            conn.execute(
+                "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
+                (now, session_id),
+            )
+            conn.commit()
+            return cur.lastrowid or 0  # type: ignore[return-value]
 
     def get_history(
         self,
@@ -396,13 +410,14 @@ class SessionManager:
         offset: int = 0,
     ) -> list[dict[str, Any]]:
         """Return message dicts in chronological order."""
-        conn = self._ensure_connection()
-        query = "SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC"
-        params: list[Any] = [session_id]
-        if limit is not None:
-            query += " LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
-        rows = conn.execute(query, params).fetchall()
+        with self._lock:
+            conn = self._ensure_connection()
+            query = "SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC"
+            params: list[Any] = [session_id]
+            if limit is not None:
+                query += " LIMIT ? OFFSET ?"
+                params.extend([limit, offset])
+            rows = conn.execute(query, params).fetchall()
         return [
             {
                 "id": r["id"],
@@ -418,25 +433,28 @@ class SessionManager:
 
     def get_history_tokens(self, session_id: str) -> int:
         """Return total token count across all messages in *session_id*."""
-        conn = self._ensure_connection()
-        row = conn.execute(
-            "SELECT COALESCE(SUM(token_count), 0) AS total FROM messages WHERE session_id = ?",
-            (session_id,),
-        ).fetchone()
-        return row["total"]  # type: ignore[return-value]
+        with self._lock:
+            conn = self._ensure_connection()
+            row = conn.execute(
+                "SELECT COALESCE(SUM(token_count), 0) AS total FROM messages WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            return row["total"]  # type: ignore[return-value]
 
     def delete_message(self, message_id: int) -> bool:
         """Delete a single message by its primary key."""
-        conn = self._ensure_connection()
-        cur = conn.execute("DELETE FROM messages WHERE id = ?", (message_id,))
-        conn.commit()
-        return cur.rowcount > 0
+        with self._lock:
+            conn = self._ensure_connection()
+            cur = conn.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+            conn.commit()
+            return cur.rowcount > 0
 
     def clear_history(self, session_id: str) -> None:
         """Remove all messages for a session."""
-        conn = self._ensure_connection()
-        conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
-        conn.commit()
+        with self._lock:
+            conn = self._ensure_connection()
+            conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            conn.commit()
 
     # -- compaction log ------------------------------------------------------
 
@@ -449,27 +467,29 @@ class SessionManager:
         summary: str | None = None,
     ) -> None:
         """Record a compaction event."""
-        conn = self._ensure_connection()
-        conn.execute(
-            """INSERT INTO compaction_log
-               (session_id, timestamp, tokens_before, tokens_after, strategy, summary)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (session_id, time.time(), tokens_before, tokens_after, strategy, summary),
-        )
-        conn.commit()
+        with self._lock:
+            conn = self._ensure_connection()
+            conn.execute(
+                """INSERT INTO compaction_log
+                   (session_id, timestamp, tokens_before, tokens_after, strategy, summary)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (session_id, time.time(), tokens_before, tokens_after, strategy, summary),
+            )
+            conn.commit()
 
     def get_compaction_history(
         self, session_id: str, limit: int = 20
     ) -> list[dict[str, Any]]:
         """Return recent compaction events for *session_id*."""
-        conn = self._ensure_connection()
-        rows = conn.execute(
-            """SELECT * FROM compaction_log
-               WHERE session_id = ?
-               ORDER BY timestamp DESC
-               LIMIT ?""",
-            (session_id, limit),
-        ).fetchall()
+        with self._lock:
+            conn = self._ensure_connection()
+            rows = conn.execute(
+                """SELECT * FROM compaction_log
+                   WHERE session_id = ?
+                   ORDER BY timestamp DESC
+                   LIMIT ?""",
+                (session_id, limit),
+            ).fetchall()
         return [
             {
                 "id": r["id"],
@@ -496,10 +516,9 @@ class CompactionStrategy(str, Enum):
 
 
 class ConversationCompactor:
-    """Smart conversation compaction to fit context windows.
+    """    Smart conversation compaction to fit context windows.
 
-    Ported from OpenClaw's compaction-planning.ts with Python-native
-    implementation.  Supports multiple strategies, priority-based retention,
+    Python-native implementation.  Supports multiple strategies, priority-based retention,
     chunked summarization, and oversized-message fallback.
 
     Usage::
@@ -614,8 +633,6 @@ class ConversationCompactor:
         context_window: int,
     ) -> float:
         """Compute adaptive chunk ratio based on average message size.
-
-        Mirrors OpenClaw's ``computeAdaptiveChunkRatio``.
         """
         if not messages:
             return self.base_chunk_ratio
@@ -825,8 +842,6 @@ class ConversationCompactor:
 class ContextWindowGuard:
     """Monitor token usage against model limits and auto-trigger compaction.
 
-    Ported from OpenClaw's context-window-guard.ts.
-
     Usage::
 
         guard = ContextWindowGuard(context_window=128_000)
@@ -867,8 +882,6 @@ class ContextWindowGuard:
         default_tokens: int = DEFAULT_CONTEXT_WINDOW,
     ) -> ContextWindowInfo:
         """Resolve effective context window from layered config values.
-
-        Mirrors OpenClaw's ``resolveContextWindowInfo``.
         """
         base = config_context_tokens or model_context_tokens or default_tokens
         source = "default"
@@ -948,8 +961,6 @@ class ContextWindowGuard:
 
 class PromptComposer:
     """Compose system prompts from identity, memory, context, and tools.
-
-    Ported from OpenClaw's system-prompt.ts / prompt-composition.ts patterns.
 
     Usage::
 

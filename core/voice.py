@@ -1,7 +1,7 @@
 """
 Voice/TTS module for HelloChusquis.
 
-Ports OpenClaw's TTS architecture to Python:
+Implements TTS architecture for HelloChusquis:
 - Multiple TTS providers with auto-detection
 - Voice model catalog and selection
 - Text normalization and directive parsing
@@ -866,7 +866,7 @@ def select_best_provider(
 
 
 # ---------------------------------------------------------------------------
-# Text normalization (ported from OpenClaw speech-text.ts)
+# Text normalization
 # ---------------------------------------------------------------------------
 
 _CODE_HEAVY_THRESHOLD = 0.5
@@ -962,7 +962,7 @@ def normalize_speech_text(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# VoiceDirective parser (ported from OpenClaw directives.ts)
+# VoiceDirective parser
 # ---------------------------------------------------------------------------
 
 
