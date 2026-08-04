@@ -1423,3 +1423,48 @@
 </script>
 </body>
 </html>
+
+                git clone https://github.com/aminoy77/HelloChusquis.git && cd HelloChusquis && pip install -e .
+                <button class="copy-btn" onclick="copy(this, 'git clone https://github.com/aminoy77/HelloChusquis.git && cd HelloChusquis && pip install -e .')" aria-label="Copy git clone command">copy</button>
+            </div>
+            <p class="install-note">For contributors. Editable install.</p>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer>
+    <div class="footer-logo">
+        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
+        HelloChusquis
+    </div>
+    <ul class="footer-links">
+        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://pypi.org/project/hellochusquis" target="_blank" rel="noopener">PyPI</a></li>
+        <li><a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribute</a></li>
+    </ul>
+    <p class="footer-copy">MIT License</p>
+</footer>
+
+<script>
+    function copy(btn, text) {
+        navigator.clipboard.writeText(text).then(function() {
+            var original = btn.textContent;
+            btn.textContent = 'copied!';
+            btn.style.color = 'var(--green)';
+            setTimeout(function() { btn.textContent = original; btn.style.color = ''; }, 2000);
+        });
+    }
+
+    // Terminal typing animation
+    (function() {
+        var lines = document.querySelectorAll('.t-anim');
+        lines.forEach(function(line) {
+            var delay = parseInt(line.getAttribute('data-delay')) || 0;
+            setTimeout(function() { line.classList.add('show'); }, delay);
+        });
+    })();
+</script>
+</body>
+</html>
