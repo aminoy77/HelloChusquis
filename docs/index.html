@@ -53,6 +53,17 @@
             overflow-x: hidden;
         }
 
+        /* Noir texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.4;
+        }
+
         /* Skip to content */
         .skip-link {
             position: absolute;
@@ -174,6 +185,12 @@
             letter-spacing: 0.05em;
             color: var(--text-muted);
             margin-bottom: 32px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .hero-badge:hover {
+            border-color: var(--amber);
+            box-shadow: 0 0 24px var(--amber-glow);
         }
 
         .hero-badge::before {
@@ -198,9 +215,10 @@
             letter-spacing: -0.03em;
             margin-bottom: 24px;
             max-width: 680px;
+            text-shadow: 0 0 80px rgba(245, 166, 35, 0.06);
         }
 
-        .hero-title span { color: var(--amber); text-shadow: 0 0 40px rgba(245, 166, 35, 0.15); }
+        .hero-title span { color: var(--amber); text-shadow: 0 0 40px rgba(245, 166, 35, 0.2); }
 
         .hero-desc {
             font-size: 1.05rem;
@@ -234,6 +252,18 @@
             padding: 12px 16px;
             background: var(--surface2);
             border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .terminal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--amber), transparent);
+            opacity: 0.3;
         }
 
         .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -254,6 +284,22 @@
             font-size: 0.8rem;
             line-height: 2;
             min-height: 280px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .terminal-body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(245, 166, 35, 0.015) 2px,
+                rgba(245, 166, 35, 0.015) 4px
+            );
+            pointer-events: none;
         }
 
         .t-line { display: flex; gap: 10px; }
@@ -353,18 +399,41 @@
 
         /* SECTIONS */
         section {
-            padding: 96px 48px;
+            padding: 112px 48px;
             max-width: 1100px;
             margin: 0 auto;
+            position: relative;
+        }
+
+        /* Section dividers — faint horizontal line between sections */
+        section + section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
         }
 
         .section-label {
             font-family: var(--mono);
-            font-size: 0.7rem;
-            letter-spacing: 0.15em;
+            font-size: 0.75rem;
+            letter-spacing: 0.18em;
             text-transform: uppercase;
             color: var(--amber);
             margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-label::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background: var(--amber);
         }
 
         .section-title {
@@ -465,10 +534,14 @@
         .feature-card {
             background: var(--surface);
             padding: 32px 28px;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
         }
 
-        .feature-card:hover { background: var(--surface2); }
+        .feature-card:hover {
+            background: var(--surface2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 24px rgba(245, 166, 35, 0.04);
+        }
 
         .feature-header {
             display: flex;
@@ -945,9 +1018,8 @@
     <h1 class="hero-title">An AI agent that <span>runs from your terminal</span></h1>
 
     <p class="hero-desc">
-        One command to install. 35+ AI providers with automatic failover.
-        130+ tools. Browser automation. Persistent memory.
-        No cloud account needed. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
+        Deploy, debug, and automate from your terminal — without switching tabs between AI, docs, and your code.
+        35+ providers. 130+ tools. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
     </p>
 
     <div class="demo-wrapper">
@@ -1005,7 +1077,7 @@
 <!-- HOW IT WORKS -->
 <section id="how">
     <p class="section-label">How It Works</p>
-    <h2 class="section-title">Three steps. No setup wizard.</h2>
+    <h2 class="section-title">Install and start in three steps.</h2>
     <p class="section-desc">Install it, configure one API key, and start asking questions.</p>
 
     <div class="how-grid">
@@ -1131,31 +1203,31 @@
 <!-- FEATURES -->
 <section id="features">
     <p class="section-label">Features</p>
-    <h2 class="section-title">What it actually does.</h2>
-    <p class="section-desc">No vaporware. Every feature ships working. Here's what you can do today.</p>
+    <h2 class="section-title">Features that ship real workflows.</h2>
+    <p class="section-desc">Real features, real workflows. Not a feature list — a productivity upgrade.</p>
 
     <h3 class="sub-heading">Never lose a provider again</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🔄</div>
+                <div class="feature-icon" aria-hidden="true">🔄</div>
                 <div class="feature-title">Multi-provider fallback</div>
             </div>
-            <div class="feature-desc">Configure Groq, OpenRouter, Ollama, OpenAI, and more. If one fails, the next picks up. Your workflow never stops.</div>
+            <div class="feature-desc">Groq goes down? OpenAI hits limits? The agent switches providers automatically — your workflow never stops.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🧠</div>
+                <div class="feature-icon" aria-hidden="true">🧠</div>
                 <div class="feature-title">Persistent memory</div>
             </div>
-            <div class="feature-desc">Remembers past sessions and learns from your feedback. Tell it once, it remembers forever.</div>
+            <div class="feature-desc">Tell it once, it remembers forever. Learns from 👍/👎 feedback and gets better every session.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">📋</div>
+                <div class="feature-icon" aria-hidden="true">📋</div>
                 <div class="feature-title">Task planner</div>
             </div>
-            <div class="feature-desc">Complex tasks broken into steps. You review the plan, then the agent executes — no surprises.</div>
+            <div class="feature-desc">Complex tasks broken into steps. You approve each one before it runs — no surprises, no fires to put out.</div>
         </div>
     </div>
 
@@ -1163,17 +1235,17 @@
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🌐</div>
+                <div class="feature-icon" aria-hidden="true">🌐</div>
                 <div class="feature-title">Web interface</div>
             </div>
-            <div class="feature-desc">Chat from your browser at localhost:8000. Voice input/output, themes, chat export, provider status.</div>
+            <div class="feature-desc">Full chat experience in your browser — voice input/output, themes, export, provider status at a glance.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">📡</div>
+                <div class="feature-icon" aria-hidden="true">📡</div>
                 <div class="feature-title">REST API with streaming</div>
             </div>
-            <div class="feature-desc">Expose your agent over HTTP. SSE streaming for real-time responses. Rate limiting included.</div>
+            <div class="feature-desc">Expose your agent as an HTTP service. Real-time SSE streaming. Rate limiting and health checks built in.</div>
         </div>
     </div>
 
@@ -1181,31 +1253,31 @@
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🔍</div>
+                <div class="feature-icon" aria-hidden="true">🔍</div>
                 <div class="feature-title">Browser automation</div>
             </div>
-            <div class="feature-desc">Open URLs, click buttons, fill forms, take screenshots. Real Playwright with anti-detection stealth.</div>
+            <div class="feature-desc">Real Playwright with anti-detection stealth. Open URLs, click, type, screenshot — all from chat.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🔒</div>
+                <div class="feature-icon" aria-hidden="true">🔒</div>
                 <div class="feature-title">Workspace permissions</div>
             </div>
-            <div class="feature-desc">Only accesses directories you allow. Runtime prompts for new paths. Nothing runs without your say-so.</div>
+            <div class="feature-desc">Only touches directories you allow. New paths require your explicit approval at runtime.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🧩</div>
+                <div class="feature-icon" aria-hidden="true">🧩</div>
                 <div class="feature-title">Plugin system</div>
             </div>
-            <div class="feature-desc">Community plugins or build your own. The agent can even build integrations on demand.</div>
+            <div class="feature-desc">Drop-in community plugins or build your own. The agent can even create integrations on demand.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🛡️</div>
+                <div class="feature-icon" aria-hidden="true">🛡️</div>
                 <div class="feature-title">Security checks</div>
             </div>
-            <div class="feature-desc">AI-powered safety evaluator blocks dangerous commands before they run. Configurable strictness levels.</div>
+            <div class="feature-desc">AI-powered safety blocks dangerous commands before they run. Set strictness to match your comfort level.</div>
         </div>
     </div>
 
@@ -1239,7 +1311,7 @@
 <!-- DEMO -->
 <section id="demo">
     <p class="section-label">Demo</p>
-    <h2 class="section-title">See it in action.</h2>
+    <h2 class="section-title">A real deployment, start to finish.</h2>
     <p class="section-desc">Real terminal output. No cherry-picking.</p>
 
     <div class="code-example">
@@ -1285,7 +1357,7 @@
 
 <section id="providers">
     <p class="section-label">AI Providers</p>
-    <h2 class="section-title">35+ providers. Automatic failover.</h2>
+    <h2 class="section-title">Pick any provider. Switch anytime.</h2>
     <p class="section-desc">Add as many as you want. The agent switches when one hits rate limits or goes down.</p>
 
     <div class="providers-grid">
@@ -1315,7 +1387,7 @@
 <!-- FAQ -->
 <section id="faq">
     <p class="section-label">FAQ</p>
-    <h2 class="section-title">Common questions.</h2>
+    <h2 class="section-title">Everything you asked, answered.</h2>
 
     <div class="faq-grid">
         <div class="faq-item">
@@ -1342,7 +1414,7 @@
 <!-- INSTALL -->
 <section id="install">
     <p class="section-label">Get Started</p>
-    <h2 class="section-title">Install in one command.</h2>
+    <h2 class="section-title">One command to get started.</h2>
     <p class="section-desc">Pick the method that works for you.</p>
 
     <div class="install-methods">
@@ -1419,51 +1491,6 @@
             setTimeout(runDemo, maxDelay + 3000);
         }
         runDemo();
-    })();
-</script>
-</body>
-</html>
-
-                git clone https://github.com/aminoy77/HelloChusquis.git && cd HelloChusquis && pip install -e .
-                <button class="copy-btn" onclick="copy(this, 'git clone https://github.com/aminoy77/HelloChusquis.git && cd HelloChusquis && pip install -e .')" aria-label="Copy git clone command">copy</button>
-            </div>
-            <p class="install-note">For contributors. Editable install.</p>
-        </div>
-    </div>
-</section>
-
-</main>
-
-<footer>
-    <div class="footer-logo">
-        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
-        HelloChusquis
-    </div>
-    <ul class="footer-links">
-        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="https://pypi.org/project/hellochusquis" target="_blank" rel="noopener">PyPI</a></li>
-        <li><a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribute</a></li>
-    </ul>
-    <p class="footer-copy">MIT License</p>
-</footer>
-
-<script>
-    function copy(btn, text) {
-        navigator.clipboard.writeText(text).then(function() {
-            var original = btn.textContent;
-            btn.textContent = 'copied!';
-            btn.style.color = 'var(--green)';
-            setTimeout(function() { btn.textContent = original; btn.style.color = ''; }, 2000);
-        });
-    }
-
-    // Terminal typing animation
-    (function() {
-        var lines = document.querySelectorAll('.t-anim');
-        lines.forEach(function(line) {
-            var delay = parseInt(line.getAttribute('data-delay')) || 0;
-            setTimeout(function() { line.classList.add('show'); }, delay);
-        });
     })();
 </script>
 </body>
