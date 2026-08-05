@@ -1,49 +1,55 @@
 from __future__ import annotations
 
+import os
 import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+
+PLUGIN_NAME = "raycast"
+PLUGIN_DESCRIPTION = "Raycast - app shortcuts and extensions"
 
 
-class RaycastTool(Tool):
-    name = "raycast"
-    description = "Raycast - app shortcuts and extensions"
+def run(action: str, **kwargs) -> str:
+    token = os.getenv("RAYCAST_TOKEN")
+    if not token:
+        return "Error: No Raycast token found. Set RAYCAST_TOKEN environment variable."
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="Raycast token not configured")
+    base_url = "https://api.raycast.com/v1"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-        base_url = "https://api.raycast.com/v1"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    try:
+        if action == "list_extensions":
+            r = httpx.get(f"{base_url}/extensions", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("extensions", data))
 
-        try:
-            if action == "list_extensions":
-                r = httpx.get(f"{base_url}/extensions", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("extensions", []))
+        elif action == "launch_extension":
+            id = kwargs.get("id")
+            if not id:
+                return "Error: Extension ID required for launch_extension"
+            r = httpx.post(f"{base_url}/extensions/{id}/launch", headers=headers, timeout=30)
+            return _fmt(r)
 
-            elif action == "launch_extension":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Extension ID required")
-                r = httpx.post(f"{base_url}/extensions/{id}/launch", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        elif action == "list_shortcuts":
+            r = httpx.get(f"{base_url}/shortcuts", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("items", data))
 
-            elif action == "list_shortcuts":
-                r = httpx.get(f"{base_url}/shortcuts", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("items", []))
+        elif action == "run_shortcut":
+            id = kwargs.get("id")
+            if not id:
+                return "Error: Shortcut ID required for run_shortcut"
+            r = httpx.post(f"{base_url}/shortcuts/{id}/run", headers=headers, json=kwargs.get("params", {}), timeout=30)
+            return _fmt(r)
 
-            elif action == "run_shortcut":
-                id = kwargs.get("id")
-                params = kwargs.get("params", {})
-                if not id:
-                    return ToolResult(success=False, error="Shortcut ID required")
-                r = httpx.post(f"{base_url}/shortcuts/{id}/run", headers=headers, json=params, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        else:
+            return f"Error: Unknown action '{action}'. Available: list_extensions, launch_extension, list_shortcuts, run_shortcut"
+    except httpx.TimeoutException:
+        return "Error: Request timed out after 30 seconds."
+    except Exception as e:
+        return f"Error: {e}"
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+def _fmt(r: httpx.Response) -> str:
+    try:
+        return str(r.json())
+    except Exception:
+        return r.text[:500]

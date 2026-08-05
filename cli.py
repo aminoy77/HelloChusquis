@@ -3,11 +3,22 @@
 import sys
 import os
 import argparse
+import socket
 
 # Add project to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 KNOWN_COMMANDS = {"web", "api", "config", "setup", "doctor", "version", "help"}
+
+
+def pick_free_port(host="127.0.0.1"):
+    """Ask the OS for a free ephemeral port."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind((host, 0))
+        return s.getsockname()[1]
+    finally:
+        s.close()
 
 
 def _print_help():
@@ -131,7 +142,18 @@ def main():
     if args.command == "web":
         from web.server import start
         host = args.host or "127.0.0.1"
-        port = args.port or 8000
+        port = args.port or 7272
+
+        if port == 7272:
+            # Default port: use 7272 if free, else pick a random free port.
+            probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                probe.bind((host, 7272))
+                probe.close()
+            except OSError:
+                port = pick_free_port(host)
+                print(f"Port 7272 unavailable; using random port {port}")
+
         print(f"Starting HelloChusquis web interface on http://{host}:{port}")
         start(host=host, port=port)
         return

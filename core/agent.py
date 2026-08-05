@@ -1338,9 +1338,17 @@ class Agent:
             try:
                 module = self._external_tool_modules[name]
                 result = module.run(**args)
-                return ToolResult(success=True, output=str(result))
+                if isinstance(result, ToolResult):
+                    # Some modules return ToolResult directly — respect its flags
+                    return result
+                text = str(result)
+                # Treat "Error: ..." prefixed strings as failures so the LLM
+                # sees accurate success flags instead of a success-wrapped error
+                if isinstance(result, str) and result.lower().startswith("error"):
+                    return ToolResult(success=False, output="", error=text)
+                return ToolResult(success=True, output=text)
             except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
+                return ToolResult(success=False, output="", error=f"{name} tool error: {e}")
 
         for plugin in self.plugins:
             if plugin["name"] == name:
