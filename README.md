@@ -1,22 +1,22 @@
-# HelloChusquis v1.4.3
+# HelloChusquis v5.0
 
 **HelloChusquis** is an AI terminal agent with a full-screen TUI, web search, file management, code execution, and multiple AI integrations. 
 
 ![HelloChusquis Demo](demo.gif)
 
-## What's New in v1.4.3
+## What's New in v5.0
 
-- **Browser Automation v2** — Complete rewrite. Anti-detection stealth mode, 30+ actions as native LLM tool, auto-recovery on crash, health checks, human-like mouse async movements
-- **Rate Limiting** — API endpoints protected with per-IP rate limits (30 req/min)
-- **SSE Streaming** — Real-time streaming responses via Server-Sent Events
-- **Smart History Compression** — Intelligent token-based context management (100 entries, auto-compress)
-- **Structured Logging** — JSON logs with rotation to `~/.hellochusquis/logs/`
-- **Health Endpoints** — `/health`, `/health/ready`, `/health/live` for monitoring
-- **Web UI Auth** — Optional token-based authentication via `HELLOCHUSQUIS_API_KEY` env var
-- **CLI --port/--host** — `hellochusquis api --port 9000 --host 127.0.0.1`
-- **Graceful Shutdown** — SIGTERM/SIGHUP handlers save session before exit
-- **64 Unit Tests** — Coverage for history, cache, rate limiter, functions, DB memory
-- **Bug Fixes** — Session persistence (json.dumps), config path, Ollama detection, missing dependencies
+- **54-Provider Catalog** — Expanded from 35 to 54 AI providers across 9 categories (Major, European, Chinese, AI Platforms, Open Source, Local, Enterprise, Specialized, Custom)
+- **20 New Providers** — Cerebras, NVIDIA NIM, DeepInfra, SiliconFlow, Volcengine, Baidu Qianfan, Tencent Hunyuan, StepFun, Jina AI, FriendliAI, LM Studio, vLLM, Jan, AI21, TextCortex, Baseten, Modal, TextGen WebUI, LocalAI, AnythingLLM
+- **Provider/Model Selection UI** — Full catalog browsing with grouped categories, paginated model lists, number or text search
+- **Unified Setup Flow** — `run_quick_setup` and `run_setup` now use the full 54-provider catalog with model lists
+- **SSE Streaming** — `/clear` and `/status` now return Server-Sent Events; `/chat/stream` for real-time responses
+- **20+ New Tool Integrations** — GitHub, Discord, Stripe, Shopify, Notion, Twilio, HubSpot, Intercom, Mailchimp, MongoDB, PagerDuty, Datadog, ClickUp, Resend, Sanity, Vercel, and more
+- **Security Hardening Round 2** — Block renamed fork bombs, 2-stage RCE patterns, `python -c` with dangerous imports, disk destruction commands, and more
+- **Performance Improvements** — Flat write path for db_memory, vocab cache reuse, no per-query vocabulary rebuild
+- **TUI Interface** — New `ui/tui.py` with 481 lines of rich terminal UI
+- **Web UI Restructured** — Sidebar with Providers, Memory, Learnings panels; model dropdown population fix
+- **Auth Opt-in** — `HELLOCHUSQUIS_AUTH` env var for optional authentication (disabled by default for local use)
 
 ## Quick Start
 

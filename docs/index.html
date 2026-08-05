@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you a full-screen TUI with chat, code execution, web search, and 130+ integrations — all from one terminal command.">
+    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you a full-screen TUI with chat, code execution, web search, and 150+ integrations — all from one terminal command.">
     <meta property="og:title" content="HelloChusquis — Terminal AI Agent">
-    <meta property="og:description" content="Spin up an AI agent with one pip install. 35+ providers, auto-fallback, 130+ tools.">
+    <meta property="og:description" content="Spin up an AI agent with one pip install. 54 providers, auto-fallback, 150+ tools.">
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg">
@@ -14,7 +14,7 @@
     <meta property="og:image:alt" content="HelloChusquis - Open source terminal AI agent">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="HelloChusquis — Terminal AI Agent">
-    <meta name="twitter:description" content="One pip install. 35+ providers. 130+ tools. Auto-fallback.">
+    <meta name="twitter:description" content="One pip install. 54 providers. 150+ tools. Auto-fallback.">
     <link rel="canonical" href="https://aminoy77.github.io/HelloChusquis/">
     <link rel="icon" type="image/png" href="hc.png">
     <title>HelloChusquis — Terminal AI Agent</title>
@@ -1124,13 +1124,13 @@
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "HelloChusquis",
-      "description": "Open source terminal AI agent with 35+ providers, auto-fallback, 130+ integrations, and browser automation.",
+      "description": "Open source terminal AI agent with 54 AI providers, auto-fallback, 150+ integrations, SSE streaming, and browser automation.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Linux, Windows",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "url": "https://aminoy77.github.io/HelloChusquis/",
       "downloadUrl": "https://pypi.org/project/hellochusquis/",
-      "softwareVersion": "1.4.3",
+      "softwareVersion": "5.0",
       "license": "https://opensource.org/licenses/MIT"
     }
     </script>
@@ -1144,7 +1144,7 @@
           "name": "What is HelloChusquis?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 35+ AI providers, 130+ tool integrations, browser automation, and persistent memory — all from one pip install."
+            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 54 AI providers, 150+ tool integrations, browser automation, SSE streaming, and persistent memory — all from one pip install."
           }
         },
         {
@@ -1160,7 +1160,7 @@
           "name": "What AI providers does HelloChusquis support?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "35+ providers including OpenRouter, Groq, Ollama (local), OpenAI, Anthropic, Google Gemini, xAI, Perplexity, Mistral, DeepSeek, Cohere, Together AI, Azure OpenAI, AWS Bedrock, and more. Automatic failover when a provider goes down."
+            "text": "54 providers across 9 categories including OpenRouter, Groq, Ollama (local), OpenAI, Anthropic, Google Gemini, xAI, Perplexity, Mistral, DeepSeek, Cohere, Together AI, Azure OpenAI, AWS Bedrock, Cerebras, NVIDIA NIM, DeepInfra, SiliconFlow, and more. Automatic failover when a provider goes down."
           }
         },
         {
@@ -1200,13 +1200,13 @@
 
 <!-- HERO -->
 <div class="hero">
-    <div class="hero-badge">v1.4.3 — Open Source — MIT License</div>
+    <div class="hero-badge">v5.0 — Open Source — MIT License</div>
 
     <h1 class="hero-title">An AI agent that <span>runs from your terminal</span></h1>
 
     <p class="hero-desc">
         Deploy, debug, and automate from your terminal — without switching tabs between AI, docs, and your code.
-        Full-screen TUI. 35+ providers. 130+ tools. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
+        Full-screen TUI. 54 providers. 150+ tools. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
     </p>
 
     <div class="demo-wrapper">
@@ -1326,8 +1326,8 @@
 
 <!-- STATS -->
 <div class="stats-bar">
-    <div class="stat"><span class="stat-value">35+</span><span class="stat-label">AI Providers</span></div>
-    <div class="stat"><span class="stat-value">130+</span><span class="stat-label">Integrations</span></div>
+    <div class="stat"><span class="stat-value">54</span><span class="stat-label">AI Providers</span></div>
+    <div class="stat"><span class="stat-value">150+</span><span class="stat-label">Integrations</span></div>
     <div class="stat"><span class="stat-value">100%</span><span class="stat-label">Open Source</span></div>
     <div class="stat"><span class="stat-value">0</span><span class="stat-label">Cloud Accounts</span></div>
 </div>
@@ -1627,10 +1627,17 @@
         <span class="tool-tag">postgresql</span>
         <span class="tool-tag">stripe</span>
         <span class="tool-tag">twilio</span>
-        <span class="tool-tag">spotify</span>
+        <span class="tool-tag">shopify</span>
+        <span class="tool-tag">hubspot</span>
+        <span class="tool-tag">intercom</span>
+        <span class="tool-tag">mailchimp</span>
+        <span class="tool-tag">mongodb</span>
+        <span class="tool-tag">pagerduty</span>
+        <span class="tool-tag">discord</span>
+        <span class="tool-tag">datadog</span>
+        <span class="tool-tag">clickup</span>
         <span class="tool-tag">vercel</span>
         <span class="tool-tag">supabase</span>
-        <span class="tool-tag">cloudinary</span>
         <span class="tool-tag">+ 130 more</span>
     </div>
 </section>
@@ -1677,6 +1684,7 @@
     <h2 class="section-title">Never get stuck when a provider goes down.</h2>
     <p class="section-desc">Add as many as you want. The agent switches when one hits rate limits or goes down.</p>
 
+    <h3 class="sub-heading">Major & Platform Providers</h3>
     <div class="providers-grid">
         <div class="provider-card"><div class="provider-dot"></div>OpenRouter</div>
         <div class="provider-card"><div class="provider-dot"></div>Groq</div>
@@ -1691,13 +1699,49 @@
         <div class="provider-card"><div class="provider-dot"></div>Cohere</div>
         <div class="provider-card"><div class="provider-dot"></div>Together AI</div>
         <div class="provider-card"><div class="provider-dot"></div>Fireworks AI</div>
-        <div class="provider-card"><div class="provider-dot"></div>Qwen / Alibaba</div>
+        <div class="provider-card"><div class="provider-dot"></div>Replicate</div>
+        <div class="provider-card"><div class="provider-dot"></div>IBM watsonx.ai</div>
+        <div class="provider-card"><div class="provider-dot"></div>HuggingFace</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Enterprise & Cloud</h3>
+    <div class="providers-grid">
         <div class="provider-card"><div class="provider-dot"></div>Azure OpenAI</div>
         <div class="provider-card"><div class="provider-dot"></div>AWS Bedrock</div>
         <div class="provider-card"><div class="provider-dot"></div>Vertex AI</div>
-        <div class="provider-card"><div class="provider-dot"></div>HuggingFace</div>
-        <div class="provider-card"><div class="provider-dot"></div>Replicate</div>
-        <div class="provider-card"><div class="provider-dot"></div>IBM watsonx.ai</div>
+        <div class="provider-card"><div class="provider-dot"></div>Cerebras</div>
+        <div class="provider-card"><div class="provider-dot"></div>NVIDIA NIM</div>
+        <div class="provider-card"><div class="provider-dot"></div>DeepInfra</div>
+        <div class="provider-card"><div class="provider-dot"></div>Baseten</div>
+        <div class="provider-card"><div class="provider-dot"></div>Modal</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Chinese & Asian Providers</h3>
+    <div class="providers-grid">
+        <div class="provider-card"><div class="provider-dot"></div>Qwen / Alibaba</div>
+        <div class="provider-card"><div class="provider-dot"></div>SiliconFlow</div>
+        <div class="provider-card"><div class="provider-dot"></div>Volcengine</div>
+        <div class="provider-card"><div class="provider-dot"></div>Baidu Qianfan</div>
+        <div class="provider-card"><div class="provider-dot"></div>Tencent Hunyuan</div>
+        <div class="provider-card"><div class="provider-dot"></div>StepFun</div>
+        <div class="provider-card"><div class="provider-dot"></div>Jina AI</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Open Source & Local</h3>
+    <div class="providers-grid">
+        <div class="provider-card"><div class="provider-dot"></div>LM Studio</div>
+        <div class="provider-card"><div class="provider-dot"></div>vLLM</div>
+        <div class="provider-card"><div class="provider-dot"></div>Jan</div>
+        <div class="provider-card"><div class="provider-dot"></div>LocalAI</div>
+        <div class="provider-card"><div class="provider-dot"></div>TextGen WebUI</div>
+        <div class="provider-card"><div class="provider-dot"></div>AnythingLLM</div>
+        <div class="provider-card"><div class="provider-dot"></div>FriendliAI</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Specialized</h3>
+    <div class="providers-grid">
+        <div class="provider-card"><div class="provider-dot"></div>AI21</div>
+        <div class="provider-card"><div class="provider-dot"></div>TextCortex</div>
     </div>
 </section>
 
@@ -1711,7 +1755,7 @@
     <div class="faq-grid">
         <div class="faq-item">
             <div class="faq-q">What is HelloChusquis?</div>
-            <div class="faq-a">An open source terminal AI agent. One pip install, 35+ providers, 130+ tools, browser automation, persistent memory. Runs locally on your machine.</div>
+            <div class="faq-a">An open source terminal AI agent. One pip install, 54 providers, 150+ tools, browser automation, SSE streaming, persistent memory. Runs locally on your machine.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">How much does it cost?</div>
@@ -1723,7 +1767,7 @@
         </div>
         <div class="faq-item">
             <div class="faq-q">What can it actually do?</div>
-            <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 130+ APIs.</div>
+            <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 150+ APIs.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">How does it compare to browser-based AI tools?</div>
