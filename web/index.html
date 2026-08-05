@@ -1496,7 +1496,7 @@
                     const o = document.createElement('option');
                     o.value = m;
                     o.textContent = m;
-                    modelSelect.appendChild(m);
+                    modelSelect.appendChild(o);
                 });
                 const saved = storage.get('hc_model');
                 if (saved && [...modelSelect.options].some((o) => o.value === saved)) modelSelect.value = saved;
@@ -1757,13 +1757,15 @@
                 }
             }
         } catch (e) {
-            if (e && e.name === 'AbortError') wasCancelled = true;
-            if (thinking) thinking.remove();
-            if (assistant) {
-                // keep what we got
+            if (e && e.name === 'AbortError') {
+                wasCancelled = true;
+                if (thinking) thinking.remove();
             } else {
-                assistant = ensureAssistant();
-                assistant.querySelector('.message-bubble').innerHTML = '<p><em>' + esc((e && e.message) || 'Request failed') + '</em></p>';
+                if (thinking) thinking.remove();
+                if (!assistant) {
+                    assistant = ensureAssistant();
+                    assistant.querySelector('.message-bubble').innerHTML = '<p><em>' + esc((e && e.message) || 'Request failed') + '</em></p>';
+                }
             }
         } finally {
             if (thinking) thinking.remove();

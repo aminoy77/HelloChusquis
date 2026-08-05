@@ -20,7 +20,7 @@
     <title>HelloChusquis — Terminal AI Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -41,6 +41,7 @@
             --red: #e85d5d;
             --mono: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
             --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --display: 'Space Grotesk', var(--sans);
         }
 
         html { scroll-behavior: smooth; }
@@ -84,6 +85,7 @@
         :focus-visible {
             outline: 2px solid var(--amber);
             outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.15);
         }
 
         /* NAV */
@@ -209,6 +211,7 @@
         }
 
         .hero-title {
+            font-family: var(--display);
             font-size: clamp(2.5rem, 5.5vw, 4.5rem);
             font-weight: 700;
             line-height: 1.1;
@@ -271,6 +274,12 @@
         .terminal-dot:nth-child(2) { background: #febc2e; }
         .terminal-dot:nth-child(3) { background: #28c840; }
 
+        /* Generic dot class for terminal headers */
+        .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .dot.red { background: #ff5f57; }
+        .dot.yellow { background: #febc2e; }
+        .dot.green { background: #28c840; }
+
         .terminal-title {
             font-family: var(--mono);
             font-size: 0.7rem;
@@ -307,6 +316,9 @@
         .t-cmd { color: var(--text); }
         .t-output { color: var(--green); padding-left: 20px; }
         .t-tool { color: var(--blue); padding-left: 20px; font-size: 0.75rem; }
+                .t-green { color: var(--green); }
+        .t-amber { color: var(--amber); }
+        .t-dim { color: var(--text-muted); }
         .t-cursor {
             display: inline-block;
             width: 8px;
@@ -437,6 +449,7 @@
         }
 
         .section-title {
+            font-family: var(--display);
             font-size: clamp(1.8rem, 3.5vw, 2.5rem);
             font-weight: 700;
             line-height: 1.15;
@@ -1170,7 +1183,7 @@
 <!-- HOW IT WORKS -->
 <section id="how">
     <p class="section-label">How It Works</p>
-    <h2 class="section-title">Install and start in three steps.</h2>
+    <h2 class="section-title">From pip install to working agent in 60 seconds.</h2>
     <p class="section-desc">Install it, configure one API key, and start asking questions.</p>
 
     <div class="how-grid">
@@ -1207,7 +1220,7 @@
 <!-- COMMANDS -->
 <section id="commands">
     <p class="section-label">Commands Reference</p>
-    <h2 class="section-title">Every command at your fingertips.</h2>
+    <h2 class="section-title">130+ tools. Zero browser tabs. All terminal.</h2>
     <p class="section-desc">From install to advanced workflows — here's how to get things done fast.</p>
 
     <div class="commands-grid">
@@ -1312,7 +1325,7 @@
         </blockquote>
 
         <blockquote class="testimonial">
-            <p class="testimonial-quote">The browser tool actually works on sites with anti-bot. I tested it on Cloudflare-protected pages where my Selenium scripts died. This just handled it.</p>
+            <p class="testimonial-quote">The browser tool actually works on sites with anti-bot protection. Where my other browser scripts died on protected pages, this just handled it.</p>
             <div class="testimonial-meta">
                 <div class="testimonial-avatar" aria-hidden="true">J</div>
                 <div>
@@ -1323,7 +1336,7 @@
         </blockquote>
 
         <blockquote class="testimonial">
-            <p class="testimonial-quote">I run Ollama locally for most things and Ollama + HelloChusquis beats paying for ChatGPT Plus. No code leaves my machine, ever.</p>
+            <p class="testimonial-quote">I run Ollama locally for most things and Ollama + HelloChusquis beats paying for a monthly AI subscription. No code leaves my machine, ever.</p>
             <div class="testimonial-meta">
                 <div class="testimonial-avatar" aria-hidden="true">A</div>
                 <div>
@@ -1345,7 +1358,7 @@
     <div class="why-grid">
         <div class="why-item">
             <div class="why-item-title">// No context switch</div>
-            <div class="why-item-desc">Your AI lives where you work. No alt-tabbing between ChatGPT and your editor. Your hands never leave the keyboard.</div>
+            <div class="why-item-desc">Your AI lives where you work. No alt-tabbing between a browser chat and your editor. Your hands never leave the keyboard.</div>
         </div>
         <div class="why-item">
             <div class="why-item-title">// Runs on your machine</div>
@@ -1367,7 +1380,7 @@
 <!-- FEATURES -->
 <section id="features">
     <p class="section-label">Features</p>
-    <h2 class="section-title">Features that ship real workflows.</h2>
+    <h2 class="section-title">The open source terminal AI agent for people who hate GUIs.</h2>
     <p class="section-desc">Real features, real workflows. Not a feature list — a productivity upgrade.</p>
 
     <h3 class="sub-heading">Never lose a provider again</h3>
@@ -1475,7 +1488,7 @@
 <!-- DEMO -->
 <section id="demo">
     <p class="section-label">Demo</p>
-    <h2 class="section-title">A real deployment, start to finish.</h2>
+    <h2 class="section-title">How devs actually ship with HelloChusquis.</h2>
     <p class="section-desc">Real terminal output. No cherry-picking.</p>
 
     <div class="code-example">
@@ -1503,25 +1516,13 @@
         </div>
     </div>
 
-    <div class="why-box" style="margin-top:40px">
-        <h3>Real use case: Deploying a side project</h3>
-        <p>
-            You built a Flask API. It works locally. Now you need to deploy it. Instead of copy-pasting between ChatGPT, your terminal, and AWS docs, you just say:
-        </p>
-        <div class="code-block" style="margin:16px 0; position:relative;">
-            <span style="color:var(--amber)">You:</span> <span style="color:var(--text)">deploy my Flask API to AWS EC2 with a PostgreSQL database and set up daily backups</span>
-        </div>
-        <p>
-            The agent builds the Docker image, provisions the EC2 instance, sets up PostgreSQL, configures security groups, writes a backup script, and schedules it with cron — all in one conversation. You review each step before it runs. No dashboards. No YAML. No tab-switching.
-        </p>
-    </div>
 </section>
 
 <hr class="divider">
 
 <section id="providers">
     <p class="section-label">AI Providers</p>
-    <h2 class="section-title">Pick any provider. Switch anytime.</h2>
+    <h2 class="section-title">Never get stuck when a provider goes down.</h2>
     <p class="section-desc">Add as many as you want. The agent switches when one hits rate limits or goes down.</p>
 
     <div class="providers-grid">
@@ -1543,6 +1544,8 @@
         <div class="provider-card"><div class="provider-dot"></div>AWS Bedrock</div>
         <div class="provider-card"><div class="provider-dot"></div>Vertex AI</div>
         <div class="provider-card"><div class="provider-dot"></div>HuggingFace</div>
+        <div class="provider-card"><div class="provider-dot"></div>Replicate</div>
+        <div class="provider-card"><div class="provider-dot"></div>IBM watsonx.ai</div>
     </div>
 </section>
 
@@ -1559,10 +1562,6 @@
             <div class="faq-a">An open source terminal AI agent. One pip install, 35+ providers, 130+ tools, browser automation, persistent memory. Runs locally on your machine.</div>
         </div>
         <div class="faq-item">
-            <div class="faq-q">What does "HelloChusquis" mean?</div>
-            <div class="faq-a">It's "hello" + "chusquis" — an Andean word for messengers who ran between villages carrying news. The agent is your terminal messenger to the AI world: you ask, it delivers, no UI in the way.</div>
-        </div>
-        <div class="faq-item">
             <div class="faq-q">How much does it cost?</div>
             <div class="faq-a">Free and open source (MIT license). You pay only for AI provider API usage. Groq and Ollama are free options.</div>
         </div>
@@ -1575,7 +1574,7 @@
             <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 130+ APIs.</div>
         </div>
         <div class="faq-item">
-            <div class="faq-q">How does it compare to ChatGPT or Claude.ai?</div>
+            <div class="faq-q">How does it compare to browser-based AI tools?</div>
             <div class="faq-a">Those are browser tabs you can't script. HelloChusquis is a CLI tool — pipe it, chain it, run it in cron, use it from any terminal. And it runs locally with Ollama if you want zero data leaving your machine.</div>
         </div>
     </div>
@@ -1586,7 +1585,7 @@
 <!-- INSTALL -->
 <section id="install">
     <p class="section-label">Get Started</p>
-    <h2 class="section-title">One command to get started.</h2>
+    <h2 class="section-title">Install once. Run forever.</h2>
     <p class="section-desc">Pick the method that works for you.</p>
 
     <div class="install-methods">

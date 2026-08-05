@@ -273,12 +273,23 @@ def chat_stream(req: MessageRequest, http_request: Request):
 
     if user_input == "/clear":
         agent.history.clear()
-        return {"response": "Historial limpiado.", "tool_calls": []}
+        text = "Historial limpiado."
+        return StreamingResponse(
+            iter([f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n",
+                  f"data: {json.dumps({'type': 'done'})}\n\n"]),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     if user_input == "/status":
         status = agent.pool.status()
-        lines = [f"{'✓' if p['status'] == 'ready' else '✗'} {p['name']} — {p['model']}" for p in status]
-        return {"response": "\n".join(lines), "tool_calls": []}
+        text = "\n".join(f"{'OK' if p['status'] == 'ready' else 'FAIL'} {p['name']} - {p['model']}" for p in status)
+        return StreamingResponse(
+            iter([f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n",
+                  f"data: {json.dumps({'type': 'done'})}\n\n"]),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     def event_gen():
         try:
