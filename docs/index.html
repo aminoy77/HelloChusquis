@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you chat, code execution, web search, and 130+ integrations — all from one terminal command.">
+    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you a full-screen TUI with chat, code execution, web search, and 130+ integrations — all from one terminal command.">
     <meta property="og:title" content="HelloChusquis — Terminal AI Agent">
     <meta property="og:description" content="Spin up an AI agent with one pip install. 35+ providers, auto-fallback, 130+ tools.">
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
@@ -233,92 +233,173 @@
 
         /* TERMINAL */
         .demo-wrapper {
-            max-width: 620px;
+            max-width: 680px;
             width: 100%;
             margin: 0 auto 48px;
         }
 
-        .terminal {
-            background: var(--surface);
+        /* OPENCODE-STYLE UI */
+        .oc {
+            background: var(--bg);
             border: 1px solid var(--border);
-            width: 100%;
-            text-align: left;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 0 60px rgba(245, 166, 35, 0.03), 0 0 1px rgba(245, 166, 35, 0.1);
-            border-top: 2px solid var(--amber);
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            line-height: 1.6;
+            box-shadow: 0 0 80px rgba(245, 166, 35, 0.04), 0 2px 32px rgba(0,0,0,0.4);
         }
 
-        .terminal-header {
+        /* Top status bar */
+        .oc-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .oc-topbar-left, .oc-topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .oc-logo {
+            color: var(--amber);
+            font-size: 0.9rem;
+        }
+
+        .oc-session { color: var(--text-muted); }
+
+        .oc-provider {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .oc-tokens { color: var(--text-dim); }
+
+        .oc-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .oc-dot.green { background: var(--green); box-shadow: 0 0 6px rgba(94,185,126,0.4); }
+
+        /* Main body */
+        .oc-body {
+            padding: 20px;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Messages */
+        .oc-msg {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .oc-msg-label {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            min-width: 40px;
+            padding-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .oc-user .oc-msg-label { color: var(--amber); }
+        .oc-agent .oc-msg-label { color: var(--green); }
+
+        .oc-msg-text {
+            color: var(--text);
+            flex: 1;
+        }
+
+        /* Tool call cards */
+        .oc-tool {
+            margin-left: 52px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .oc-tool-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 16px;
-            background: var(--surface2);
+            padding: 6px 12px;
             border-bottom: 1px solid var(--border);
-            position: relative;
-        }
-
-        .terminal-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--amber), transparent);
-            opacity: 0.3;
-        }
-
-        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
-        .terminal-dot:nth-child(1) { background: #ff5f57; }
-        .terminal-dot:nth-child(2) { background: #febc2e; }
-        .terminal-dot:nth-child(3) { background: #28c840; }
-
-        /* Generic dot class for terminal headers */
-        .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-        .dot.red { background: #ff5f57; }
-        .dot.yellow { background: #febc2e; }
-        .dot.green { background: #28c840; }
-
-        .terminal-title {
-            font-family: var(--mono);
             font-size: 0.7rem;
-            color: var(--text-dim);
+        }
+
+        .oc-tool-icon { color: var(--text-dim); }
+        .oc-tool-name { color: var(--blue); font-weight: 500; }
+
+        .oc-tool-status {
             margin-left: auto;
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 3px;
         }
 
-        .terminal-body {
-            padding: 20px 24px;
-            font-family: var(--mono);
-            font-size: 0.8rem;
-            line-height: 2;
-            min-height: 280px;
-            position: relative;
+        .oc-ok { color: var(--green); background: rgba(94,185,126,0.1); }
+
+        .oc-tool-time { color: var(--text-dim); font-size: 0.65rem; }
+
+        .oc-tool-cmd {
+            padding: 8px 12px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .terminal-body::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(245, 166, 35, 0.015) 2px,
-                rgba(245, 166, 35, 0.015) 4px
-            );
-            pointer-events: none;
+        /* Inline styles */
+        .oc-green { color: var(--green); font-weight: 600; }
+        .oc-amber { color: var(--amber); font-weight: 600; }
+
+        /* Bottom status bar */
+        .oc-statusbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            font-size: 0.65rem;
+            color: var(--text-dim);
         }
 
-        .t-line { display: flex; gap: 10px; }
-        .t-prompt { color: var(--amber); user-select: none; font-weight: 600; }
-        .t-cmd { color: var(--text); }
-        .t-output { color: var(--green); padding-left: 20px; }
-        .t-tool { color: var(--blue); padding-left: 20px; font-size: 0.75rem; }
-                .t-green { color: var(--green); }
-        .t-amber { color: var(--amber); }
-        .t-dim { color: var(--text-muted); }
+        .oc-statusbar-left, .oc-statusbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .oc-key-hint {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .oc-sep { color: var(--border); }
+
+        .oc-memory {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .t-cursor {
             display: inline-block;
             width: 8px;
@@ -1125,30 +1206,101 @@
 
     <p class="hero-desc">
         Deploy, debug, and automate from your terminal — without switching tabs between AI, docs, and your code.
-        35+ providers. 130+ tools. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
+        Full-screen TUI. 35+ providers. 130+ tools. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
     </p>
 
     <div class="demo-wrapper">
-        <div class="terminal" role="img" aria-label="Terminal showing HelloChusquis agent deploying a Docker app to AWS">
-            <div class="terminal-header">
-                <div class="terminal-dot"></div>
-                <div class="terminal-dot"></div>
-                <div class="terminal-dot"></div>
-                <span class="terminal-title">terminal — hellochusquis</span>
+        <div class="oc" role="img" aria-label="HelloChusquis agent interface showing a deployment workflow">
+            <!-- Top status bar -->
+            <div class="oc-topbar">
+                <div class="oc-topbar-left">
+                    <span class="oc-logo">⬡</span>
+                    <span class="oc-session">session: deploy-app</span>
+                </div>
+                <div class="oc-topbar-right">
+                    <span class="oc-provider"><span class="oc-dot green"></span>Groq · llama-3.3-70b</span>
+                    <span class="oc-tokens">↑ 1.2k ↓ 3.4k</span>
+                </div>
             </div>
-            <div class="terminal-body" id="terminal-demo">
-                <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">pip install hellochusquis</span></div>
-                <div class="t-line t-anim" data-delay="800"><span class="t-output">Installed hellochusquis-1.4.3</span></div>
-                <div class="t-line t-anim" data-delay="1200"><span class="t-prompt">$</span><span class="t-cmd">hellochusquis</span></div>
-                <div class="t-line t-anim" data-delay="1800"><span class="t-output">Loaded 4 providers. 50+ tools ready.</span></div>
-                <div class="t-line t-anim" data-delay="2400" style="margin-top:4px"><span class="t-prompt">You:</span><span class="t-cmd"> deploy my Docker app to AWS</span></div>
-                <div class="t-line t-anim" data-delay="3200"><span class="t-tool">→ shell("docker build -t myapp .")</span></div>
-                <div class="t-line t-anim" data-delay="3800"><span class="t-tool">→ aws(action="list_ec2")</span></div>
-                <div class="t-line t-anim" data-delay="4400"><span class="t-output">Done. Deployed to EC2 instance i-0a1b2c3d.</span></div>
-                <div class="t-line t-anim" data-delay="5200"><span class="t-prompt">You:</span><span class="t-cmd"> send me the details by email</span></div>
-                <div class="t-line t-anim" data-delay="6000"><span class="t-tool">→ gmail(action="send_email", to="me@...</span></div>
-                <div class="t-line t-anim" data-delay="6600"><span class="t-output">Email sent with deployment details.</span></div>
-                <div class="t-line t-anim" data-delay="7200"><span class="t-prompt">You:</span><span class="t-cursor"></span></div>
+
+            <!-- Main content area -->
+            <div class="oc-body">
+                <!-- User message -->
+                <div class="oc-msg oc-user t-anim" data-delay="400">
+                    <div class="oc-msg-label">you</div>
+                    <div class="oc-msg-text">deploy my Docker app to AWS with monitoring</div>
+                </div>
+
+                <!-- Agent response with tool calls -->
+                <div class="oc-msg oc-agent t-anim" data-delay="1200">
+                    <div class="oc-msg-label">agent</div>
+                    <div class="oc-msg-text">Planning deployment. 3 steps identified.</div>
+                </div>
+
+                <!-- Tool call card -->
+                <div class="oc-tool t-anim" data-delay="2000">
+                    <div class="oc-tool-header">
+                        <span class="oc-tool-icon">▸</span>
+                        <span class="oc-tool-name">shell</span>
+                        <span class="oc-tool-status oc-ok">done</span>
+                        <span class="oc-tool-time">0.8s</span>
+                    </div>
+                    <div class="oc-tool-cmd">docker build -t myapp . && docker push myapp</div>
+                </div>
+
+                <!-- Tool call card -->
+                <div class="oc-tool t-anim" data-delay="2800">
+                    <div class="oc-tool-header">
+                        <span class="oc-tool-icon">▸</span>
+                        <span class="oc-tool-name">aws</span>
+                        <span class="oc-tool-status oc-ok">done</span>
+                        <span class="oc-tool-time">1.2s</span>
+                    </div>
+                    <div class="oc-tool-cmd">ec2.run_instances(ImageId=ami-..., InstanceType=t3.micro)</div>
+                </div>
+
+                <!-- Tool call card -->
+                <div class="oc-tool t-anim" data-delay="3600">
+                    <div class="oc-tool-header">
+                        <span class="oc-tool-icon">▸</span>
+                        <span class="oc-tool-name">shell</span>
+                        <span class="oc-tool-status oc-ok">done</span>
+                        <span class="oc-tool-time">0.4s</span>
+                    </div>
+                    <div class="oc-tool-cmd">ssh ec2-user@54.x.x.x "docker run -d -p 80:80 myapp"</div>
+                </div>
+
+                <!-- Agent final response -->
+                <div class="oc-msg oc-agent t-anim" data-delay="4400">
+                    <div class="oc-msg-label">agent</div>
+                    <div class="oc-msg-text"><span class="oc-green">✓</span> Deployed. Instance <span class="oc-amber">i-0a1b2c3d</span> · monitoring enabled · uptime: 99.9%</div>
+                </div>
+
+                <!-- User follow-up -->
+                <div class="oc-msg oc-user t-anim" data-delay="5200">
+                    <div class="oc-msg-label">you</div>
+                    <div class="oc-msg-text">send me the details by email</div>
+                </div>
+
+                <!-- Agent response -->
+                <div class="oc-msg oc-agent t-anim" data-delay="6000">
+                    <div class="oc-msg-label">agent</div>
+                    <div class="oc-msg-text"><span class="oc-green">✓</span> Email sent with deployment summary and monitoring links.</div>
+                </div>
+            </div>
+
+            <!-- Bottom status bar -->
+            <div class="oc-statusbar">
+                <div class="oc-statusbar-left">
+                    <span class="oc-key-hint">↑↓</span> history
+                    <span class="oc-sep">·</span>
+                    <span class="oc-key-hint">Tab</span> autocomplete
+                    <span class="oc-sep">·</span>
+                    <span class="oc-key-hint">Esc</span> cancel
+                </div>
+                <div class="oc-statusbar-right">
+                    <span class="oc-memory"><span class="oc-dot green"></span>memory: 48 entries</span>
+                </div>
             </div>
         </div>
     </div>
@@ -1380,7 +1532,7 @@
 <!-- FEATURES -->
 <section id="features">
     <p class="section-label">Features</p>
-    <h2 class="section-title">The open source terminal AI agent for people who hate GUIs.</h2>
+    <h2 class="section-title">The open source terminal AI agent.</h2>
     <p class="section-desc">Real features, real workflows. Not a feature list — a productivity upgrade.</p>
 
     <h3 class="sub-heading">Never lose a provider again</h3>

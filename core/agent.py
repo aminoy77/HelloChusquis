@@ -1380,6 +1380,24 @@ class Agent:
             "2. <call>: Execute the tool immediately.\n"
             "3. <verify>: Check if the result solves the request.\n"
         )
+
+        # Always inject CRITICAL file creation rules — even if old config lacks them
+        if "CRITICAL: File Creation Rules" not in system:
+            system += (
+                "\n## CRITICAL: File Creation Rules\n\n"
+                "When user asks you to create, write, or save a file:\n\n"
+                "1. You MUST call the `files` tool with these exact parameters:\n"
+                "   - `action`: \"write\"\n"
+                "   - `path`: The FULL absolute path (e.g. /Users/name/Downloads/file.py)\n"
+                "   - `content`: The COMPLETE file content as a string\n\n"
+                "2. NEVER just show the code as text. Displaying code in a code block is NOT creating a file.\n\n"
+                "3. If creating multiple files, call `files` tool ONCE PER FILE.\n\n"
+                "4. After writing, confirm: \"File created at /path/to/file\"\n\n"
+                "Example: Tool call: files(action=\"write\", path=\"/Users/name/Downloads/app.py\", content=\"print('hello')\")\n"
+                "WRONG: Here's the code:\n```python\nprint('hello')\n```\n"
+                "This is just displaying text, NOT creating a file!\n"
+            )
+
         return [{"role": "system", "content": system}, *self.history.get()]
 
     def run(self, user_input: str, provider: Optional[str] = None, model: Optional[str] = None) -> str:

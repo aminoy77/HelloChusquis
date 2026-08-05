@@ -333,7 +333,7 @@ class ProviderPool:
         models: List[str] = []
         try:
             from core.setup import fetch_available_models
-            models = fetch_available_models(provider.base_url, provider.api_key)
+            models = fetch_available_models(provider.base_url, provider.api_key, provider_name=provider.name)
         except Exception:
             models = []
 
