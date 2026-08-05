@@ -1,5 +1,67 @@
 from typing import Optional
 from httpx import AsyncClient
+import os
+import httpx
+
+
+def run(action: str, **kwargs) -> str:
+    """Synchronous dispatcher for Resend API actions."""
+    key = kwargs.get("key") or os.getenv("RESEND_API_KEY")
+    if not key:
+        return "Error: No Resend API key found. Set RESEND_API_KEY environment variable."
+
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return _run_sync(action, key, kwargs)
+        return loop.run_until_complete(_run_async(action, key, kwargs))
+    except RuntimeError:
+        return _run_sync(action, key, kwargs)
+
+
+async def _run_async(action: str, key: str, kwargs: dict) -> str:
+    """Async dispatcher for Resend operations."""
+    if action == "send_email":
+        return await send_email(key, kwargs.get("to", ""), kwargs.get("subject", ""), kwargs.get("html", ""), kwargs.get("from_", ""))
+    elif action == "batch_send":
+        return await batch_send(key, kwargs.get("emails", []))
+    elif action == "create_template":
+        return await create_template(key, kwargs.get("name", ""), kwargs.get("html", ""))
+    elif action == "send_template":
+        return await send_template(key, kwargs.get("template_id", ""), kwargs.get("to", ""), kwargs.get("params"))
+    elif action == "get_domains":
+        return await get_domains(key)
+    else:
+        return f"Error: Unknown action '{action}'. Available: send_email, batch_send, create_template, send_template, get_domains"
+
+
+def _run_sync(action: str, key: str, kwargs: dict) -> str:
+    """Synchronous fallback using httpx.Client."""
+    base_url = "https://api.resend.com"
+    headers = {"Authorization": f"Bearer {key}"}
+
+    try:
+        client = httpx.Client(timeout=30)
+        if action == "send_email":
+            r = client.post(f"{base_url}/emails", json={"from": kwargs.get("from_", ""), "to": [kwargs.get("to", "")], "subject": kwargs.get("subject", ""), "html": kwargs.get("html", "")}, headers=headers)
+            return str(r.json())[:2000]
+        elif action == "batch_send":
+            r = client.post(f"{base_url}/emails/batch", json=kwargs.get("emails", []), headers=headers)
+            return str(r.json())[:2000]
+        elif action == "create_template":
+            r = client.post(f"{base_url}/templates", json={"name": kwargs.get("name", ""), "html": kwargs.get("html", "")}, headers=headers)
+            return str(r.json())[:2000]
+        elif action == "send_template":
+            r = client.post(f"{base_url}/emails", json={"from": "onboarding@resend.dev", "to": [kwargs.get("to", "")], "subject": "Template", "template_id": kwargs.get("template_id", ""), "params": kwargs.get("params", {})}, headers=headers)
+            return str(r.json())[:2000]
+        elif action == "get_domains":
+            r = client.get(f"{base_url}/domains", headers=headers)
+            return str(r.json())[:2000]
+        else:
+            return f"Error: Unknown action '{action}'. Available: send_email, batch_send, create_template, send_template, get_domains"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 async def send_email(key: str, to: str, subject: str, html: str, from_: str) -> dict:

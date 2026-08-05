@@ -22,7 +22,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -98,7 +98,8 @@ class EmbeddingCache:
 # DB helpers
 # ---------------------------------------------------------------------------
 
-def _connect(db_path: Path = MEMORY_DB_PATH) -> sqlite3.Connection:
+def _connect(db_path: Union[Path, str] = MEMORY_DB_PATH) -> sqlite3.Connection:
+    db_path = Path(db_path)  # accept str or Path; mkdir needs a Path
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -213,6 +214,7 @@ class EmbeddingProvider:
         self._idf: Dict[str, float] = {}
         self._vocab: List[str] = []
         self._vocab_index: Dict[str, int] = {}
+        self._vocab_version: int = 0
         self._fitted = False
         self._default_idf: float = 1.0
 
@@ -228,6 +230,12 @@ class EmbeddingProvider:
         """Fit IDF weights on *corpus*.  Call with the full entry value set.
 
         Caches ``_vocab_index`` so ``encode()`` doesn't rebuild it each call.
+
+        Order-preserving: existing vocab order is kept and only unseen
+        corpus terms are appended.  This keeps vector indices stable across
+        incremental ``set_vocab()`` grows AND full refits, so embeddings
+        encoded under older vocab versions stay prefix-aligned (older vector
+        = prefix of newer) and cosine similarity remains valid between them.
         """
         doc_freq: Counter[str] = Counter()
         n_docs = max(len(corpus), 1)
@@ -236,16 +244,46 @@ class EmbeddingProvider:
             for t in tokens:
                 doc_freq[t] += 1
         idf_map: Dict[str, float] = {}
-        vocab_set: set = set()
         for term, freq in doc_freq.items():
             idf_map[term] = math.log((n_docs + 1) / (freq + 1)) + 1.0
-            vocab_set.add(term)
-        self._vocab = sorted(vocab_set)
-        self._vocab_index = {term: i for i, term in enumerate(self._vocab)}
+        # Append only unseen terms, in corpus first-appearance order.
+        known = self._vocab_index
+        new_terms: List[str] = []
+        for t in doc_freq:
+            if t not in known:
+                known[t] = len(self._vocab) + len(new_terms)
+                new_terms.append(t)
+        if new_terms:
+            self._vocab.extend(new_terms)
         self._idf = idf_map
         self._fitted = True
+        self._vocab_version += 1
         # Mean IDF for unknown terms — prevents zero vectors for OOV queries
         self._default_idf = (sum(idf_map.values()) / len(idf_map)) if idf_map else 1.0
+
+    def set_vocab(self, tokens: Sequence[str]) -> List[str]:
+        """Incrementally extend the vocabulary with *tokens*.
+
+        Adds only unseen terms so existing vector indices stay stable and
+        newly encoded entries share the same dimension space.  Returns the
+        newly added terms (empty when everything was already known).  Called
+        on the per-write hot path — O(new tokens), never a corpus scan.
+        """
+        if not tokens:
+            return []
+        if not self._fitted:
+            self.fit(list(tokens))
+            return list(tokens)
+        new_terms: List[str] = []
+        idx = self._vocab_index
+        for t in tokens:
+            if t not in idx:
+                idx[t] = len(self._vocab) + len(new_terms)
+                new_terms.append(t)
+        if new_terms:
+            self._vocab.extend(new_terms)
+            self._vocab_version += 1
+        return new_terms
 
     # -- encode -------------------------------------------------------------
 
@@ -363,6 +401,11 @@ class MemoryStore:
     called from uvicorn worker threads.
     """
 
+    # Full-corpus refit/reindex every N incrementally-embedded entries.
+    # Keeps vector dimensions consistent while keeping per-write cost flat
+    # (reindex is amortized: O(N/100) per write, not O(N)).
+    _FIT_REINDEX_THRESHOLD = 100
+
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path if db_path is not None else MEMORY_DB_PATH
         self._conn: Optional[sqlite3.Connection] = None
@@ -372,6 +415,11 @@ class MemoryStore:
         self._embedding_cache: Dict[int, List[float]] = {}
         # Dirty flag: set when entries change, cleared when search cache is rebuilt
         self._dirty: bool = True
+        # Vocab stale flag: True until a full-corpus fit() has run.  Set on
+        # init, entry mutations that skip embedding, and explicit reindexes.
+        self._needs_fit: bool = True
+        # Entries embedded incrementally since the last full fit/reindex.
+        self._since_fit: int = 0
         self._ensure()
 
     # -- connection ---------------------------------------------------------
@@ -496,6 +544,10 @@ class MemoryStore:
         entry_id = cur.lastrowid or 0
         self.conn.commit()
         self._dirty = True
+        # Vocab only genuinely stale when never fitted (fresh store/process);
+        # on the warm path the incremental embed below extends it O(new tokens).
+        if not self.embedder._fitted:
+            self._needs_fit = True
         if auto_embed:
             self._embed_entry_incremental(entry_id, key, value, tags or [], category)
         return entry_id
@@ -530,6 +582,7 @@ class MemoryStore:
         )
         self.conn.commit()
         self._dirty = True
+        self._needs_fit = True
         if re_embed and value is not None:
             # For updates, rebuild this entry's embedding with its current fields
             entry = self.get_entry(entry_id)
@@ -645,19 +698,13 @@ class MemoryStore:
     # Embedding helpers
     # =====================================================================
 
-    @_locked
-    def build_vocabulary(self) -> None:
-        """Fit the embedding vocabulary on all stored entry values.
+    @staticmethod
+    def _corpus_from_rows(rows) -> List[str]:
+        """Build TF-IDF corpus from all entry text fields.
 
-        Must be called before any encoding to ensure all vectors share
-        the same dimensionality.  Uses the embedder's cached vocab_index
-        so subsequent encode() calls are fast.
+        Rows must be ``(key, value, tags_json, category)`` tuples.  Keys,
+        tags and categories are included so queries can match on them too.
         """
-        rows = self.conn.execute(
-            "SELECT key, value, tags, category FROM memory_entries"
-        ).fetchall()
-        # Build corpus from all text fields so queries can match on keys,
-        # tags, or categories — not just values.
         corpus: List[str] = []
         for key, value, tags_json, category in rows:
             corpus.append(value)
@@ -672,8 +719,29 @@ class MemoryStore:
                         corpus.extend(str(t) for t in tags)
                 except (json.JSONDecodeError, TypeError):
                     pass
+        return corpus
+
+    @_locked
+    def build_vocabulary(self) -> None:
+        """Fit the embedding vocabulary on all stored entry values.
+
+        Must be called before any encoding to ensure all vectors share
+        the same dimensionality.  Uses the embedder's cached vocab_index
+        so subsequent encode() calls are fast.  Resets the stale-fit
+        flags — callers only run this when ``_needs_fit`` is True or the
+        embedder is unfitted, never on the per-write hot path.
+        """
+        rows = self.conn.execute(
+            "SELECT key, value, tags, category FROM memory_entries"
+        ).fetchall()
+        corpus = self._corpus_from_rows(rows)
         if corpus:
             self.embedder.fit(corpus)
+        elif not self.embedder._fitted:
+            # Empty store: still mark fitted so encode() stays legal.
+            self.embedder.fit([])
+        self._needs_fit = False
+        self._since_fit = 0
 
     @_locked
     def _embed_entry_incremental(
@@ -686,35 +754,21 @@ class MemoryStore:
     ) -> None:
         """Embed a SINGLE new/updated entry without re-encoding all entries.
 
-        Builds vocabulary from the full corpus (required for consistent dims),
-        but only encodes and stores the one entry.  Previous embeddings in
-        the DB are left untouched — they remain valid as long as the vocab
-        doesn't change drastically.  Call ``reindex_all_embeddings()`` for
-        a full rebuild when needed.
+        Vocabulary strategy (kills the O(N) per-write corpus scan):
+          (a) Full-corpus fit() ONLY when vocab is genuinely stale (fresh
+              store, entry updates, or embedding-less writes) — O(N) once
+              per stale window, never per write.
+          (b) Otherwise extend the vocab incrementally from THIS entry's
+              tokens via ``set_vocab()`` — O(new tokens), no SELECT.
+          (c) Encode only the new entry, then periodically (every
+              ``_FIT_REINDEX_THRESHOLD`` entries) run a full reindex so
+              vector dimensions stay consistent across the whole store.
         """
-        # Build corpus for vocabulary (needed for dimension consistency)
-        rows = self.conn.execute(
-            "SELECT key, value, tags, category FROM memory_entries"
-        ).fetchall()
-        if not rows:
-            return
-        corpus: List[str] = []
-        for _, k, v, tags_json, cat in rows:
-            corpus.append(v)
-            if k:
-                corpus.append(k)
-            if cat:
-                corpus.append(cat)
-            if tags_json:
-                try:
-                    parsed = json.loads(tags_json)
-                    if isinstance(parsed, list):
-                        corpus.extend(str(t) for t in parsed)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-        self.embedder.fit(corpus)
+        # (a) Full fit once per stale window (fresh store / update path).
+        if self._needs_fit or not self.embedder._fitted:
+            self.build_vocabulary()
 
-        # Encode ONLY this entry's combined text
+        # Combined text of this entry only — no corpus scan.
         parts = [value]
         if key:
             parts.append(key)
@@ -722,7 +776,13 @@ class MemoryStore:
             parts.append(category)
         if tags:
             parts.extend(str(t) for t in tags)
-        embedding = self.embedder.encode(" ".join(parts))
+        combined = " ".join(parts)
+
+        # (b) Incremental vocab update from this entry's tokens.
+        self.embedder.set_vocab(self.embedder.tokenize(combined))
+
+        # (c) Encode ONLY this entry.
+        embedding = self.embedder.encode(combined)
         blob = json.dumps(embedding)
 
         # Upsert embedding for this single entry
@@ -743,8 +803,16 @@ class MemoryStore:
             )
         self.conn.commit()
 
-        # Update in-memory cache
+        # Update in-memory cache — the cache is complete and current now,
+        # so searches can stay warm (no full rebuild on the next query).
         self._embedding_cache[entry_id] = embedding
+        self._dirty = False
+        self._since_fit += 1
+
+        # Amortized dimension-consistency reindex: O(N) once per threshold
+        # entries instead of O(N) on every write.
+        if self._since_fit >= self._FIT_REINDEX_THRESHOLD:
+            self.reindex_all_embeddings()
 
     @_locked
     def reindex_all_embeddings(self) -> int:
@@ -753,22 +821,14 @@ class MemoryStore:
             "SELECT id, key, value, tags, category FROM memory_entries"
         ).fetchall()
         if not rows:
+            self._dirty = False
+            self._needs_fit = False
+            self._since_fit = 0
             return 0
         # Build corpus from all text fields
-        corpus: List[str] = []
-        for _, key, value, tags_json, category in rows:
-            corpus.append(value)
-            if key:
-                corpus.append(key)
-            if category:
-                corpus.append(category)
-            if tags_json:
-                try:
-                    tags = json.loads(tags_json)
-                    if isinstance(tags, list):
-                        corpus.extend(str(t) for t in tags)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+        corpus = self._corpus_from_rows(
+            [(k, v, tj, c) for _, k, v, tj, c in rows]
+        )
         self.embedder.fit(corpus)
         count = 0
         now = _now_ms()
@@ -808,11 +868,19 @@ class MemoryStore:
             count += 1
         self.conn.commit()
         self._dirty = False
+        self._needs_fit = False
+        self._since_fit = 0
         return count
 
     @_locked
     def _ensure_embedding_cache(self) -> Dict[int, List[float]]:
-        """Return in-memory embedding cache, rebuilding from DB if dirty or empty."""
+        """Return in-memory embedding cache, rebuilding from DB if dirty or empty.
+
+        Also triggers a vocab refit when the store reports stale vocab
+        (``_needs_fit``) or the embedder was never fitted.
+        """
+        if self._needs_fit or not self.embedder._fitted:
+            self.build_vocabulary()
         if self._dirty or not self._embedding_cache:
             self.reindex_all_embeddings()
         return self._embedding_cache
@@ -865,12 +933,18 @@ class MemorySearch:
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
     ) -> List[SearchResult]:
-        # Ensure vocab is fitted (fast if already cached)
-        self.store.build_vocabulary()
-        qvec = self.store.embedder.encode(query)
+        # Build vocab only when stale/unfitted — NOT on every query.
+        # The embedder caches _vocab/_vocab_index across searches, so warm
+        # queries skip the full-corpus SELECT + fit() entirely.
+        store = self.store
+        if store._needs_fit or not store.embedder._fitted:
+            store.build_vocabulary()
+        if not store.embedder._fitted:
+            return []
+        qvec = store.embedder.encode(query)
 
         # Use in-memory embedding cache to avoid re-fetching + json.loads all rows
-        emb_cache = self.store._ensure_embedding_cache()
+        emb_cache = store._ensure_embedding_cache()
         if not emb_cache:
             return []
 

@@ -44,9 +44,13 @@ def _verify_token(token: str) -> bool:
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # CORS preflight: pass through OPTIONS (browser sends before actual request)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         # Skip auth for read-only status endpoints
         if request.method == "GET" and request.url.path in (
-            "/", "/health", "/health/live", "/health/ready", "/status"
+            "/", "/health", "/health/live", "/health/ready"
         ):
             return await call_next(request)
 

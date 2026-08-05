@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Optional
 import core.db_memory as memory
 import core.learning as learning
 from core.provider import ProviderPool
@@ -213,11 +214,14 @@ def _build_tools_schema(plugins: list) -> list:
             "type": "function",
             "function": {
                 "name": "web_search",
-                "description": "Search the internet via DuckDuckGo",
+                "description": "Search the internet with fallbacks (DuckDuckGo lite → HTML → browser). Returns titles, URLs, snippets.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "Search query"}
+                        "query": {"type": "string", "description": "Search query"},
+                        "num_results": {"type": "number", "description": "Number of results (1-20, default 5)"},
+                        "region": {"type": "string", "description": "Region code (e.g. es-es, en-us)"},
+                        "time_filter": {"type": "string", "enum": ["day", "week", "month", "year"], "description": "Time filter for results"}
                     },
                     "required": ["query"]
                 }
@@ -1096,17 +1100,31 @@ class Agent:
             "calendly", "zoom"  # Meetings
         ]
         
-        self.system_prompt += f"\n\nIf user requests an integration not in available tools ({', '.join(available_integrations)}), offer to build it using the /tool command or suggest it as a feature request."
+        self._external_tool_modules = {
+            "github": github_module, "slack": slack_module, "discord": discord_module,
+            "docker": docker_module, "notion": notion_module, "aws": aws_module,
+            "twitter": twitter_module, "gmail": gmail_module, "jira": jira_module,
+            "postgresql": postgresql_module, "mongodb": mongodb_module,
+            "google_calendar": google_calendar_module, "spotify": spotify_module,
+            "stripe": stripe_module, "twilio": twilio_module, "sendgrid": sendgrid_module,
+            "supabase": supabase_module, "vercel": vercel_module, "sentry": sentry_module,
+            "pagerduty": pagerduty_module, "datadog": datadog_module, "intercom": intercom_module,
+            "contentful": contentful_module, "sanity": sanity_module, "hubspot": hubspot_module,
+            "shopify": shopify_module, "mailchimp": mailchimp_module, "airtable": airtable_module,
+            "plaid": plaid_module, "square": square_module, "cloudinary": cloudinary_module,
+            "algolia": algolia_module, "resend": resend_module, "brevo": brevo_module,
+            "upstash": upstash_module, "clerk": clerk_module, "posthog": posthog_module,
+            "launchdarkly": launchdarkly_module, "calendly": calendly_module,
+            "zoom": zoom_module, "clickup": clickup_module, "raycast": raycast_module,
+            "bitbucket": bitbucket_module, "n8n": n8n_module, "pipedream": pipedream_module,
+            "retool": retool_module, "workato": workato_module, "make": make_module
+        }
 
     def _dispatch_tool(self, name: str, args: dict) -> ToolResult:
         if name == "shell":
             cmd = args.get("command", "")
-            
-            # Skip security checks if disabled via CLI
             unsafe_mode = os.getenv("HELLOCHUSQUIS_UNSAFE_MODE") == "1"
             profile = os.getenv("HELLOCHUSQUIS_PROFILE", "default")
-
-            # En modo agresivo o deshabilitado por CLI, saltarse las revisiones
             if not unsafe_mode and profile != "aggressive":
                 safety_check = evaluate_command_safety(cmd, self.pool)
                 if not safety_check.get("safe", True):
@@ -1115,7 +1133,6 @@ class Agent:
                     console.print(f"[bold red]⛔ Blocked unsafe command:[/bold red] {cmd}")
                     console.print(f"[dim]{risk_msg}[/dim]")
                     return ToolResult(success=False, output="", error=f"Safety check failed: {risk_msg}")
-
             return self.shell.run(**args)
 
         if name == "code":
@@ -1317,339 +1334,10 @@ class Agent:
                 return ToolResult(success=False, output="", error=str(e))
 
         # External tool modules - call run() directly from module
-        if name == "github":
+        if name in self._external_tool_modules:
             try:
-                result = github_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "slack":
-            try:
-                result = slack_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "discord":
-            try:
-                result = discord_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "docker":
-            try:
-                result = docker_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "notion":
-            try:
-                result = notion_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "aws":
-            try:
-                result = aws_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "twitter":
-            try:
-                result = twitter_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "gmail":
-            try:
-                result = gmail_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "jira":
-            try:
-                result = jira_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "postgresql":
-            try:
-                result = postgresql_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "mongodb":
-            try:
-                result = mongodb_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "google_calendar":
-            try:
-                result = google_calendar_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "spotify":
-            try:
-                result = spotify_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        # New tool integrations
-        if name == "stripe":
-            try:
-                result = stripe_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "twilio":
-            try:
-                result = twilio_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "sendgrid":
-            try:
-                result = sendgrid_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "supabase":
-            try:
-                result = supabase_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "vercel":
-            try:
-                result = vercel_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "sentry":
-            try:
-                result = sentry_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "pagerduty":
-            try:
-                result = pagerduty_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "datadog":
-            try:
-                result = datadog_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "intercom":
-            try:
-                result = intercom_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "contentful":
-            try:
-                result = contentful_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "sanity":
-            try:
-                result = sanity_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "hubspot":
-            try:
-                result = hubspot_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "shopify":
-            try:
-                result = shopify_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "mailchimp":
-            try:
-                result = mailchimp_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "airtable":
-            try:
-                result = airtable_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "plaid":
-            try:
-                result = plaid_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "square":
-            try:
-                result = square_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "cloudinary":
-            try:
-                result = cloudinary_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "algolia":
-            try:
-                result = algolia_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "resend":
-            try:
-                result = resend_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "brevo":
-            try:
-                result = brevo_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "upstash":
-            try:
-                result = upstash_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "clerk":
-            try:
-                result = clerk_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "posthog":
-            try:
-                result = posthog_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "launchdarkly":
-            try:
-                result = launchdarkly_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "calendly":
-            try:
-                result = calendly_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "zoom":
-            try:
-                result = zoom_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "clickup":
-            try:
-                result = clickup_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "raycast":
-            try:
-                result = raycast_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "bitbucket":
-            try:
-                result = bitbucket_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "n8n":
-            try:
-                result = n8n_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "pipedream":
-            try:
-                result = pipedream_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "retool":
-            try:
-                result = retool_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "workato":
-            try:
-                result = workato_module.run(**args)
-                return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
-
-        if name == "make":
-            try:
-                result = make_module.run(**args)
+                module = self._external_tool_modules[name]
+                result = module.run(**args)
                 return ToolResult(success=True, output=str(result))
             except Exception as e:
                 return ToolResult(success=False, output="", error=str(e))
@@ -1663,6 +1351,7 @@ class Agent:
                     return ToolResult(success=False, output="", error=str(e))
 
         return ToolResult(success=False, output="", error=f"Unknown tool: {name}. I can create this tool for you! Run `hellochusquis build` to create it with AI.")
+
 
     def _propose_tool_creation(self, tool_name: str, args: dict) -> str:
         """Propose creating a new tool when one doesn't exist."""
@@ -1693,7 +1382,7 @@ class Agent:
         )
         return [{"role": "system", "content": system}, *self.history.get()]
 
-    def run(self, user_input: str) -> str:
+    def run(self, user_input: str, provider: Optional[str] = None, model: Optional[str] = None) -> str:
         self.history.add("user", user_input)
         self.session_manager.append_message(self._session_id, "user", user_input)
         messages = self._build_messages()
@@ -1707,14 +1396,16 @@ class Agent:
             messages.append(tr)
         
         # Only optimize if we have too many messages (not during multi-step execution)
-        if self.history.get_token_count(messages) > 4000:
+        if self.history.get_token_count(messages) > 8000:
             messages = self.history.optimize_context(max_tokens=4000)
             # Re-add tool results after optimization
             for tr in self._pending_tool_results:
                 messages.append(tr)
 
         while True:
-            response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
+            response = self.pool.chat_with_retry(
+                messages, tools=self.tools_schema, provider_name=provider, model=model
+            )
             choices = response.get("choices", [])
             if not choices:
                 return "Error: No response from AI provider"
@@ -1799,7 +1490,7 @@ class Agent:
             # Keep all tool results for this turn for next turn
             self._pending_tool_results.extend(step_tool_results)
 
-    def stream_run(self, user_input: str):
+    def stream_run(self, user_input: str, provider: Optional[str] = None, model: Optional[str] = None):
         """Yield SSE events instead of returning full string.
         Yields dict payloads: {"type": "chunk"|"tool_call"|"done", ...}
         """
@@ -1811,13 +1502,15 @@ class Agent:
         for tr in self._pending_tool_results:
             messages.append(tr)
 
-        if self.history.get_token_count(messages) > 4000:
+        if self.history.get_token_count(messages) > 8000:
             messages = self.history.optimize_context(max_tokens=4000)
             for tr in self._pending_tool_results:
                 messages.append(tr)
 
         while True:
-            response = self.pool.chat_with_retry(messages, tools=self.tools_schema)
+            response = self.pool.chat_with_retry(
+                messages, tools=self.tools_schema, provider_name=provider, model=model
+            )
             choices = response.get("choices", [])
             if not choices:
                 yield {"type": "chunk", "content": "Error: No response from AI provider"}

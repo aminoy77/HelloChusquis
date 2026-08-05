@@ -1,4 +1,71 @@
 from httpx import AsyncClient
+import os
+import httpx
+
+
+def run(action: str, **kwargs) -> str:
+    """Synchronous dispatcher for Discord API actions."""
+    token = kwargs.get("access_token") or os.getenv("DISCORD_BOT_TOKEN") or os.getenv("DISCORD_TOKEN")
+    if not token:
+        return "Error: No Discord token found. Set DISCORD_BOT_TOKEN environment variable."
+
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return _run_sync(action, token, kwargs)
+        return loop.run_until_complete(_run_async(action, token, kwargs))
+    except RuntimeError:
+        return _run_sync(action, token, kwargs)
+
+
+async def _run_async(action: str, token: str, kwargs: dict) -> str:
+    """Async dispatcher for Discord operations."""
+    if action == "send_message":
+        return await post_message(kwargs.get("channel_id", ""), kwargs.get("content", ""), token)
+    elif action == "send_embed":
+        return await post_message(kwargs.get("channel_id", ""), kwargs.get("content", ""), token)
+    elif action == "create_channel":
+        return await create_channel(kwargs.get("guild_id", ""), kwargs.get("name", ""), kwargs.get("type", 0), token)
+    elif action == "list_channels":
+        return await get_guild_members(kwargs.get("guild_id", ""), kwargs.get("limit", 20), token)
+    else:
+        return f"Error: Unknown action '{action}'. Available: send_message, send_embed, create_channel, list_channels"
+
+
+def _run_sync(action: str, token: str, kwargs: dict) -> str:
+    """Synchronous fallback using httpx.Client."""
+    base_url = "https://discord.com/api/v10"
+    headers = {"Authorization": f"Bot {token}", "Content-Type": "application/json"}
+
+    try:
+        client = httpx.Client(timeout=30)
+        if action == "send_message":
+            channel_id = kwargs.get("channel_id", "")
+            r = client.post(f"{base_url}/channels/{channel_id}/messages", headers=headers,
+                           json={"content": kwargs.get("content", "")})
+            return str(r.json())[:2000]
+        elif action == "send_embed":
+            channel_id = kwargs.get("channel_id", "")
+            r = client.post(f"{base_url}/channels/{channel_id}/messages", headers=headers,
+                           json={"content": kwargs.get("content", "")})
+            return str(r.json())[:2000]
+        elif action == "create_channel":
+            guild_id = kwargs.get("guild_id", "")
+            r = client.post(f"{base_url}/guilds/{guild_id}/channels", headers=headers,
+                           json={"name": kwargs.get("name", ""), "type": kwargs.get("type", 0)})
+            return str(r.json())[:2000]
+        elif action == "list_channels":
+            guild_id = kwargs.get("guild_id", "")
+            r = client.get(f"{base_url}/guilds/{guild_id}/channels", headers=headers)
+            return str(r.json())[:2000]
+        else:
+            return f"Error: Unknown action '{action}'. Available: send_message, send_embed, create_channel, list_channels"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+# --- Legacy async API (kept for backward compat) ---
 
 
 async def post_message(group_id: str, message: str, access_token: str) -> dict:

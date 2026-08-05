@@ -46,7 +46,7 @@ from typing import (
 )
 
 from tools.base import BaseTool, ToolResult
-from core.security_evaluator import evaluate_command_safety
+from core.security_evaluator import evaluate_command_safety, scan_destructive_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -174,26 +174,70 @@ DEFAULT_SAFE_BINS: Set[str] = {
 
 # Dangerous command patterns — split into catastrophic (DENY) and medium (ASK).
 CATASTROPHIC_PATTERNS: List[Tuple[str, str]] = [
+    # rm recursive+force — short flags, case variants, clusters with trailing chars
     (r"\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\b", "recursive force delete"),
     (r"\brm\s+-rf\s+/", "root filesystem delete"),
     (r"\brm\s+-fr\s+/", "root filesystem delete"),
     (r"\brm\s+-r\s+-f\s+/", "root filesystem delete"),
     (r"\brm\s+-f\s+-r\s+/", "root filesystem delete"),
+    # rm long-form / mixed / cluster flag combos
+    (r"\brm\s+--recursive\s+--force\b", "recursive force delete"),
+    (r"\brm\s+--force\s+--recursive\b", "recursive force delete"),
+    (r"\brm\s+--recursive\s+-[a-zA-Z]*[fF]\b", "recursive force delete"),
+    (r"\brm\s+--force\s+-[a-zA-Z]*[rR]\b", "recursive force delete"),
+    (r"\brm\s+-[a-zA-Z]*[fF]\s+--recursive\b", "recursive force delete"),
+    (r"\brm\s+-[a-zA-Z]*[rR]\s+--force\b", "recursive force delete"),
+    (r"\brm\s+-[a-zA-Z]*[rR][a-zA-Z]*[fF]", "recursive force delete"),
+    (r"\brm\s+-[a-zA-Z]*[fF][a-zA-Z]*[rR]", "recursive force delete"),
     (r"\brm\s+.*\s+/", "delete root path"),
     (r"\bdd\s+.*of=/dev/", "raw disk write"),
     (r">\s*/dev/sd", "raw disk overwrite"),
     (r">\s*/dev/nvme", "raw disk overwrite"),
     (r":\(\)\s*\{.*\|.*&", "fork bomb"),
+    (r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{[^{}]*\b\1\s*\|\s*\1\b[^{}]*&[^{}]*\}", "fork bomb"),
     (r"\bmkfs\b", "filesystem formatting"),
+    (r"\bmke2fs\b", "filesystem formatting"),
+    (r"\bnewfs_\w+\b", "filesystem formatting"),
+    (r"\bdiskutil\s+(erase\S*|zero\w*|secureErase\S*)\b", "filesystem formatting"),
     (r"\bformat\b.*\b(c:|/dev/)", "filesystem formatting"),
     (r"\bchmod\s+-R\s+777\s+/", "recursive world-writable on root"),
+    (r"\bchmod\s+(?:--recursive\s+|-r[a-zA-Z]*\s+)?(0?7777?|[ugoa]*[+-=][rwxXugoa]*)(?:\s+(?:--recursive|-r[a-zA-Z]*))?\s+/(?:\s|$)", "world-writable on root"),
     (r"\bmv\s+/\s+/", "move root filesystem"),
     (r"\bshutdown\b", "system shutdown"),
     (r"\breboot\b", "system reboot"),
     (r"\binit\s+0\b", "init 0 shutdown"),
+    (r"^\s*(sudo\s+)?(halt|poweroff)\b", "system shutdown"),
+    (r"\bsystemctl\s+(halt|poweroff|reboot)\b", "system shutdown"),
+    (r"\bosascript\b.*\b(shut\s?down|restart)\b", "system shutdown via osascript"),
+    (r"\btelinit\s+[06]\b", "runlevel shutdown"),
     (r"\b(fdisk|parted|gdisk)\b", "partition manipulation"),
     (r"\bcurl\b.*\|\s*(ba)?sh\b", "remote code execution via pipe"),
     (r"\bwget\b.*\|\s*(ba)?sh\b", "remote code execution via pipe"),
+    (r"\bcurl\b.*\|\s*sudo\b", "remote code execution via pipe as root"),
+    # Two-stage RCE: download to file, then execute
+    (r"\bcurl\b[^;&|\n]*(?:-o|-O|--output|--output-document|--remote-name)[^;&|\n]*(?:&&|;|\n)\s*((ba)?sh|zsh|fish)\b", "download and execute"),
+    (r"\bwget\b[^;&|\n]*(?:-O|-o|--output-document)[^;&|\n]*(?:&&|;|\n)\s*((ba)?sh|zsh|fish)\b", "download and execute"),
+    # RCE via process substitution: bash <(curl ...)
+    (r"\b((ba)?sh|zsh|fish)\s*<\(\s*(curl|wget)\b", "remote code via process substitution"),
+    (r"\b(source|\.)\s*<\(\s*(curl|wget)\b", "remote code via process substitution"),
+    # RCE via xargs: curl ... | xargs -I{} sh -c {}
+    (r"\b(curl|wget)\b.*\|\s*xargs\b.*\b(sh|bash|zsh|fish|python)\b", "remote code via xargs"),
+    (r"\b(curl|wget)\b.*\|\s*xargs\b.*\b(rm|dd|mkfs|chmod|mv|shutdown)\b", "remote code via xargs"),
+    # sh -c / bash -c with destructive payload
+    (r"\b((ba)?sh|zsh|fish)\s+(--command|-c)\b.*\b(rm|dd|mkfs|mke2fs|mv|chmod|chown|shutdown|reboot|halt|poweroff|kill|fdisk|parted|curl|wget)\b", "shell -c with destructive command"),
+    # python -c / python3 -c inline code execution
+    (r"\bpython3?\s+-c\b.*(?:\bimport\s+(?:os|shutil|subprocess)\b|\bfrom\s+pathlib\b|\bos\.(?:system|remove|rmdir|unlink|popen)\b|\bshutil\.\w+|\brmtree\s*\(|\.unlink\s*\()", "python inline code execution"),
+    # find -exec with rm/dd
+    (r"\bfind\b.*-exec\s+(rm|dd)\b", "find -exec with destructive command"),
+    # find -delete rooted at /, /home, or ~
+    (r"\bfind\s+(?:/|/home|~)(?:\s)[^;&|\n]*-delete\b", "recursive delete via find"),
+    # kill critical PIDs (init=1, process group=0, everything=-1)
+    (r"\bkill\s+-(SIG)?\w+\s+(-?1|0)\b", "kill critical process"),
+    (r"\bkill\s+-s\s+(SIG)?\w+\s+(-?1|0)\b", "kill critical process"),
+    (r"\bkill\s+-1\b(?=\s*(?:$|[;&|\n]))", "kill all processes"),
+    (r"\bkillall\b", "kill all processes"),
+    # sudo + destructive commands
+    (r"\bsudo\b.*\b(rm\s+-[a-zA-Z]*r[a-zA-Z]*f|dd\s+|mkfs|format|chmod\s+-R\s+777\s+/)\b", "sudo with destructive command"),
 ]
 
 # Legacy list kept for backward compat with any direct callers
@@ -283,6 +327,10 @@ class SafeBinPolicy:
 
     def _is_catastrophic(self, command: str) -> Optional[str]:
         """Return reason if command matches a catastrophic pattern, else None."""
+        # Token-level scan first (rm long-flag / cluster combos).
+        token_reason = scan_destructive_tokens(command)
+        if token_reason:
+            return token_reason
         for regex, desc in self._compiled_catastrophic:
             if regex.search(command):
                 return desc

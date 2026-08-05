@@ -2,9 +2,9 @@ from tools.base import BaseTool, ToolResult
 import subprocess
 
 
-class CodeTool(BaseTool):        # ← esto falta
-    name = "code"                # ← esto falta
-    description = "Ejecuta código Python"  # ← esto falta
+class CodeTool(BaseTool):
+    name = "code"
+    description = "Ejecuta código Python"
 
     def run(self, code: str) -> ToolResult:
         try:

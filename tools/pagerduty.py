@@ -1,5 +1,81 @@
-from  httpx import AsyncClient
-from  typing import Any
+from httpx import AsyncClient
+from typing import Any
+import os
+import httpx
+
+
+def run(action: str, **kwargs) -> str:
+    """Synchronous dispatcher for PagerDuty API actions."""
+    api_key = kwargs.get("api_key") or os.getenv("PAGERDUTY_API_KEY")
+    if not api_key:
+        return "Error: No PagerDuty API key found. Set PAGERDUTY_API_KEY environment variable."
+
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        import concurrent.futures
+        fut = asyncio.run_coroutine_threadsafe(_run_async(action, api_key, kwargs), loop)
+        return fut.result(timeout=30)
+    except RuntimeError:
+        return _run_sync(action, api_key, kwargs)
+
+
+async def _run_async(action: str, api_key: str, kwargs: dict) -> str:
+    """Async dispatcher for PagerDuty operations."""
+    if action == "create_incident":
+        return str(await create_incident(api_key, kwargs.get("title", ""), kwargs.get("urgency", "high"), kwargs.get("service")))[2000]
+    elif action == "list_incidents":
+        return str(await list_incidents(api_key, kwargs.get("status", "triggered")))[2000]
+    elif action == "get_incident":
+        return str(await get_incident(api_key, kwargs.get("incident_id", "")))[:2000]
+    elif action == "resolve_incident":
+        return str(await resolve_incident(api_key, kwargs.get("incident_id", "")))[:2000]
+    elif action == "create_maintenance_window":
+        return str(await create_maintenance_window(api_key, kwargs.get("service_id", ""), kwargs.get("start", ""), kwargs.get("end", ""), kwargs.get("description", "")))[:2000]
+    else:
+        return f"Error: Unknown action '{action}'. Available: create_incident, list_incidents, get_incident, resolve_incident, create_maintenance_window"
+
+
+def _run_sync(action: str, api_key: str, kwargs: dict) -> str:
+    """Synchronous fallback using httpx.Client."""
+    base_url = "https://api.pagerduty.com"
+    headers = {"Authorization": f"Token token={api_key}", "Content-Type": "application/json"}
+    try:
+        client = httpx.Client(timeout=30)
+        if action == "create_incident":
+            r = client.post(f"{base_url}/incidents", json={
+                "incident": {
+                    "title": kwargs.get("title", ""),
+                    "urgency": kwargs.get("urgency", "high"),
+                    "service": {"id": kwargs.get("service")} if kwargs.get("service") else None
+                }
+            }, headers=headers)
+            return str(r.json())[:2000]
+        elif action == "list_incidents":
+            status = kwargs.get("status", "triggered")
+            r = client.get(f"{base_url}/incidents?statuses[]={status}", headers=headers)
+            return str(r.json())[:2000]
+        elif action == "get_incident":
+            r = client.get(f"{base_url}/incidents/{kwargs.get('incident_id', '')}", headers=headers)
+            return str(r.json())[:2000]
+        elif action == "resolve_incident":
+            r = client.put(f"{base_url}/incidents/{kwargs.get('incident_id', '')}",
+                          json={"incident": {"type": "incident_reference", "status": "resolved"}}, headers=headers)
+            return str(r.json())[:2000]
+        elif action == "create_maintenance_window":
+            r = client.post(f"{base_url}/maintenance_windows", json={
+                "maintenance_window": {
+                    "service": {"id": kwargs.get("service_id", "")},
+                    "start_time": kwargs.get("start", ""),
+                    "end_time": kwargs.get("end", ""),
+                    "description": kwargs.get("description", "")
+                }
+            }, headers=headers)
+            return str(r.json())[:2000]
+        else:
+            return f"Error: Unknown action '{action}'. Available: create_incident, list_incidents, get_incident, resolve_incident, create_maintenance_window"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 class PagerDuty:

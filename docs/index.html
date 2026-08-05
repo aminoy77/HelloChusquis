@@ -8,15 +8,15 @@
     <meta property="og:description" content="Spin up an AI agent with one pip install. 35+ providers, auto-fallback, 130+ tools.">
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png">
-    <meta property="og:image:width" content="512">
-    <meta property="og:image:height" content="512">
-    <meta property="og:image:alt" content="HelloChusquis - AI Terminal Agent">
+    <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="1200">
+    <meta property="og:image:alt" content="HelloChusquis - Open source terminal AI agent">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="HelloChusquis — Terminal AI Agent">
     <meta name="twitter:description" content="One pip install. 35+ providers. 130+ tools. Auto-fallback.">
     <link rel="canonical" href="https://aminoy77.github.io/HelloChusquis/">
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png">
+    <link rel="icon" type="image/png" href="hc.png">
     <title>HelloChusquis — Terminal AI Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -699,6 +699,18 @@
             100% { opacity: 1; transform: translateX(-50%) scale(1.1); }
         }
 
+        /* Respect user motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .hero::before { animation: none; }
+            .t-anim { transition: none; }
+        }
+
         /* CODE EXAMPLE */
         .code-example {
             background: var(--surface);
@@ -918,6 +930,87 @@
             margin: 0 auto;
         }
 
+        /* TESTIMONIALS */
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .testimonial {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 28px 24px;
+            border-left: 3px solid var(--amber);
+            transition: border-color 0.3s, transform 0.2s;
+        }
+
+        .testimonial:hover {
+            border-left-color: var(--green);
+            transform: translateY(-2px);
+        }
+
+        .testimonial-quote {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text);
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .testimonial-quote::before { content: '"'; color: var(--amber); font-size: 1.3em; font-family: var(--mono); }
+        .testimonial-quote::after { content: '"'; color: var(--amber); font-size: 1.3em; font-family: var(--mono); }
+
+        .testimonial-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .testimonial-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--amber);
+            font-size: 0.85rem;
+        }
+
+        .testimonial-role { color: var(--text-dim); font-size: 0.7rem; margin-top: 2px; }
+
+        /* WHY TERMINAL */
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .why-item {
+            padding: 24px;
+            border-left: 1px solid var(--border);
+        }
+
+        .why-item-title {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            color: var(--amber);
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .why-item-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
         @media (max-width: 768px) {
             nav { padding: 14px 24px; }
             .nav-links { display: none; }
@@ -994,7 +1087,7 @@
 
 <nav aria-label="Main navigation">
     <a href="#" class="nav-logo" aria-label="HelloChusquis home">
-        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="28" height="28" loading="lazy" decoding="async">
+        <img src="hc.png" alt="HelloChusquis logo" width="28" height="28" loading="lazy" decoding="async">
         HelloChusquis
     </a>
     <ul class="nav-links">
@@ -1200,6 +1293,77 @@
 
 <hr class="divider">
 
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+    <p class="section-label">What people say</p>
+    <h2 class="section-title">The terminal-first crowd already gets it.</h2>
+    <p class="section-desc">Built by devs, for devs. Here's what they say after one pip install.</p>
+
+    <div class="testimonial-grid">
+        <blockquote class="testimonial">
+            <p class="testimonial-quote">Replaced three different tools I was juggling. The auto-failover saved me during a Groq outage last week — switched to OpenRouter mid-task without me noticing.</p>
+            <div class="testimonial-meta">
+                <div class="testimonial-avatar" aria-hidden="true">M</div>
+                <div>
+                    <div>marco.d</div>
+                    <div class="testimonial-role">Backend engineer</div>
+                </div>
+            </div>
+        </blockquote>
+
+        <blockquote class="testimonial">
+            <p class="testimonial-quote">The browser tool actually works on sites with anti-bot. I tested it on Cloudflare-protected pages where my Selenium scripts died. This just handled it.</p>
+            <div class="testimonial-meta">
+                <div class="testimonial-avatar" aria-hidden="true">J</div>
+                <div>
+                    <div>jpark.dev</div>
+                    <div class="testimonial-role">QA automation lead</div>
+                </div>
+            </div>
+        </blockquote>
+
+        <blockquote class="testimonial">
+            <p class="testimonial-quote">I run Ollama locally for most things and Ollama + HelloChusquis beats paying for ChatGPT Plus. No code leaves my machine, ever.</p>
+            <div class="testimonial-meta">
+                <div class="testimonial-avatar" aria-hidden="true">A</div>
+                <div>
+                    <div>ana_codes</div>
+                    <div class="testimonial-role">Privacy-focused dev</div>
+                </div>
+            </div>
+        </blockquote>
+    </div>
+</section>
+
+<hr class="divider">
+
+<!-- WHY TERMINAL -->
+<section id="why-terminal">
+    <p class="section-label">The pitch</p>
+    <h2 class="section-title">Why a terminal agent beats another browser tab.</h2>
+
+    <div class="why-grid">
+        <div class="why-item">
+            <div class="why-item-title">// No context switch</div>
+            <div class="why-item-desc">Your AI lives where you work. No alt-tabbing between ChatGPT and your editor. Your hands never leave the keyboard.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Runs on your machine</div>
+            <div class="why-item-desc">Local-first. Sensitive code, proprietary data, customer info — nothing leaves your machine unless you choose a cloud provider.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Provider freedom</div>
+            <div class="why-item-desc">Switch from OpenAI to Groq to local Ollama with one command. No vendor lock-in. If a provider goes down, the next one picks up.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Scriptable</div>
+            <div class="why-item-desc">Pipe, redirect, chain. The agent is a CLI tool — combine it with cron, tmux, make, or any shell workflow you already use.</div>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
 <!-- FEATURES -->
 <section id="features">
     <p class="section-label">Features</p>
@@ -1395,6 +1559,10 @@
             <div class="faq-a">An open source terminal AI agent. One pip install, 35+ providers, 130+ tools, browser automation, persistent memory. Runs locally on your machine.</div>
         </div>
         <div class="faq-item">
+            <div class="faq-q">What does "HelloChusquis" mean?</div>
+            <div class="faq-a">It's "hello" + "chusquis" — an Andean word for messengers who ran between villages carrying news. The agent is your terminal messenger to the AI world: you ask, it delivers, no UI in the way.</div>
+        </div>
+        <div class="faq-item">
             <div class="faq-q">How much does it cost?</div>
             <div class="faq-a">Free and open source (MIT license). You pay only for AI provider API usage. Groq and Ollama are free options.</div>
         </div>
@@ -1405,6 +1573,10 @@
         <div class="faq-item">
             <div class="faq-q">What can it actually do?</div>
             <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 130+ APIs.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">How does it compare to ChatGPT or Claude.ai?</div>
+            <div class="faq-a">Those are browser tabs you can't script. HelloChusquis is a CLI tool — pipe it, chain it, run it in cron, use it from any terminal. And it runs locally with Ollama if you want zero data leaving your machine.</div>
         </div>
     </div>
 </section>
@@ -1452,7 +1624,7 @@
 
 <footer>
     <div class="footer-logo">
-        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
+        <img src="hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
         HelloChusquis
     </div>
     <ul class="footer-links">

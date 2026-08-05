@@ -41,7 +41,7 @@ CRITICAL_PATTERNS: list[tuple[re.Pattern, str]] = [
     # Fork bomb — classic colon form
     (re.compile(r":\(\)\s*\{.*\|.*&", re.I), "fork bomb"),
     # Fork bomb — renamed form: ANY NAME(){ NAME|NAME& };NAME
-    (re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{[^{}]*\b\1\s*\|\s*\1\b[^{}]*&\s*\}", re.I), "fork bomb"),
+    (re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{[^{}]*\b\1\s*\|\s*\1\b[^{}]*&[^{}]*\}", re.I), "fork bomb"),
     # Format
     (re.compile(r"\bmkfs\b", re.I), "filesystem formatting"),
     (re.compile(r"\bmke2fs\b", re.I), "filesystem formatting"),

@@ -41,6 +41,7 @@ class ProviderPool:
         self.providers: List[Provider] = []
         self.reset_after_seconds: float = 3600  # default 1 hour
         self.timeout: int = 15  # seconds
+        self._models_cache: Dict[str, tuple] = {}  # name -> (fetched_at, models)
         self._load(Path(config_path))
 
     # ---------------------------------------------------------------------
@@ -72,10 +73,11 @@ class ProviderPool:
             return config, valid_count
 
         # Check multiple locations for config, preferring ones with valid API keys
+        # CWD config checked FIRST — project-specific overrides global
         possible_paths = [
+            config_path,
             PathLib.home() / "config.yaml",
             PathLib.home() / ".hellochusquis" / "config.yaml",
-            config_path,  # Current directory last (often has empty placeholder)
         ]
 
         best_config = None
@@ -151,8 +153,13 @@ class ProviderPool:
         messages: List[dict],
         tools: Optional[List[dict]] = None,
         max_retries: int = 3,
+        provider_name: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> dict:
         """Attempt to chat, retrying up to *max_retries* times on failure.
+
+        If *provider_name* is given, only that provider is tried. If *model*
+        is given, it overrides the provider's configured model for this call.
 
         The method delegates to :meth:`chat` and catches :class:`RuntimeError`
         from failed providers.
@@ -160,7 +167,7 @@ class ProviderPool:
         last_error: Optional[Exception] = None
         for attempt in range(max_retries):
             try:
-                return self.chat(messages, tools)
+                return self.chat(messages, tools, provider_name=provider_name, model=model)
             except RuntimeError as exc:
                 last_error = exc
                 if attempt < max_retries - 1:
@@ -171,8 +178,13 @@ class ProviderPool:
                 continue
         raise RuntimeError(f"All providers failed after {max_retries} attempts: {last_error}")
 
-    def chat(self, messages: List[dict], tools: Optional[List[dict]] = None) -> dict:
+    def chat(self, messages: List[dict], tools: Optional[List[dict]] = None,
+             provider_name: Optional[str] = None, model: Optional[str] = None) -> dict:
         """Send *messages* to the first available provider and return the response.
+
+        When *provider_name* is supplied the pool only considers that provider;
+        if it is unavailable the request still falls back to other providers so
+        the UI selection is a preference, not a hard lock.
 
         Raises
         ------
@@ -183,11 +195,16 @@ class ProviderPool:
         if not available:
             raise RuntimeError("All providers exhausted. Try again later.")
 
+        if provider_name:
+            preferred = [p for p in available if p.name == provider_name]
+            if preferred:
+                available = preferred
+
         last_error: Optional[Exception] = None
         for provider in available:
             start = time.time()
             try:
-                result = self._call(provider, messages, tools)
+                result = self._call(provider, messages, tools, model=model)
                 # Update timing statistics
                 elapsed = time.time() - start
                 provider.avg_response_time = (
@@ -247,6 +264,7 @@ class ProviderPool:
         provider: Provider,
         messages: List[dict],
         tools: Optional[List[dict]],
+        model: Optional[str] = None,
     ) -> dict:
         """Perform the HTTP request against *provider*.
 
@@ -256,7 +274,7 @@ class ProviderPool:
             provider.base_url = 'https://' + provider.base_url
 
         payload: Dict[str, Any] = {
-            "model": provider.model,
+            "model": model or provider.model,
             "messages": messages,
         }
         supports_tools = "groq.com" not in provider.base_url.lower()
@@ -288,6 +306,7 @@ class ProviderPool:
                 {
                     "name": p.name,
                     "model": p.model,
+                    "base_url": p.base_url,
                     "status": "exhausted" if p.exhausted else "ready",
                     "avg_ms": round(p.avg_response_time * 1000) if p.avg_response_time else 0,
                     "calls": p.total_calls,
@@ -295,6 +314,35 @@ class ProviderPool:
                 }
             )
         return summary
+
+    def list_models(self, name: str, refresh: bool = False) -> List[str]:
+        """Return the models available for a provider, with a short TTL cache.
+
+        Best-effort: if the provider's /models endpoint can't be reached the
+        list falls back to the provider's configured model.
+        """
+        now = time.time()
+        cached = self._models_cache.get(name)
+        if not refresh and cached and (now - cached[0]) < 300:
+            return cached[1]
+
+        provider = next((p for p in self.providers if p.name == name), None)
+        if provider is None:
+            return []
+
+        models: List[str] = []
+        try:
+            from core.setup import fetch_available_models
+            models = fetch_available_models(provider.base_url, provider.api_key)
+        except Exception:
+            models = []
+
+        if provider.model and provider.model not in models:
+            models.insert(0, provider.model)
+
+        self._models_cache[name] = (now, models)
+        logger.info("Fetched %d models for %s", len(models), name)
+        return models
 
     def update_api_key(self, name: str, api_key: str):
         """Update API key for a provider."""

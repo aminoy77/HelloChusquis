@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from starlette.responses import StreamingResponse
 import uvicorn
 import json
 import hashlib
@@ -52,7 +53,22 @@ def _load_or_create_api_key() -> str:
 
 
 REQUIRED_API_KEY = _load_or_create_api_key()
-AUTH_ENABLED = True  # Always enabled; key is guaranteed non-empty
+# Auth is opt-in. The web UI exposes an agent with shell access; leaving it
+# open on localhost still allows CSRF/PNA/DNS-rebinding-driven attacks from
+# any website or local process. For trusted local use the app opens without a
+# key. Set HELLOCHUSQUIS_AUTH=1 (or true/yes/on) to require the access key
+# (trusted LAN / kiosk / shared machines).
+_AUTH_ENABLED = os.environ.get("HELLOCHUSQUIS_AUTH", "").strip().lower() in ("1", "true", "yes", "on")
+AUTH_ENABLED = _AUTH_ENABLED
+
+
+def _auth_hint() -> str:
+    """Human-readable hint about where the API key lives."""
+    if os.environ.get("HELLOCHUSQUIS_API_KEY"):
+        return "Set via the HELLOCHUSQUIS_API_KEY environment variable."
+    if _AUTH_KEY_FILE.exists():
+        return f"Stored in {_AUTH_KEY_FILE}"
+    return f"Generate one by starting the server (saved to {_AUTH_KEY_FILE})"
 
 
 def _verify_token(token: str) -> bool:
@@ -63,6 +79,14 @@ def _verify_token(token: str) -> bool:
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
+
+        # CORS preflight: pass through OPTIONS (browser sends before actual request)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # Auth is disabled by default (local web UI)
+        if not AUTH_ENABLED:
+            return await call_next(request)
 
         # Skip auth for static/login endpoints
         if request.method == "GET" and path == "/":
@@ -104,6 +128,8 @@ _chat_limiter = RateLimiter(requests_per_minute=30)
 
 class MessageRequest(BaseModel):
     message: str
+    provider: str | None = None
+    model: str | None = None
 
 
 class FeedbackRequest(BaseModel):
@@ -125,8 +151,11 @@ async def root():
 
 @app.get("/auth/check")
 def auth_check():
-    """Tell the frontend whether auth is required."""
-    return {"auth_required": AUTH_ENABLED}
+    """Tell the frontend whether auth is required (and where the key lives)."""
+    return {
+        "auth_required": AUTH_ENABLED,
+        "key_hint": _auth_hint() if AUTH_ENABLED else "",
+    }
 
 
 @app.post("/auth/verify")
@@ -165,7 +194,7 @@ def liveness_probe():
 
 
 @app.post("/chat")
-async def chat(req: MessageRequest, http_request: Request):
+def chat(req: MessageRequest, http_request: Request):
     ip = http_request.client.host if http_request.client else "unknown"
     if not _chat_limiter.is_allowed(ip):
         retry = _chat_limiter.get_retry_after(ip)
@@ -213,7 +242,7 @@ async def chat(req: MessageRequest, http_request: Request):
     agent._dispatch_tool = logged_dispatch
 
     try:
-        response = agent.run(user_input)
+        response = agent.run(user_input, provider=req.provider, model=req.model)
     except RuntimeError as e:
         logger.error("Chat error: %s", e)
         response = f"Error: {e}"
@@ -221,6 +250,52 @@ async def chat(req: MessageRequest, http_request: Request):
         agent._dispatch_tool = original_dispatch
 
     return {"response": response, "tool_calls": tool_calls_log}
+
+
+@app.post("/chat/stream")
+def chat_stream(req: MessageRequest, http_request: Request):
+    """SSE streaming endpoint. Same contract as /chat but yields chunks."""
+    ip = http_request.client.host if http_request.client else "unknown"
+    if not _chat_limiter.is_allowed(ip):
+        retry = _chat_limiter.get_retry_after(ip)
+        logger.warning("Rate limit exceeded on /chat/stream from %s", ip)
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Max 30 requests/minute.",
+            headers={"Retry-After": str(int(retry) + 1)},
+        )
+
+    user_input = req.message.strip()
+    if not user_input:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(user_input) > 20000:
+        raise HTTPException(status_code=400, detail="Message too long (max 20000 chars)")
+
+    if user_input == "/clear":
+        agent.history.clear()
+        return {"response": "Historial limpiado.", "tool_calls": []}
+
+    if user_input == "/status":
+        status = agent.pool.status()
+        lines = [f"{'✓' if p['status'] == 'ready' else '✗'} {p['name']} — {p['model']}" for p in status]
+        return {"response": "\n".join(lines), "tool_calls": []}
+
+    def event_gen():
+        try:
+            for ev in agent.stream_run(user_input, provider=req.provider, model=req.model):
+                payload = json.dumps(ev, ensure_ascii=False)
+                yield f"data: {payload}\n\n"
+        except RuntimeError as e:
+            yield f"data: {json.dumps({'type': 'error', 'content': f'Error: {e}'})}\n\n"
+        except Exception as e:
+            logger.exception("Stream failed")
+            yield f"data: {json.dumps({'type': 'error', 'content': f'Error: {e}'})}\n\n"
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/feedback")
@@ -244,7 +319,7 @@ def update_config(req: ConfigRequest):
 
 
 @app.get("/status")
-async def status():
+def status():
     providers = agent.pool.status()
     plugins = [{"name": p["name"]} for p in agent.plugins]
     summary = db_memory.load_summary()
@@ -277,6 +352,19 @@ async def status():
     }
 
 
+@app.get("/models")
+def models(provider: str = "", refresh: bool = False):
+    """Available models for a provider (cached server-side, ~5 min TTL)."""
+    known_names = {p["name"] for p in agent.pool.status()}
+    if provider not in known_names:
+        raise HTTPException(status_code=404, detail=f"Provider '{provider}' not found")
+    try:
+        return {"provider": provider, "models": agent.pool.list_models(provider, refresh=refresh)}
+    except Exception:
+        logger.exception("models fetch failed")
+        raise HTTPException(status_code=500, detail="Failed to fetch models")
+
+
 class ProviderUpdate(BaseModel):
     name: str
     key: str = ""
@@ -285,7 +373,7 @@ class ProviderUpdate(BaseModel):
 
 
 @app.post("/update-provider")
-async def update_provider(data: ProviderUpdate):
+def update_provider(data: ProviderUpdate):
     """Update provider configuration."""
     # Validate provider name exists
     known_names = {p["name"] for p in agent.pool.status()}
@@ -314,7 +402,10 @@ async def update_provider(data: ProviderUpdate):
 
 
 def start(host: str = "127.0.0.1", port: int = 8000):
-    logger.info("API key: %s", REQUIRED_API_KEY)
+    if AUTH_ENABLED:
+        logger.info("Auth enabled — API key: %s (%s)", REQUIRED_API_KEY, _auth_hint())
+    else:
+        logger.info("Auth disabled — set HELLOCHUSQUIS_AUTH=1 to protect the web UI")
     uvicorn.run(app, host=host, port=port, log_level="warning")
 
 
