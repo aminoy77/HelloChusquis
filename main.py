@@ -1,11 +1,6 @@
 from core.setup import ensure_config
-from ui.terminal import print_assistant, print_banner, get_input, print_status
 from core.agent import Agent
-from core.planner import generate_plan, confirm_plan, execute_plan
-from core.learning import add_feedback
 from rich.console import Console
-import threading
-import sys
 import signal
 
 console = Console()
@@ -66,123 +61,36 @@ def is_complex(text: str) -> bool:
     return False
 
 
-def handle_feedback(user_input: str, history):
-    if user_input in ["👍", "+", "good", "bien"]:
-        msgs = history.get()
-        ctx = msgs[-2]["content"] if len(msgs) >= 2 else ""
-        add_feedback("positive", ctx)
-        console.print("[green]✓ Feedback saved[/green]")
-        return True
-    if user_input in ["👎", "-", "bad", "mal"]:
-        msgs = history.get()
-        ctx = msgs[-2]["content"] if len(msgs) >= 2 else ""
-        add_feedback("negative", ctx)
-        console.print("[red]✓ Feedback saved[/red]")
-        return True
-    return False
-
-
 def main():
-    config = ensure_config()
-    agent = Agent(config)
+    """Launch HelloChusquis — TUI by default, web/api via subcommands."""
+    try:
+        config = ensure_config()
+    except KeyboardInterrupt:
+        console.print("\n[dim]Setup cancelled.[/dim]")
+        return 1
+
+    try:
+        agent = Agent(config)
+    except FileNotFoundError as e:
+        console.print("[red]No LLM providers configured. Run 'hellochusquis config' to set up.[/red]")
+        console.print(f"[dim]{e}[/dim]")
+        return 1
+    except Exception as e:
+        console.print(f"[red]Failed to initialize agent: {e}[/red]")
+        return 1
+
     retention_days = config["settings"].get("memory_retention_days", 30)
 
     # Install signal handlers for graceful shutdown
     signal.signal(signal.SIGTERM, _request_shutdown)
     signal.signal(signal.SIGHUP, _request_shutdown)
 
-    print_banner()
+    # Launch TUI
+    from ui.tui import run_tui
     try:
-        user_input = get_input()
-        while user_input not in ["exit", "quit"] and not _shutdown_requested:
-
-            if handle_feedback(user_input, agent.history):
-                user_input = get_input()
-                continue
-
-            if user_input == "/help":
-                console.print("""
-[bold #f5a623]HelloChusquis Commands[/bold #f5a623]
-
-[bold]Chat:[/bold]
-  /help      — Show this help
-  /status    — Provider status
-  /clear     — Clear history
-  /plan      — Force plan: /plan <task>
-  👍 / +     — Positive feedback
-  👎 / -     — Negative feedback
-  exit       — Exit
-
-[bold]Terminal:[/bold]
-  hellochusquis install <plugin>
-  hellochusquis uninstall <plugin>
-  hellochusquis plugins
-  hellochusquis build
-  hellochusquis learn
-  hellochusquis web
-  hellochusquis daemon [start|stop|status|install|add|tasks|log]
-""")
-
-            elif user_input == "/status":
-                statuses = agent.pool.status()
-                print_status(statuses)
-                for s in statuses:
-                    if s.get("avg_ms"):
-                        console.print(f"  [dim]avg {s['avg_ms']}ms · {s['calls']} calls · {s['failures']} failures[/dim]")
-
-            elif user_input == "/clear":
-                agent.history.clear()
-                console.print("[dim]History cleared.[/dim]")
-
-            elif user_input.startswith("/plan "):
-                task = user_input[6:].strip()
-                steps = generate_plan(task, agent.pool)
-                if steps:
-                    final = confirm_plan(steps, agent.pool, task)
-                    if final:
-                        execute_plan(final, agent)
-                else:
-                    console.print("[red]Could not generate plan.[/red]")
-
-            elif user_input == "/web" or user_input == "web":
-                console.print("[dim]Starting web interface...[/dim]")
-                from web.server import app
-                import uvicorn
-                uvicorn.run(app, host="127.0.0.1", port=8000)
-                return
-
-            elif user_input.strip() == "":
-                pass
-
-            else:
-                try:
-                    if is_complex(user_input):
-                        console.print("[dim]Complex task — generating plan...[/dim]")
-                        steps = generate_plan(user_input, agent.pool)
-                        if steps:
-                            final = confirm_plan(steps, agent.pool, user_input)
-                            if final:
-                                execute_plan(final, agent)
-                        else:
-                            respuesta = agent.run(user_input)
-                            print_assistant(respuesta)
-                    else:
-                        respuesta = agent.run(user_input)
-                        print_assistant(respuesta)
-                        console.print("[dim]  👍 / 👎[/dim]")
-
-                except RuntimeError as e:
-                    console.print(f"\n[red]✗ {e}[/red]")
-                    console.print("[yellow]No providers available with credits. Try:[/yellow]")
-                    console.print("[dim]  1. OpenRouter: https://openrouter.ai/keys[/dim]")
-                    console.print("[dim]  2. Groq: https://console.groq.com/keys[/dim]")
-                    console.print("[dim]  3. Ollama (local, no key needed)[/dim]")
-                    console.print("[dim]Edit config: nano ~/.hellochusquis/config.yaml[/dim]")
-
-            user_input = get_input()
-
+        run_tui(agent=agent, config=config)
     except KeyboardInterrupt:
-        console.print("\n")
+        pass
     finally:
         _cleanup(agent, retention_days)
 

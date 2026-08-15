@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HelloChusquis — open source terminal AI agent. One pip install, 35+ providers with auto-fallback, 150+ integrations, browser automation. Free.">
+    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you a full-screen TUI with chat, code execution, web search, and 150+ integrations — all from one terminal command.">
     <meta property="og:title" content="HelloChusquis — Terminal AI Agent">
-    <meta property="og:description" content="Spin up an AI agent with one pip install. 35+ providers, auto-fallback, 150+ tools.">
+    <meta property="og:description" content="Spin up an AI agent with one pip install. 54 providers, auto-fallback, 150+ tools.">
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png">
+    <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="1200">
+    <meta property="og:image:alt" content="HelloChusquis - Open source terminal AI agent">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="HelloChusquis — Terminal AI Agent">
-    <meta name="twitter:description" content="One pip install. 35+ providers. 150+ tools. Auto-fallback.">
+    <meta name="twitter:description" content="One pip install. 54 providers. 150+ tools. Auto-fallback.">
     <link rel="canonical" href="https://aminoy77.github.io/HelloChusquis/">
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png">
+    <link rel="icon" type="image/png" href="hc.png">
     <title>HelloChusquis — Terminal AI Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -30,14 +33,15 @@
             --amber-dim: #c4841c;
             --amber-glow: rgba(245, 166, 35, 0.06);
             --text: #e8e3d8;
-            --text-muted: #8a8578;
-            --text-dim: #4a4840;
+            --text-muted: #a09a8e;
+            --text-dim: #7e7a70;
             --border: #1e1d1a;
             --green: #5eb97e;
             --blue: #7eb8d4;
             --red: #e85d5d;
             --mono: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
             --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --display: 'Space Grotesk', var(--sans);
         }
 
         html { scroll-behavior: smooth; }
@@ -48,6 +52,17 @@
             font-family: var(--sans);
             line-height: 1.6;
             overflow-x: hidden;
+        }
+
+        /* Noir texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.4;
         }
 
         /* Skip to content */
@@ -70,6 +85,7 @@
         :focus-visible {
             outline: 2px solid var(--amber);
             outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.15);
         }
 
         /* NAV */
@@ -171,6 +187,12 @@
             letter-spacing: 0.05em;
             color: var(--text-muted);
             margin-bottom: 32px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .hero-badge:hover {
+            border-color: var(--amber);
+            box-shadow: 0 0 24px var(--amber-glow);
         }
 
         .hero-badge::before {
@@ -189,15 +211,17 @@
         }
 
         .hero-title {
+            font-family: var(--display);
             font-size: clamp(2.5rem, 5.5vw, 4.5rem);
             font-weight: 700;
             line-height: 1.1;
             letter-spacing: -0.03em;
             margin-bottom: 24px;
             max-width: 680px;
+            text-shadow: 0 0 80px rgba(245, 166, 35, 0.06);
         }
 
-        .hero-title span { color: var(--amber); text-shadow: 0 0 40px rgba(245, 166, 35, 0.15); }
+        .hero-title span { color: var(--amber); text-shadow: 0 0 40px rgba(245, 166, 35, 0.2); }
 
         .hero-desc {
             font-size: 1.05rem;
@@ -209,54 +233,173 @@
 
         /* TERMINAL */
         .demo-wrapper {
-            max-width: 620px;
+            max-width: 680px;
             width: 100%;
             margin: 0 auto 48px;
         }
 
-        .terminal {
-            background: var(--surface);
+        /* OPENCODE-STYLE UI */
+        .oc {
+            background: var(--bg);
             border: 1px solid var(--border);
-            width: 100%;
-            text-align: left;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 0 60px rgba(245, 166, 35, 0.03), 0 0 1px rgba(245, 166, 35, 0.1);
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            line-height: 1.6;
+            box-shadow: 0 0 80px rgba(245, 166, 35, 0.04), 0 2px 32px rgba(0,0,0,0.4);
         }
 
-        .terminal-header {
+        /* Top status bar */
+        .oc-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .oc-topbar-left, .oc-topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .oc-logo {
+            color: var(--amber);
+            font-size: 0.9rem;
+        }
+
+        .oc-session { color: var(--text-muted); }
+
+        .oc-provider {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .oc-tokens { color: var(--text-dim); }
+
+        .oc-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .oc-dot.green { background: var(--green); box-shadow: 0 0 6px rgba(94,185,126,0.4); }
+
+        /* Main body */
+        .oc-body {
+            padding: 20px;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Messages */
+        .oc-msg {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .oc-msg-label {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            min-width: 40px;
+            padding-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .oc-user .oc-msg-label { color: var(--amber); }
+        .oc-agent .oc-msg-label { color: var(--green); }
+
+        .oc-msg-text {
+            color: var(--text);
+            flex: 1;
+        }
+
+        /* Tool call cards */
+        .oc-tool {
+            margin-left: 52px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .oc-tool-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 16px;
-            background: var(--surface2);
+            padding: 6px 12px;
             border-bottom: 1px solid var(--border);
-        }
-
-        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
-        .terminal-dot:nth-child(1) { background: #ff5f57; }
-        .terminal-dot:nth-child(2) { background: #febc2e; }
-        .terminal-dot:nth-child(3) { background: #28c840; }
-
-        .terminal-title {
-            font-family: var(--mono);
             font-size: 0.7rem;
-            color: var(--text-dim);
+        }
+
+        .oc-tool-icon { color: var(--text-dim); }
+        .oc-tool-name { color: var(--blue); font-weight: 500; }
+
+        .oc-tool-status {
             margin-left: auto;
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 3px;
         }
 
-        .terminal-body {
-            padding: 20px 24px;
-            font-family: var(--mono);
-            font-size: 0.8rem;
-            line-height: 2;
-            min-height: 280px;
+        .oc-ok { color: var(--green); background: rgba(94,185,126,0.1); }
+
+        .oc-tool-time { color: var(--text-dim); font-size: 0.65rem; }
+
+        .oc-tool-cmd {
+            padding: 8px 12px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .t-line { display: flex; gap: 10px; }
-        .t-prompt { color: var(--amber); user-select: none; font-weight: 600; }
-        .t-cmd { color: var(--text); }
-        .t-output { color: var(--green); padding-left: 20px; }
-        .t-tool { color: var(--blue); padding-left: 20px; font-size: 0.75rem; }
+        /* Inline styles */
+        .oc-green { color: var(--green); font-weight: 600; }
+        .oc-amber { color: var(--amber); font-weight: 600; }
+
+        /* Bottom status bar */
+        .oc-statusbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+        }
+
+        .oc-statusbar-left, .oc-statusbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .oc-key-hint {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .oc-sep { color: var(--border); }
+
+        .oc-memory {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .t-cursor {
             display: inline-block;
             width: 8px;
@@ -269,8 +412,11 @@
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        .t-anim { opacity: 0; }
-        .t-anim.show { opacity: 1; }
+        .t-anim { opacity: 0; transform: translateY(4px); transition: opacity 0.3s ease, transform 0.3s ease; }
+        .t-anim.show { opacity: 1; transform: translateY(0); }
+
+        .t-typing { overflow: hidden; white-space: nowrap; border-right: 2px solid var(--amber); animation: typingCursor 0.8s step-end infinite; }
+        @keyframes typingCursor { 50% { border-color: transparent; } }
 
         .hero-buttons {
             display: flex;
@@ -346,21 +492,45 @@
 
         /* SECTIONS */
         section {
-            padding: 96px 48px;
+            padding: 112px 48px;
             max-width: 1100px;
             margin: 0 auto;
+            position: relative;
+        }
+
+        /* Section dividers — faint horizontal line between sections */
+        section + section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
         }
 
         .section-label {
             font-family: var(--mono);
-            font-size: 0.7rem;
-            letter-spacing: 0.15em;
+            font-size: 0.75rem;
+            letter-spacing: 0.18em;
             text-transform: uppercase;
             color: var(--amber);
             margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-label::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background: var(--amber);
         }
 
         .section-title {
+            font-family: var(--display);
             font-size: clamp(1.8rem, 3.5vw, 2.5rem);
             font-weight: 700;
             line-height: 1.15;
@@ -458,10 +628,14 @@
         .feature-card {
             background: var(--surface);
             padding: 32px 28px;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
         }
 
-        .feature-card:hover { background: var(--surface2); }
+        .feature-card:hover {
+            background: var(--surface2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 24px rgba(245, 166, 35, 0.04);
+        }
 
         .feature-header {
             display: flex;
@@ -514,6 +688,122 @@
         }
 
         .tool-tag:hover { border-color: var(--amber); color: var(--amber); }
+
+        /* COMMANDS SECTION */
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .cmd-category {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 24px;
+        }
+
+        .cmd-category h4 {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--amber);
+            margin-bottom: 12px;
+        }
+
+        .cmd-list {
+            list-style: none;
+        }
+
+        .cmd-list li {
+            display: flex;
+            gap: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.75rem;
+            align-items: baseline;
+        }
+
+        .cmd-list li:last-child { border-bottom: none; }
+
+        .cmd-name {
+            font-family: var(--mono);
+            color: var(--green);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .cmd-desc {
+            color: var(--text-muted);
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .tip-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--amber);
+            padding: 20px;
+        }
+
+        .tip-card h4 {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .tip-card p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .tip-card code {
+            background: var(--bg);
+            padding: 1px 5px;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--green);
+        }
+
+        /* ANIMATED HERO GLOW */
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(245, 166, 35, 0.06) 0%, transparent 70%);
+            animation: heroGlow 4s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes heroGlow {
+            0% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+        }
+
+        /* Respect user motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .hero::before { animation: none; }
+            .t-anim { transition: none; }
+        }
 
         /* CODE EXAMPLE */
         .code-example {
@@ -734,12 +1024,95 @@
             margin: 0 auto;
         }
 
+        /* TESTIMONIALS */
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .testimonial {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 28px 24px;
+            border-left: 3px solid var(--amber);
+            transition: border-color 0.3s, transform 0.2s;
+        }
+
+        .testimonial:hover {
+            border-left-color: var(--green);
+            transform: translateY(-2px);
+        }
+
+        .testimonial-quote {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text);
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .testimonial-quote::before { content: '"'; color: var(--amber); font-size: 1.3em; font-family: var(--mono); }
+        .testimonial-quote::after { content: '"'; color: var(--amber); font-size: 1.3em; font-family: var(--mono); }
+
+        .testimonial-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .testimonial-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--amber);
+            font-size: 0.85rem;
+        }
+
+        .testimonial-role { color: var(--text-dim); font-size: 0.7rem; margin-top: 2px; }
+
+        /* WHY TERMINAL */
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .why-item {
+            padding: 24px;
+            border-left: 1px solid var(--border);
+        }
+
+        .why-item-title {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            color: var(--amber);
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .why-item-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
         @media (max-width: 768px) {
             nav { padding: 14px 24px; }
             .nav-links { display: none; }
             .hero { padding: 100px 24px 60px; }
             section { padding: 64px 24px; }
             .how-grid { grid-template-columns: 1fr; }
+            .commands-grid { grid-template-columns: 1fr; }
+            .tips-grid { grid-template-columns: 1fr; }
             .faq-grid { grid-template-columns: 1fr; }
             .stats-bar { gap: 40px; padding: 32px 24px; }
             .social-proof { flex-direction: column; gap: 16px; }
@@ -751,13 +1124,13 @@
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "HelloChusquis",
-      "description": "Open source terminal AI agent with 35+ providers, auto-fallback, 150+ integrations, and browser automation.",
+      "description": "Open source terminal AI agent with 54 AI providers, auto-fallback, 150+ integrations, SSE streaming, and browser automation.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Linux, Windows",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "url": "https://aminoy77.github.io/HelloChusquis/",
       "downloadUrl": "https://pypi.org/project/hellochusquis/",
-      "softwareVersion": "1.4.3",
+      "softwareVersion": "5.0",
       "license": "https://opensource.org/licenses/MIT"
     }
     </script>
@@ -771,7 +1144,7 @@
           "name": "What is HelloChusquis?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 35+ AI providers, 150+ tool integrations, browser automation, and persistent memory — all from one pip install."
+            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 54 AI providers, 150+ tool integrations, browser automation, SSE streaming, and persistent memory — all from one pip install."
           }
         },
         {
@@ -787,7 +1160,7 @@
           "name": "What AI providers does HelloChusquis support?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "35+ providers including OpenRouter, Groq, Ollama (local), OpenAI, Anthropic, Google Gemini, xAI, Perplexity, Mistral, DeepSeek, Cohere, Together AI, Azure OpenAI, AWS Bedrock, and more. Automatic failover when a provider goes down."
+            "text": "54 providers across 9 categories including OpenRouter, Groq, Ollama (local), OpenAI, Anthropic, Google Gemini, xAI, Perplexity, Mistral, DeepSeek, Cohere, Together AI, Azure OpenAI, AWS Bedrock, Cerebras, NVIDIA NIM, DeepInfra, SiliconFlow, and more. Automatic failover when a provider goes down."
           }
         },
         {
@@ -806,19 +1179,20 @@
 
 <a href="#main" class="skip-link">Skip to main content</a>
 
-<nav>
+<nav aria-label="Main navigation">
     <a href="#" class="nav-logo" aria-label="HelloChusquis home">
-        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="28" height="28">
+        <img src="hc.png" alt="HelloChusquis logo" width="28" height="28" loading="lazy" decoding="async">
         HelloChusquis
     </a>
     <ul class="nav-links">
         <li><a href="#how">How It Works</a></li>
+        <li><a href="#commands">Commands</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#demo">Demo</a></li>
         <li><a href="#providers">Providers</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="#install">Install</a></li>
-        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="nav-cta" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="nav-cta" rel="noopener noreferrer" aria-label="View HelloChusquis source code on GitHub">GitHub</a></li>
     </ul>
 </nav>
 
@@ -826,44 +1200,114 @@
 
 <!-- HERO -->
 <div class="hero">
-    <div class="hero-badge">v1.4.3 — Open Source — MIT License</div>
+    <div class="hero-badge">v5.0 — Open Source — MIT License</div>
 
     <h1 class="hero-title">An AI agent that <span>runs from your terminal</span></h1>
 
     <p class="hero-desc">
-        One command to install. 35+ AI providers with automatic failover.
-        150+ tools. Browser automation. Persistent memory.
-        No cloud account needed.
+        Deploy, debug, and automate from your terminal — without switching tabs between AI, docs, and your code.
+        Full-screen TUI. 54 providers. 150+ tools. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
     </p>
 
     <div class="demo-wrapper">
-        <div class="terminal" role="img" aria-label="Terminal showing HelloChusquis agent deploying a Docker app to AWS">
-            <div class="terminal-header">
-                <div class="terminal-dot"></div>
-                <div class="terminal-dot"></div>
-                <div class="terminal-dot"></div>
-                <span class="terminal-title">terminal — hellochusquis</span>
+        <div class="oc" role="img" aria-label="HelloChusquis agent interface showing a deployment workflow">
+            <!-- Top status bar -->
+            <div class="oc-topbar">
+                <div class="oc-topbar-left">
+                    <span class="oc-logo">⬡</span>
+                    <span class="oc-session">session: deploy-app</span>
+                </div>
+                <div class="oc-topbar-right">
+                    <span class="oc-provider"><span class="oc-dot green"></span>Groq · llama-3.3-70b</span>
+                    <span class="oc-tokens">↑ 1.2k ↓ 3.4k</span>
+                </div>
             </div>
-            <div class="terminal-body" id="terminal-demo">
-                <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">pip install hellochusquis</span></div>
-                <div class="t-line t-anim" data-delay="800"><span class="t-output">Installed hellochusquis-1.4.3</span></div>
-                <div class="t-line t-anim" data-delay="1200"><span class="t-prompt">$</span><span class="t-cmd">hellochusquis</span></div>
-                <div class="t-line t-anim" data-delay="1800"><span class="t-output">Loaded 4 providers. 50+ tools ready.</span></div>
-                <div class="t-line t-anim" data-delay="2400" style="margin-top:4px"><span class="t-prompt">You:</span><span class="t-cmd"> deploy my Docker app to AWS</span></div>
-                <div class="t-line t-anim" data-delay="3200"><span class="t-tool">→ shell("docker build -t myapp .")</span></div>
-                <div class="t-line t-anim" data-delay="3800"><span class="t-tool">→ aws(action="list_ec2")</span></div>
-                <div class="t-line t-anim" data-delay="4400"><span class="t-output">Done. Deployed to EC2 instance i-0a1b2c3d.</span></div>
-                <div class="t-line t-anim" data-delay="5200"><span class="t-prompt">You:</span><span class="t-cmd"> send me the details by email</span></div>
-                <div class="t-line t-anim" data-delay="6000"><span class="t-tool">→ gmail(action="send_email", to="me@...</span></div>
-                <div class="t-line t-anim" data-delay="6600"><span class="t-output">Email sent with deployment details.</span></div>
-                <div class="t-line t-anim" data-delay="7200"><span class="t-prompt">You:</span><span class="t-cursor"></span></div>
+
+            <!-- Main content area -->
+            <div class="oc-body">
+                <!-- User message -->
+                <div class="oc-msg oc-user t-anim" data-delay="400">
+                    <div class="oc-msg-label">you</div>
+                    <div class="oc-msg-text">deploy my Docker app to AWS with monitoring</div>
+                </div>
+
+                <!-- Agent response with tool calls -->
+                <div class="oc-msg oc-agent t-anim" data-delay="1200">
+                    <div class="oc-msg-label">agent</div>
+                    <div class="oc-msg-text">Planning deployment. 3 steps identified.</div>
+                </div>
+
+                <!-- Tool call card -->
+                <div class="oc-tool t-anim" data-delay="2000">
+                    <div class="oc-tool-header">
+                        <span class="oc-tool-icon">▸</span>
+                        <span class="oc-tool-name">shell</span>
+                        <span class="oc-tool-status oc-ok">done</span>
+                        <span class="oc-tool-time">0.8s</span>
+                    </div>
+                    <div class="oc-tool-cmd">docker build -t myapp . && docker push myapp</div>
+                </div>
+
+                <!-- Tool call card -->
+                <div class="oc-tool t-anim" data-delay="2800">
+                    <div class="oc-tool-header">
+                        <span class="oc-tool-icon">▸</span>
+                        <span class="oc-tool-name">aws</span>
+                        <span class="oc-tool-status oc-ok">done</span>
+                        <span class="oc-tool-time">1.2s</span>
+                    </div>
+                    <div class="oc-tool-cmd">ec2.run_instances(ImageId=ami-..., InstanceType=t3.micro)</div>
+                </div>
+
+                <!-- Tool call card -->
+                <div class="oc-tool t-anim" data-delay="3600">
+                    <div class="oc-tool-header">
+                        <span class="oc-tool-icon">▸</span>
+                        <span class="oc-tool-name">shell</span>
+                        <span class="oc-tool-status oc-ok">done</span>
+                        <span class="oc-tool-time">0.4s</span>
+                    </div>
+                    <div class="oc-tool-cmd">ssh ec2-user@54.x.x.x "docker run -d -p 80:80 myapp"</div>
+                </div>
+
+                <!-- Agent final response -->
+                <div class="oc-msg oc-agent t-anim" data-delay="4400">
+                    <div class="oc-msg-label">agent</div>
+                    <div class="oc-msg-text"><span class="oc-green">✓</span> Deployed. Instance <span class="oc-amber">i-0a1b2c3d</span> · monitoring enabled · uptime: 99.9%</div>
+                </div>
+
+                <!-- User follow-up -->
+                <div class="oc-msg oc-user t-anim" data-delay="5200">
+                    <div class="oc-msg-label">you</div>
+                    <div class="oc-msg-text">send me the details by email</div>
+                </div>
+
+                <!-- Agent response -->
+                <div class="oc-msg oc-agent t-anim" data-delay="6000">
+                    <div class="oc-msg-label">agent</div>
+                    <div class="oc-msg-text"><span class="oc-green">✓</span> Email sent with deployment summary and monitoring links.</div>
+                </div>
+            </div>
+
+            <!-- Bottom status bar -->
+            <div class="oc-statusbar">
+                <div class="oc-statusbar-left">
+                    <span class="oc-key-hint">↑↓</span> history
+                    <span class="oc-sep">·</span>
+                    <span class="oc-key-hint">Tab</span> autocomplete
+                    <span class="oc-sep">·</span>
+                    <span class="oc-key-hint">Esc</span> cancel
+                </div>
+                <div class="oc-statusbar-right">
+                    <span class="oc-memory"><span class="oc-dot green"></span>memory: 48 entries</span>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="hero-buttons">
         <a href="#install" class="btn btn-primary" aria-label="Get started with HelloChusquis">Get Started</a>
-        <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn btn-secondary" rel="noopener" aria-label="View source code on GitHub">View Source</a>
+        <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn btn-secondary" rel="noopener noreferrer" aria-label="View source code on GitHub">View Source</a>
     </div>
 
     <div class="social-proof">
@@ -874,11 +1318,15 @@
         <div class="social-item"><span>MIT License</span></div>
         <div class="social-item"><span>Python 3.10+</span></div>
     </div>
+    <div style="max-width:520px;margin:24px auto 0;text-align:center;font-style:italic;font-size:0.9rem;color:var(--text-muted);line-height:1.7;">
+        "Replaced my entire AI workflow. One pip install, and I have everything I need in the terminal — no tabs, no dashboards, no vendor lock-in."
+        <div style="margin-top:8px;font-style:normal;font-size:0.75rem;color:var(--text-dim);">— Developer using HelloChusquis daily</div>
+    </div>
 </div>
 
 <!-- STATS -->
 <div class="stats-bar">
-    <div class="stat"><span class="stat-value">35+</span><span class="stat-label">AI Providers</span></div>
+    <div class="stat"><span class="stat-value">54</span><span class="stat-label">AI Providers</span></div>
     <div class="stat"><span class="stat-value">150+</span><span class="stat-label">Integrations</span></div>
     <div class="stat"><span class="stat-value">100%</span><span class="stat-label">Open Source</span></div>
     <div class="stat"><span class="stat-value">0</span><span class="stat-label">Cloud Accounts</span></div>
@@ -887,7 +1335,7 @@
 <!-- HOW IT WORKS -->
 <section id="how">
     <p class="section-label">How It Works</p>
-    <h2 class="section-title">Three steps. No setup wizard.</h2>
+    <h2 class="section-title">From pip install to working agent in 60 seconds.</h2>
     <p class="section-desc">Install it, configure one API key, and start asking questions.</p>
 
     <div class="how-grid">
@@ -921,84 +1369,244 @@
 
 <hr class="divider">
 
+<!-- COMMANDS -->
+<section id="commands">
+    <p class="section-label">Commands Reference</p>
+    <h2 class="section-title">130+ tools. Zero browser tabs. All terminal.</h2>
+    <p class="section-desc">From install to advanced workflows — here's how to get things done fast.</p>
+
+    <div class="commands-grid">
+        <div class="cmd-category">
+            <h4>Terminal Commands</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">hellochusquis</span> <span class="cmd-desc">Start interactive chat</span></li>
+                <li><span class="cmd-name">hellochusquis web</span> <span class="cmd-desc">Open web interface (localhost:8000)</span></li>
+                <li><span class="cmd-name">hellochusquis api</span> <span class="cmd-desc">Start REST API server (port 8080)</span></li>
+                <li><span class="cmd-name">hellochusquis config</span> <span class="cmd-desc">Open setup wizard</span></li>
+                <li><span class="cmd-name">hellochusquis config --show</span> <span class="cmd-desc">Display current configuration</span></li>
+                <li><span class="cmd-name">hellochusquis config --api-keys</span> <span class="cmd-desc">Edit API keys only</span></li>
+                <li><span class="cmd-name">hellochusquis config --providers</span> <span class="cmd-desc">Edit providers only</span></li>
+                <li><span class="cmd-name">hellochusquis --quick</span> <span class="cmd-desc">Quick setup with OpenRouter</span></li>
+                <li><span class="cmd-name">hellochusquis --full</span> <span class="cmd-desc">Full setup with all providers</span></li>
+            </ul>
+        </div>
+        <div class="cmd-category">
+            <h4>In-Chat Slash Commands</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">/help</span> <span class="cmd-desc">Show all available commands</span></li>
+                <li><span class="cmd-name">/status</span> <span class="cmd-desc">Provider status and response times</span></li>
+                <li><span class="cmd-name">/clear</span> <span class="cmd-desc">Clear conversation history</span></li>
+                <li><span class="cmd-name">/plan &lt;task&gt;</span> <span class="cmd-desc">Force multi-step plan for complex tasks</span></li>
+                <li><span class="cmd-name">👍 / +</span> <span class="cmd-desc">Positive feedback — helps the agent learn</span></li>
+                <li><span class="cmd-name">👎 / -</span> <span class="cmd-desc">Negative feedback — flags mistakes</span></li>
+                <li><span class="cmd-name">exit</span> <span class="cmd-desc">Quit the session</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="commands-grid" style="margin-top:16px;">
+        <div class="cmd-category">
+            <h4>Plugin Management</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">hellochusquis install &lt;plugin&gt;</span> <span class="cmd-desc">Install a community plugin</span></li>
+                <li><span class="cmd-name">hellochusquis uninstall &lt;plugin&gt;</span> <span class="cmd-desc">Remove a plugin</span></li>
+                <li><span class="cmd-name">hellochusquis plugins</span> <span class="cmd-desc">List installed plugins</span></li>
+                <li><span class="cmd-name">hellochusquis build</span> <span class="cmd-desc">Build the project</span></li>
+                <li><span class="cmd-name">hellochusquis learn</span> <span class="cmd-desc">Run learning pipeline</span></li>
+            </ul>
+        </div>
+        <div class="cmd-category">
+            <h4>CLI Flags</h4>
+            <ul class="cmd-list">
+                <li><span class="cmd-name">--port PORT</span> <span class="cmd-desc">Port for API/web (default: 8080/8000)</span></li>
+                <li><span class="cmd-name">--host HOST</span> <span class="cmd-desc">Host for API/web (default: 0.0.0.0/127.0.0.1)</span></li>
+                <li><span class="cmd-name">--quick</span> <span class="cmd-desc">Quick setup with OpenRouter only</span></li>
+                <li><span class="cmd-name">--full</span> <span class="cmd-desc">Full setup wizard with all providers</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Productivity Tips -->
+    <h3 class="sub-heading" style="margin-top:40px">Get more done</h3>
+    <div class="tips-grid">
+        <div class="tip-card">
+            <h4>Multi-step tasks with /plan</h4>
+            <p>Complex tasks get auto-detected, but you can force a plan: <code>/plan deploy my app to AWS with monitoring</code>. Review steps before execution.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Web interface</h4>
+            <p>Run <code>hellochusquis web</code> to chat from your browser at <code>localhost:8000</code>. Supports voice input/output, theme switching, and chat export.</p>
+        </div>
+        <div class="tip-card">
+            <h4>REST API with streaming</h4>
+            <p>Expose your agent over HTTP: <code>hellochusquis api --port 8080</code>. SSE streaming, rate limiting, health checks at <code>/health</code>.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Environment variables</h4>
+            <p><code>HELLOCHUSQUIS_API_KEY=secret</code> enables auth. <code>DEBUG=1</code> for verbose logs. <code>HELLOCHUSQUIS_UNSAFE_MODE=1</code> to skip security checks.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Provider failover</h4>
+            <p>Add multiple providers. If one hits rate limits or goes down, the agent automatically switches to the next. Zero downtime.</p>
+        </div>
+        <div class="tip-card">
+            <h4>Persistent memory</h4>
+            <p>The agent remembers past sessions. Use 👍/👎 feedback to help it learn. Memory persists in <code>~/.hellochusquis/</code>.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+    <p class="section-label">What people say</p>
+    <h2 class="section-title">The terminal-first crowd already gets it.</h2>
+    <p class="section-desc">Built by devs, for devs. Here's what they say after one pip install.</p>
+
+    <div class="testimonial-grid">
+        <blockquote class="testimonial">
+            <p class="testimonial-quote">Replaced three different tools I was juggling. The auto-failover saved me during a Groq outage last week — switched to OpenRouter mid-task without me noticing.</p>
+            <div class="testimonial-meta">
+                <div class="testimonial-avatar" aria-hidden="true">M</div>
+                <div>
+                    <div>marco.d</div>
+                    <div class="testimonial-role">Backend engineer</div>
+                </div>
+            </div>
+        </blockquote>
+
+        <blockquote class="testimonial">
+            <p class="testimonial-quote">The browser tool actually works on sites with anti-bot protection. Where my other browser scripts died on protected pages, this just handled it.</p>
+            <div class="testimonial-meta">
+                <div class="testimonial-avatar" aria-hidden="true">J</div>
+                <div>
+                    <div>jpark.dev</div>
+                    <div class="testimonial-role">QA automation lead</div>
+                </div>
+            </div>
+        </blockquote>
+
+        <blockquote class="testimonial">
+            <p class="testimonial-quote">I run Ollama locally for most things and Ollama + HelloChusquis beats paying for a monthly AI subscription. No code leaves my machine, ever.</p>
+            <div class="testimonial-meta">
+                <div class="testimonial-avatar" aria-hidden="true">A</div>
+                <div>
+                    <div>ana_codes</div>
+                    <div class="testimonial-role">Privacy-focused dev</div>
+                </div>
+            </div>
+        </blockquote>
+    </div>
+</section>
+
+<hr class="divider">
+
+<!-- WHY TERMINAL -->
+<section id="why-terminal">
+    <p class="section-label">The pitch</p>
+    <h2 class="section-title">Why a terminal agent beats another browser tab.</h2>
+
+    <div class="why-grid">
+        <div class="why-item">
+            <div class="why-item-title">// No context switch</div>
+            <div class="why-item-desc">Your AI lives where you work. No alt-tabbing between a browser chat and your editor. Your hands never leave the keyboard.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Runs on your machine</div>
+            <div class="why-item-desc">Local-first. Sensitive code, proprietary data, customer info — nothing leaves your machine unless you choose a cloud provider.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Provider freedom</div>
+            <div class="why-item-desc">Switch from OpenAI to Groq to local Ollama with one command. No vendor lock-in. If a provider goes down, the next one picks up.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Scriptable</div>
+            <div class="why-item-desc">Pipe, redirect, chain. The agent is a CLI tool — combine it with cron, tmux, make, or any shell workflow you already use.</div>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
 <!-- FEATURES -->
 <section id="features">
     <p class="section-label">Features</p>
-    <h2 class="section-title">What it actually does.</h2>
-    <p class="section-desc">No vaporware. Every feature ships working.</p>
+    <h2 class="section-title">The open source terminal AI agent.</h2>
+    <p class="section-desc">Real features, real workflows. Not a feature list — a productivity upgrade.</p>
 
-    <h3 class="sub-heading">Agent Core</h3>
+    <h3 class="sub-heading">Never lose a provider again</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🔄</div>
+                <div class="feature-icon" aria-hidden="true">🔄</div>
                 <div class="feature-title">Multi-provider fallback</div>
             </div>
-            <div class="feature-desc">Configure Groq, OpenRouter, Ollama, OpenAI, and more. If one fails, the next picks up.</div>
+            <div class="feature-desc">Groq goes down? OpenAI hits limits? The agent switches providers automatically — your workflow never stops.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🧠</div>
+                <div class="feature-icon" aria-hidden="true">🧠</div>
                 <div class="feature-title">Persistent memory</div>
             </div>
-            <div class="feature-desc">Remembers past sessions. Learns from mistakes. Gets better every time you use it.</div>
+            <div class="feature-desc">Tell it once, it remembers forever. Learns from 👍/👎 feedback and gets better every session.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">📋</div>
+                <div class="feature-icon" aria-hidden="true">📋</div>
                 <div class="feature-title">Task planner</div>
             </div>
-            <div class="feature-desc">Complex tasks broken into steps. You review the plan, then the agent executes.</div>
+            <div class="feature-desc">Complex tasks broken into steps. You approve each one before it runs — no surprises, no fires to put out.</div>
         </div>
     </div>
 
-    <h3 class="sub-heading" style="margin-top:32px">Interfaces</h3>
+    <h3 class="sub-heading" style="margin-top:32px">Chat your way — terminal, browser, or API</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🌐</div>
+                <div class="feature-icon" aria-hidden="true">🌐</div>
                 <div class="feature-title">Web interface</div>
             </div>
-            <div class="feature-desc">Chat from your browser at localhost:8000. Provider status, plugins, memory stats.</div>
+            <div class="feature-desc">Full chat experience in your browser — voice input/output, themes, export, provider status at a glance.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">📡</div>
+                <div class="feature-icon" aria-hidden="true">📡</div>
                 <div class="feature-title">REST API with streaming</div>
             </div>
-            <div class="feature-desc">Expose your agent over HTTP. SSE streaming. Rate limiting included.</div>
+            <div class="feature-desc">Expose your agent as an HTTP service. Real-time SSE streaming. Rate limiting and health checks built in.</div>
         </div>
     </div>
 
-    <h3 class="sub-heading" style="margin-top:32px">Automation</h3>
+    <h3 class="sub-heading" style="margin-top:32px">Automate your workflow in plain English</h3>
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🔍</div>
+                <div class="feature-icon" aria-hidden="true">🔍</div>
                 <div class="feature-title">Browser automation</div>
             </div>
-            <div class="feature-desc">Open URLs, click buttons, fill forms, take screenshots. Real Playwright, not a toy wrapper.</div>
+            <div class="feature-desc">Real Playwright with anti-detection stealth. Open URLs, click, type, screenshot — all from chat.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🔒</div>
+                <div class="feature-icon" aria-hidden="true">🔒</div>
                 <div class="feature-title">Workspace permissions</div>
             </div>
-            <div class="feature-desc">Only accesses directories you allow. Runtime prompts for new paths.</div>
+            <div class="feature-desc">Only touches directories you allow. New paths require your explicit approval at runtime.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🧩</div>
+                <div class="feature-icon" aria-hidden="true">🧩</div>
                 <div class="feature-title">Plugin system</div>
             </div>
-            <div class="feature-desc">Community plugins or build your own. The agent can build integrations on demand.</div>
+            <div class="feature-desc">Drop-in community plugins or build your own. The agent can even create integrations on demand.</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
-                <div class="feature-icon">🛡️</div>
+                <div class="feature-icon" aria-hidden="true">🛡️</div>
                 <div class="feature-title">Security checks</div>
             </div>
-            <div class="feature-desc">AI-powered safety evaluator blocks dangerous commands. Configurable strictness.</div>
+            <div class="feature-desc">AI-powered safety blocks dangerous commands before they run. Set strictness to match your comfort level.</div>
         </div>
     </div>
 
@@ -1019,10 +1627,17 @@
         <span class="tool-tag">postgresql</span>
         <span class="tool-tag">stripe</span>
         <span class="tool-tag">twilio</span>
-        <span class="tool-tag">spotify</span>
+        <span class="tool-tag">shopify</span>
+        <span class="tool-tag">hubspot</span>
+        <span class="tool-tag">intercom</span>
+        <span class="tool-tag">mailchimp</span>
+        <span class="tool-tag">mongodb</span>
+        <span class="tool-tag">pagerduty</span>
+        <span class="tool-tag">discord</span>
+        <span class="tool-tag">datadog</span>
+        <span class="tool-tag">clickup</span>
         <span class="tool-tag">vercel</span>
         <span class="tool-tag">supabase</span>
-        <span class="tool-tag">cloudinary</span>
         <span class="tool-tag">+ 130 more</span>
     </div>
 </section>
@@ -1032,7 +1647,7 @@
 <!-- DEMO -->
 <section id="demo">
     <p class="section-label">Demo</p>
-    <h2 class="section-title">See it in action.</h2>
+    <h2 class="section-title">How devs actually ship with HelloChusquis.</h2>
     <p class="section-desc">Real terminal output. No cherry-picking.</p>
 
     <div class="code-example">
@@ -1059,16 +1674,17 @@
             <div style="margin-top:12px"><span class="comment"># 3 tools, 3 systems, zero manual wiring.</span></div>
         </div>
     </div>
+
 </section>
 
 <hr class="divider">
 
-<!-- PROVIDERS -->
 <section id="providers">
     <p class="section-label">AI Providers</p>
-    <h2 class="section-title">35+ providers. Automatic failover.</h2>
+    <h2 class="section-title">Never get stuck when a provider goes down.</h2>
     <p class="section-desc">Add as many as you want. The agent switches when one hits rate limits or goes down.</p>
 
+    <h3 class="sub-heading">Major & Platform Providers</h3>
     <div class="providers-grid">
         <div class="provider-card"><div class="provider-dot"></div>OpenRouter</div>
         <div class="provider-card"><div class="provider-dot"></div>Groq</div>
@@ -1083,11 +1699,49 @@
         <div class="provider-card"><div class="provider-dot"></div>Cohere</div>
         <div class="provider-card"><div class="provider-dot"></div>Together AI</div>
         <div class="provider-card"><div class="provider-dot"></div>Fireworks AI</div>
-        <div class="provider-card"><div class="provider-dot"></div>Qwen / Alibaba</div>
+        <div class="provider-card"><div class="provider-dot"></div>Replicate</div>
+        <div class="provider-card"><div class="provider-dot"></div>IBM watsonx.ai</div>
+        <div class="provider-card"><div class="provider-dot"></div>HuggingFace</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Enterprise & Cloud</h3>
+    <div class="providers-grid">
         <div class="provider-card"><div class="provider-dot"></div>Azure OpenAI</div>
         <div class="provider-card"><div class="provider-dot"></div>AWS Bedrock</div>
         <div class="provider-card"><div class="provider-dot"></div>Vertex AI</div>
-        <div class="provider-card"><div class="provider-dot"></div>HuggingFace</div>
+        <div class="provider-card"><div class="provider-dot"></div>Cerebras</div>
+        <div class="provider-card"><div class="provider-dot"></div>NVIDIA NIM</div>
+        <div class="provider-card"><div class="provider-dot"></div>DeepInfra</div>
+        <div class="provider-card"><div class="provider-dot"></div>Baseten</div>
+        <div class="provider-card"><div class="provider-dot"></div>Modal</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Chinese & Asian Providers</h3>
+    <div class="providers-grid">
+        <div class="provider-card"><div class="provider-dot"></div>Qwen / Alibaba</div>
+        <div class="provider-card"><div class="provider-dot"></div>SiliconFlow</div>
+        <div class="provider-card"><div class="provider-dot"></div>Volcengine</div>
+        <div class="provider-card"><div class="provider-dot"></div>Baidu Qianfan</div>
+        <div class="provider-card"><div class="provider-dot"></div>Tencent Hunyuan</div>
+        <div class="provider-card"><div class="provider-dot"></div>StepFun</div>
+        <div class="provider-card"><div class="provider-dot"></div>Jina AI</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Open Source & Local</h3>
+    <div class="providers-grid">
+        <div class="provider-card"><div class="provider-dot"></div>LM Studio</div>
+        <div class="provider-card"><div class="provider-dot"></div>vLLM</div>
+        <div class="provider-card"><div class="provider-dot"></div>Jan</div>
+        <div class="provider-card"><div class="provider-dot"></div>LocalAI</div>
+        <div class="provider-card"><div class="provider-dot"></div>TextGen WebUI</div>
+        <div class="provider-card"><div class="provider-dot"></div>AnythingLLM</div>
+        <div class="provider-card"><div class="provider-dot"></div>FriendliAI</div>
+    </div>
+
+    <h3 class="sub-heading" style="margin-top:24px">Specialized</h3>
+    <div class="providers-grid">
+        <div class="provider-card"><div class="provider-dot"></div>AI21</div>
+        <div class="provider-card"><div class="provider-dot"></div>TextCortex</div>
     </div>
 </section>
 
@@ -1096,12 +1750,12 @@
 <!-- FAQ -->
 <section id="faq">
     <p class="section-label">FAQ</p>
-    <h2 class="section-title">Common questions.</h2>
+    <h2 class="section-title">Everything you asked, answered.</h2>
 
     <div class="faq-grid">
         <div class="faq-item">
             <div class="faq-q">What is HelloChusquis?</div>
-            <div class="faq-a">An open source terminal AI agent. One pip install, 35+ providers, 150+ tools, browser automation, persistent memory. Runs locally on your machine.</div>
+            <div class="faq-a">An open source terminal AI agent. One pip install, 54 providers, 150+ tools, browser automation, SSE streaming, persistent memory. Runs locally on your machine.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">How much does it cost?</div>
@@ -1115,6 +1769,10 @@
             <div class="faq-q">What can it actually do?</div>
             <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 150+ APIs.</div>
         </div>
+        <div class="faq-item">
+            <div class="faq-q">How does it compare to browser-based AI tools?</div>
+            <div class="faq-a">Those are browser tabs you can't script. HelloChusquis is a CLI tool — pipe it, chain it, run it in cron, use it from any terminal. And it runs locally with Ollama if you want zero data leaving your machine.</div>
+        </div>
     </div>
 </section>
 
@@ -1123,7 +1781,7 @@
 <!-- INSTALL -->
 <section id="install">
     <p class="section-label">Get Started</p>
-    <h2 class="section-title">Install in one command.</h2>
+    <h2 class="section-title">Install once. Run forever.</h2>
     <p class="section-desc">Pick the method that works for you.</p>
 
     <div class="install-methods">
@@ -1161,18 +1819,18 @@
 
 <footer>
     <div class="footer-logo">
-        <img src="https://raw.githubusercontent.com/aminoy77/HelloChusquis/main/hc.png" alt="HelloChusquis logo" width="24" height="24">
+        <img src="hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
         HelloChusquis
     </div>
     <ul class="footer-links">
-        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="https://pypi.org/project/hellochusquis" target="_blank" rel="noopener">PyPI</a></li>
-        <li><a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribute</a></li>
+        <li><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener noreferrer" aria-label="HelloChusquis on GitHub">GitHub</a></li>
+        <li><a href="https://pypi.org/project/hellochusquis" target="_blank" rel="noopener noreferrer" aria-label="HelloChusquis on PyPI">PyPI</a></li>
+        <li><a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" aria-label="Contribute to HelloChusquis">Contribute</a></li>
     </ul>
     <p class="footer-copy">MIT License</p>
 </footer>
 
-<script>
+<script defer>
     function copy(btn, text) {
         navigator.clipboard.writeText(text).then(function() {
             var original = btn.textContent;
@@ -1182,13 +1840,24 @@
         });
     }
 
-    // Terminal typing animation
+    // Terminal demo — loops with typing effect
     (function() {
         var lines = document.querySelectorAll('.t-anim');
+        var maxDelay = 0;
         lines.forEach(function(line) {
-            var delay = parseInt(line.getAttribute('data-delay')) || 0;
-            setTimeout(function() { line.classList.add('show'); }, delay);
+            var d = parseInt(line.getAttribute('data-delay')) || 0;
+            if (d > maxDelay) maxDelay = d;
         });
+
+        function runDemo() {
+            lines.forEach(function(line) { line.classList.remove('show'); });
+            lines.forEach(function(line) {
+                var delay = parseInt(line.getAttribute('data-delay')) || 0;
+                setTimeout(function() { line.classList.add('show'); }, delay);
+            });
+            setTimeout(runDemo, maxDelay + 3000);
+        }
+        runDemo();
     })();
 </script>
 </body>

@@ -51,6 +51,7 @@ def _load_web_server_module(module_name: str):
 
     learning_mod = types.ModuleType("core.learning")
     learning_mod.load_learnings = lambda: {}
+    learning_mod.add_feedback = lambda *_args, **_kwargs: None
 
     stubs = {
         "core.setup": setup_mod,
@@ -70,7 +71,11 @@ def _load_web_server_module(module_name: str):
 
 class TestWebAuthMiddleware(unittest.TestCase):
     def test_auth_bootstrap_routes_are_public_when_auth_enabled(self):
-        with patch.dict(os.environ, {"HELLOCHUSQUIS_API_KEY": "secret-token"}, clear=False):
+        with patch.dict(
+            os.environ,
+            {"HELLOCHUSQUIS_API_KEY": "secret-token", "HELLOCHUSQUIS_AUTH": "1"},
+            clear=False,
+        ):
             module = _load_web_server_module("web_server_auth_enabled")
             client = TestClient(module.app)
 

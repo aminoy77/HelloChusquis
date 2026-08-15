@@ -1,61 +1,81 @@
 from __future__ import annotations
 
+import os
+import time
+import hashlib
+import hmac
 import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+
+PLUGIN_NAME = "cloudinary"
+PLUGIN_DESCRIPTION = "Cloudinary - image and video management"
 
 
-class CloudinaryTool(Tool):
-    name = "cloudinary"
-    description = "Cloudinary - image and video management"
+def _sign(params: dict, api_secret: str) -> str:
+    """Build Cloudinary API signature for signed requests."""
+    parts = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+    return hashlib.sha1((parts + api_secret).encode()).hexdigest()
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        cloud_name = self.config.get("cloud_name")
-        api_key = self.config.get("api_key")
-        api_secret = self.config.get("api_secret")
 
-        if not cloud_name or not api_key:
-            return ToolResult(success=False, error="Cloudinary credentials not configured")
+def run(action: str, **kwargs) -> str:
+    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
+    api_key = os.getenv("CLOUDINARY_API_KEY")
+    api_secret = os.getenv("CLOUDINARY_API_SECRET")
+    if not cloud_name or not api_key:
+        return "Error: Cloudinary credentials not configured. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY environment variables."
 
-        base_url = f"https://res.cloudinary.com/{cloud_name}"
+    try:
+        if action == "upload":
+            file = kwargs.get("file")
+            if not file:
+                return "Error: file (URL or path) required for upload"
+            params = {
+                "file": file,
+                "api_key": api_key,
+                "timestamp": kwargs.get("timestamp") or str(int(time.time())),
+                "folder": kwargs.get("folder", ""),
+            }
+            if api_secret:
+                params["signature"] = _sign(params, api_secret)
+            r = httpx.post(f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload", data=params, timeout=60)
+            return _fmt(r)
 
-        try:
-            if action == "upload":
-                file = kwargs.get("file")
-                if not file:
-                    return ToolResult(success=False, error="File URL or data required")
-                payload = {
-                    "file": file,
-                    "api_key": api_key,
-                    "timestamp": kwargs.get("timestamp", ""),
-                    "tags": kwargs.get("tags", ""),
-                    "folder": kwargs.get("folder", "")
-                }
-                r = httpx.post(f"{base_url}/image/upload", params=payload, timeout=60)
-                return ToolResult(success=True, data=r.json())
+        elif action == "list_resources":
+            params = {"api_key": api_key, "max_results": kwargs.get("max_results", 50)}
+            if api_secret:
+                params["timestamp"] = str(int(time.time()))
+                params["signature"] = _sign(params, api_secret)
+            r = httpx.get(f"https://api.cloudinary.com/v1_1/{cloud_name}/resources/image", params=params, timeout=30)
+            data = r.json()
+            return str(data.get("resources", data))
 
-            elif action == "list_resources":
-                r = httpx.get(f"{base_url}/resources/image", params={"api_key": api_key}, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("resources", []))
+        elif action == "delete_resource":
+            public_id = kwargs.get("public_id")
+            if not public_id:
+                return "Error: public_id required for delete_resource"
+            params = {"public_id": public_id, "api_key": api_key, "timestamp": str(int(time.time()))}
+            if api_secret:
+                params["signature"] = _sign(params, api_secret)
+            r = httpx.post(f"https://api.cloudinary.com/v1_1/{cloud_name}/image/destroy", data=params, timeout=30)
+            return _fmt(r)
 
-            elif action == "delete_resource":
-                public_id = kwargs.get("public_id")
-                if not public_id:
-                    return ToolResult(success=False, error="Public ID required")
-                payload = {"public_id": public_id, "api_key": api_key}
-                r = httpx.post(f"{base_url}/image/destroy", params=payload, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        elif action == "transform":
+            public_id = kwargs.get("public_id")
+            if not public_id:
+                return "Error: public_id required for transform"
+            transformations = kwargs.get("transformations", "c_fill,w_500,h_500")
+            url = f"https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}"
+            return f"Transformed URL: {url}"
 
-            elif action == "transform":
-                public_id = kwargs.get("public_id")
-                if not public_id:
-                    return ToolResult(success=False, error="Public ID required")
-                transformations = kwargs.get("transformations", "c_fill,w_500,h_500")
-                url = f"{base_url}/image/upload/{transformations}/{public_id}"
-                return ToolResult(success=True, data={"url": url})
+        else:
+            return f"Error: Unknown action '{action}'. Available: upload, list_resources, delete_resource, transform"
+    except httpx.TimeoutException:
+        return "Error: Request timed out."
+    except Exception as e:
+        return f"Error: {e}"
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+def _fmt(r: httpx.Response) -> str:
+    try:
+        return str(r.json())
+    except Exception:
+        return r.text[:500]

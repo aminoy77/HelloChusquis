@@ -1,49 +1,56 @@
 from __future__ import annotations
 
+import os
 import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+
+PLUGIN_NAME = "workato"
+PLUGIN_DESCRIPTION = "Workato - enterprise integration"
 
 
-class WorkatoTool(Tool):
-    name = "workato"
-    description = "Workato - enterprise integration"
+def run(action: str, **kwargs) -> str:
+    token = os.getenv("WORKATO_TOKEN")
+    workspace = os.getenv("WORKATO_WORKSPACE")
+    if not token or not workspace:
+        return "Error: Workato not configured. Set WORKATO_TOKEN and WORKATO_WORKSPACE environment variables."
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        workspace = self.config.get("workspace")
-        if not token or not workspace:
-            return ToolResult(success=False, error="Workato token and workspace required")
+    base_url = "https://www.workato.com/api/rest"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-        base_url = "https://www.workato.com/api/rest"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    try:
+        if action == "list_recipes":
+            r = httpx.get(f"{base_url}/workspaces/{workspace}/recipes", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("recipes", data))
 
-        try:
-            if action == "list_recipes":
-                r = httpx.get(f"{base_url}/workspaces/{workspace}/recipes", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("recipes", []))
+        elif action == "start_recipe":
+            id = kwargs.get("id")
+            if not id:
+                return "Error: Recipe ID required for start_recipe"
+            r = httpx.post(f"{base_url}/workspaces/{workspace}/recipes/{id}/start", headers=headers, timeout=30)
+            return _fmt(r)
 
-            elif action == "start_recipe":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Recipe ID required")
-                r = httpx.post(f"{base_url}/workspaces/{workspace}/recipes/{id}/start", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        elif action == "stop_recipe":
+            id = kwargs.get("id")
+            if not id:
+                return "Error: Recipe ID required for stop_recipe"
+            r = httpx.post(f"{base_url}/workspaces/{workspace}/recipes/{id}/stop", headers=headers, timeout=30)
+            return _fmt(r)
 
-            elif action == "stop_recipe":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Recipe ID required")
-                r = httpx.post(f"{base_url}/workspaces/{workspace}/recipes/{id}/stop", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        elif action == "list_connectors":
+            r = httpx.get(f"{base_url}/connectors", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("connectors", data))
 
-            elif action == "list_connectors":
-                r = httpx.get(f"{base_url}/connectors", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("connectors", []))
+        else:
+            return f"Error: Unknown action '{action}'. Available: list_recipes, start_recipe, stop_recipe, list_connectors"
+    except httpx.TimeoutException:
+        return "Error: Request timed out after 30 seconds."
+    except Exception as e:
+        return f"Error: {e}"
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+def _fmt(r: httpx.Response) -> str:
+    try:
+        return str(r.json())
+    except Exception:
+        return r.text[:500]

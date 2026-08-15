@@ -1,51 +1,58 @@
 from __future__ import annotations
 
+import os
 import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+
+PLUGIN_NAME = "launchdarkly"
+PLUGIN_DESCRIPTION = "LaunchDarkly - feature flags management"
 
 
-class LaunchDarklyTool(Tool):
-    name = "launchdarkly"
-    description = "LaunchDarkly - feature flags management"
+def run(action: str, **kwargs) -> str:
+    token = os.getenv("LAUNCHDARKLY_TOKEN")
+    project_key = os.getenv("LAUNCHDARKLY_PROJECT_KEY", "default")
+    if not token:
+        return "Error: No LaunchDarkly token found. Set LAUNCHDARKLY_TOKEN environment variable."
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        project_key = self.config.get("project_key", "default")
-        if not token:
-            return ToolResult(success=False, error="LaunchDarkly token not configured")
+    base_url = "https://app.launchdarkly.com/api/v2"
+    headers = {"Authorization": token, "Content-Type": "application/json"}
 
-        base_url = "https://app.launchdarkly.com/api/v2"
-        headers = {"Authorization": token, "Content-Type": "application/json"}
+    try:
+        if action == "list_flags":
+            r = httpx.get(f"{base_url}/flags/{project_key}", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("items", data))
 
-        try:
-            if action == "list_flags":
-                r = httpx.get(f"{base_url}/flags/{project_key}", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("items", []))
+        elif action == "get_flag":
+            flag = kwargs.get("flag")
+            if not flag:
+                return "Error: flag key required for get_flag"
+            r = httpx.get(f"{base_url}/flags/{project_key}/{flag}", headers=headers, timeout=30)
+            return _fmt(r)
 
-            elif action == "get_flag":
-                flag = kwargs.get("flag")
-                if not flag:
-                    return ToolResult(success=False, error="Flag key required")
-                r = httpx.get(f"{base_url}/flags/{project_key}/{flag}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        elif action == "toggle_flag":
+            flag = kwargs.get("flag")
+            if not flag:
+                return "Error: flag key required for toggle_flag"
+            state = bool(kwargs.get("state", True))
+            patch = [{"op": "replace", "path": "/on", "value": state}]
+            r = httpx.patch(f"{base_url}/flags/{project_key}/{flag}", headers=headers, json=patch, timeout=30)
+            return _fmt(r)
 
-            elif action == "toggle_flag":
-                flag = kwargs.get("flag")
-                state = kwargs.get("state", True)
-                if not flag:
-                    return ToolResult(success=False, error="Flag key required")
-                patch = [{"op": "replace", "path": "/on", "value": state}]
-                r = httpx.patch(f"{base_url}/flags/{project_key}/{flag}", headers=headers, json=patch, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        elif action == "list_environments":
+            r = httpx.get(f"{base_url}/projects/{project_key}/environments", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("items", data))
 
-            elif action == "list_environments":
-                r = httpx.get(f"{base_url}/projects/{project_key}/environments", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("items", []))
+        else:
+            return f"Error: Unknown action '{action}'. Available: list_flags, get_flag, toggle_flag, list_environments"
+    except httpx.TimeoutException:
+        return "Error: Request timed out after 30 seconds."
+    except Exception as e:
+        return f"Error: {e}"
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+def _fmt(r: httpx.Response) -> str:
+    try:
+        return str(r.json())
+    except Exception:
+        return r.text[:500]

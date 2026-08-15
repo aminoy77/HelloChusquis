@@ -1,48 +1,55 @@
 from __future__ import annotations
 
+import os
 import httpx
-from typing import Any, Dict, List, Optional
-from tools.base import Tool, ToolResult
+
+PLUGIN_NAME = "retool"
+PLUGIN_DESCRIPTION = "Retool - internal tools and dashboards"
 
 
-class RetoolTool(Tool):
-    name = "retool"
-    description = "Retool - internal tools and dashboards"
+def run(action: str, **kwargs) -> str:
+    token = os.getenv("RETOOL_TOKEN")
+    if not token:
+        return "Error: No Retool token found. Set RETOOL_TOKEN environment variable."
 
-    def run(self, action: str, **kwargs) -> ToolResult:
-        token = self.config.get("token")
-        if not token:
-            return ToolResult(success=False, error="Retool token not configured")
+    base_url = "https://api.retool.com/v1"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-        base_url = "https://api.retool.com/v1"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    try:
+        if action == "list_resources":
+            r = httpx.get(f"{base_url}/resources", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("resources", data))
 
-        try:
-            if action == "list_resources":
-                r = httpx.get(f"{base_url}/resources", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("resources", []))
+        elif action == "query_resource":
+            id = kwargs.get("id")
+            if not id:
+                return "Error: Resource ID required for query_resource"
+            r = httpx.get(f"{base_url}/resources/{id}", headers=headers, timeout=30)
+            return _fmt(r)
 
-            elif action == "query_resource":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="Resource ID required")
-                r = httpx.get(f"{base_url}/resources/{id}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        elif action == "list_apps":
+            r = httpx.get(f"{base_url}/apps", headers=headers, timeout=30)
+            data = r.json()
+            return str(data.get("apps", data))
 
-            elif action == "list_apps":
-                r = httpx.get(f"{base_url}/apps", headers=headers, timeout=30)
-                data = r.json()
-                return ToolResult(success=True, data=data.get("apps", []))
+        elif action == "get_app":
+            id = kwargs.get("id")
+            if not id:
+                return "Error: App ID required for get_app"
+            r = httpx.get(f"{base_url}/apps/{id}", headers=headers, timeout=30)
+            return _fmt(r)
 
-            elif action == "get_app":
-                id = kwargs.get("id")
-                if not id:
-                    return ToolResult(success=False, error="App ID required")
-                r = httpx.get(f"{base_url}/apps/{id}", headers=headers, timeout=30)
-                return ToolResult(success=True, data=r.json())
+        else:
+            return f"Error: Unknown action '{action}'. Available: list_resources, query_resource, list_apps, get_app"
+    except httpx.TimeoutException:
+        return "Error: Request timed out after 30 seconds."
+    except Exception as e:
+        return f"Error: {e}"
 
-            else:
-                return ToolResult(success=False, error=f"Unknown action: {action}")
-        except Exception as e:
-            return ToolResult(success=False, error=str(e))
+
+def _fmt(r: httpx.Response) -> str:
+    try:
+        return str(r.json())
+    except Exception:
+        return r.text[:500]

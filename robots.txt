@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://aminoy77.github.io/HelloChusquis/sitemap.xml
+Sitemap: https://hellochusquis.dev/sitemap.xml
