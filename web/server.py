@@ -43,8 +43,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.method == "GET" and request.url.path == "/":
             return await call_next(request)
 
-        # Skip auth for health probes (readiness/liveness)
-        if request.url.path in ("/health/live",):
+        # Skip auth for auth bootstrap and health probes
+        if request.url.path in ("/auth/check", "/auth/verify", "/health", "/health/ready", "/health/live"):
             return await call_next(request)
 
         # If auth disabled, pass through
