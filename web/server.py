@@ -414,7 +414,7 @@ def update_provider(data: ProviderUpdate):
 
 def start(host: str = "127.0.0.1", port: int = 8000):
     if AUTH_ENABLED:
-        logger.info("Auth enabled — API key: %s (%s)", REQUIRED_API_KEY, _auth_hint())
+        logger.info("Auth enabled — %s", _auth_hint())
     else:
         logger.info("Auth disabled — set HELLOCHUSQUIS_AUTH=1 to protect the web UI")
     uvicorn.run(app, host=host, port=port, log_level="warning")
