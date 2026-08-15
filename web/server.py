@@ -233,7 +233,8 @@ async def update_provider(data: ProviderUpdate):
             agent.pool.update_model(data.name, data.model)
         return {"status": "ok", "provider": data.name}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.error("Provider update failed for %s: %s", data.name, e)
+        return {"status": "error", "message": "Could not update provider"}
 
 
 def start(host: str = "127.0.0.1", port: int = 8000):
