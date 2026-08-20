@@ -13,8 +13,8 @@ import ipaddress
 import re
 import socket
 import time
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -692,19 +692,30 @@ def read_response_text(
     response: requests.Response,
     max_bytes: int | None = None,
 ) -> ReadResult:
-    """Read response body with optional byte cap."""
-    if max_bytes and max_bytes > 0:
-        content = response.content[:max_bytes]
-        truncated = len(response.content) > max_bytes
-        text = content.decode("utf-8", errors="replace")
-        return ReadResult(text=text, truncated=truncated, bytes_read=len(content))
-
-    # No cap — read full body
-    try:
-        text = response.text
-        return ReadResult(text=text, truncated=False, bytes_read=len(response.content))
-    except Exception:
-        return ReadResult(text="", truncated=False, bytes_read=0)
+    """Read an HTTP response incrementally without materializing an unbounded body."""
+    limit = max_bytes if max_bytes and max_bytes > 0 else DEFAULT_MAX_RESPONSE_BYTES
+    chunks: list[bytes] = []
+    bytes_read = 0
+    truncated = False
+    for chunk in response.iter_content(chunk_size=min(64_000, limit + 1)):
+        if not chunk:
+            continue
+        remaining = limit - bytes_read
+        if remaining <= 0:
+            truncated = True
+            break
+        if len(chunk) > remaining:
+            chunks.append(chunk[:remaining])
+            bytes_read += remaining
+            truncated = True
+            break
+        chunks.append(chunk)
+        bytes_read += len(chunk)
+    return ReadResult(
+        text=b"".join(chunks).decode("utf-8", errors="replace"),
+        truncated=truncated,
+        bytes_read=bytes_read,
+    )
 
 
 def normalize_content_type(content_type: str | None) -> str | None:
@@ -935,6 +946,7 @@ class WebFetchTool(BaseTool):
                 headers=headers,
                 timeout=self.timeout_seconds,
                 allow_redirects=False,  # Never auto-follow; we validate each hop
+                stream=True,
             )
 
             if response.status_code not in REDIRECT_STATUSES:
@@ -955,7 +967,7 @@ class WebFetchTool(BaseTool):
 
             # Validate the REDIRECT TARGET for SSRF (re-resolves DNS, checks IPs)
             validate_url_safety(next_url, allow_private=self.allow_private_network)
-
+            response.close()
             current_url = next_url
             # Loop continues with the new URL
 
@@ -966,12 +978,13 @@ class WebFetchTool(BaseTool):
         status = response.status_code
 
         if status >= 400:
-            # Read error body
+            # Read error body before releasing the network connection.
             error_body = read_response_text(response, max_bytes=64_000)
             detail = format_fetch_error(
                 status, error_body.text,
                 response.headers.get("content-type"),
             )
+            response.close()
             raise Exception(detail)
 
         content_type = normalize_content_type(
@@ -1053,7 +1066,7 @@ class WebFetchTool(BaseTool):
             result["title"] = title
         if warning:
             result["warning"] = warning
-
+        response.close()
         return result
 
 
