@@ -100,13 +100,16 @@ class EmbeddingCache:
 # ---------------------------------------------------------------------------
 
 def _connect(db_path: Union[Path, str] = MEMORY_DB_PATH) -> sqlite3.Connection:
-    db_path = Path(db_path)  # accept str or Path; mkdir needs a Path
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    managed_directory = Path.home() / ".hellochusquis"
-    if db_path.parent == managed_directory:
-        os.chmod(managed_directory, 0o700)
+    file_backed = str(db_path) != ":memory:"
+    if file_backed:
+        db_path = Path(db_path)  # accept str or Path; mkdir needs a Path
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        managed_directory = Path.home() / ".hellochusquis"
+        if db_path.parent == managed_directory:
+            os.chmod(managed_directory, 0o700)
     conn = sqlite3.connect(str(db_path), check_same_thread=False)
-    os.chmod(db_path, 0o600)
+    if file_backed:
+        os.chmod(db_path, 0o600)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")

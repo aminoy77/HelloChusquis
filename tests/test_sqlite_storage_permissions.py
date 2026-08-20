@@ -49,6 +49,17 @@ class TestSqliteStoragePermissions(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(directory.stat().st_mode), 0o700)
         self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
 
+    def test_explicit_in_memory_databases_do_not_require_a_file(self):
+        session_manager = session.SessionManager(":memory:")
+        session_manager.create_session("agent", "model")
+        session_manager.close()
+
+        connection = db_memory._connect(":memory:")
+        connection.execute("CREATE TABLE example (id INTEGER PRIMARY KEY)")
+        connection.close()
+
+        self.assertFalse((Path.cwd() / ":memory:").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
