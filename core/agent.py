@@ -1177,11 +1177,20 @@ class Agent:
     def execute_approved(self, request_id: str) -> ToolResult:
         """Consume an approved action and dispatch it exactly once."""
         request = self.approval_manager.claim_execution(request_id)
-        result = self._dispatch_tool(
-            request.tool_name,
-            request.tool_args,
-            approval_granted=True,
-        )
+        tool_policy = getattr(self, "tool_policy", None)
+        if tool_policy is not None and not tool_policy.is_tool_allowed(request.tool_name):
+            logger.warning("Approved tool denied by current policy: %s", request.tool_name)
+            result = ToolResult(
+                success=False,
+                output="",
+                error="Tool execution denied by current policy.",
+            )
+        else:
+            result = self._dispatch_tool(
+                request.tool_name,
+                request.tool_args,
+                approval_granted=True,
+            )
         summary = "Action completed successfully" if result.success else "Action execution failed"
         completed = self.approval_manager.complete_execution(request_id, result.success, summary)
         self._audit(

@@ -65,6 +65,24 @@ class TestAgentApprovalGate(unittest.TestCase):
         with self.assertRaises(ValueError):
             agent.execute_approved(request_id)
 
+    def test_approved_action_is_rechecked_against_current_policy(self):
+        agent = self._agent()
+        blocked = agent._approval_required_result("files", {"action": "delete", "path": "/tmp/a"})
+        request_id = blocked.error.split("Approval required: ", 1)[1].split(".", 1)[0]
+        agent.tool_policy = type("Policy", (), {"is_tool_allowed": lambda _self, _tool: False})()
+
+        def dispatch(*_args, **_kwargs):
+            self.fail("A policy-revoked approval must not dispatch a tool")
+
+        agent._dispatch_tool = dispatch
+        agent.decide_approval(request_id, approved=True)
+        result = agent.execute_approved(request_id)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error, "Tool execution denied by current policy.")
+        with self.assertRaises(ValueError):
+            agent.execute_approved(request_id)
+
     def test_plugin_exception_does_not_expose_sensitive_detail(self):
         agent = self._agent(require_approval=False)
         agent._external_tool_modules = {}
