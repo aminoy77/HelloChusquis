@@ -297,8 +297,13 @@ def chat(req: MessageRequest, http_request: Request):
     agent = _require_agent(http_request)
 
     if user_input == "/clear":
-        agent.clear_conversation()
-        return {"response": "Historial limpiado.", "tool_calls": []}
+        if not agent.try_acquire_turn():
+            raise HTTPException(status_code=409, detail="This conversation is already processing another request")
+        try:
+            agent.clear_conversation()
+            return {"response": "Historial limpiado.", "tool_calls": []}
+        finally:
+            agent.release_turn()
 
     if user_input == "/status":
         status = agent.pool.status()
@@ -355,7 +360,12 @@ def chat_stream(req: MessageRequest, http_request: Request):
 
     agent = _require_agent(http_request)
     if user_input == "/clear":
-        agent.clear_conversation()
+        if not agent.try_acquire_turn():
+            raise HTTPException(status_code=409, detail="This conversation is already processing another request")
+        try:
+            agent.clear_conversation()
+        finally:
+            agent.release_turn()
         text = "Historial limpiado."
         return StreamingResponse(
             iter([f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n",
