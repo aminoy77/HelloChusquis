@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import time
 import hashlib
-import hmac
 import httpx
 
 PLUGIN_NAME = "cloudinary"
@@ -11,9 +10,9 @@ PLUGIN_DESCRIPTION = "Cloudinary - image and video management"
 
 
 def _sign(params: dict, api_secret: str) -> str:
-    """Build Cloudinary API signature for signed requests."""
-    parts = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
-    return hashlib.sha1((parts + api_secret).encode()).hexdigest()
+    """Build a SHA-256 Cloudinary API signature for signed requests."""
+    parts = "&".join(f"{key}={value}" for key, value in sorted(params.items()))
+    return hashlib.sha256((parts + api_secret).encode("utf-8")).hexdigest()
 
 
 def run(action: str, **kwargs) -> str:
