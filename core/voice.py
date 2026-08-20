@@ -12,6 +12,7 @@ Implements TTS architecture for HelloChusquis:
 
 import abc
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -24,10 +25,8 @@ from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
-    BinaryIO,
     Callable,
     Dict,
-    Generator,
     List,
     Optional,
     Tuple,
@@ -269,6 +268,8 @@ class PiperTTS(TTSProvider):
             )
 
         start = time.monotonic()
+        tmp_path: str | None = None
+        succeeded = False
         try:
             with tempfile.NamedTemporaryFile(
                 suffix=f".{output_format}", delete=False
@@ -292,13 +293,12 @@ class PiperTTS(TTSProvider):
                 timeout=60,
             )
             if proc.returncode != 0:
-                return TTSResult(
-                    success=False,
-                    error=f"Piper failed: {proc.stderr.decode('utf-8', errors='replace')}",
-                )
+                error = proc.stderr.decode("utf-8", errors="replace")[:500]
+                return TTSResult(success=False, error=f"Piper failed: {error}")
 
             audio_bytes = Path(tmp_path).read_bytes()
             latency = (time.monotonic() - start) * 1000
+            succeeded = True
             return TTSResult(
                 success=True,
                 audio_path=tmp_path,
@@ -312,6 +312,12 @@ class PiperTTS(TTSProvider):
             return TTSResult(success=False, error="Piper synthesis timed out")
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
+        finally:
+            if tmp_path and not succeeded:
+                try:
+                    Path(tmp_path).unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         voices = []
@@ -646,17 +652,14 @@ class EdgeTTS(TTSProvider):
 
         start = time.monotonic()
         try:
-            # Use edge-tts Python package if available, else CLI
-            try:
-                import edge_tts  # type: ignore
-
+            # Use edge-tts Python package if available, else CLI.
+            if importlib.util.find_spec("edge_tts") is not None:
                 return self._synth_with_lib(
                     text, voice, rate_str, pitch_str, output_format, start
                 )
-            except ImportError:
-                return self._synth_with_cli(
-                    text, voice, rate_str, pitch_str, output_format, start
-                )
+            return self._synth_with_cli(
+                text, voice, rate_str, pitch_str, output_format, start
+            )
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
 
