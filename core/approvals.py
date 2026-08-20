@@ -108,6 +108,8 @@ def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
         return f"La acción de navegador '{action}' puede enviar datos o cargar archivos."
     if normalized == "mcp" and action == "call_tool":
         return "Una llamada MCP puede ejecutar una acción externa no reversible."
+    if normalized == "cloudinary" and action == "upload":
+        return "La carga a Cloudinary puede transferir archivos o datos fuera del agente."
     if action.startswith(_MUTATING_PREFIXES):
         return f"La acción externa '{action}' puede modificar recursos o enviar datos."
     return None
