@@ -9,6 +9,7 @@ Optional: tiktoken for accurate token counts (falls back to char/4 estimation).
 from __future__ import annotations
 
 import json
+import os
 import re
 import sqlite3
 import textwrap
@@ -212,9 +213,15 @@ class SessionManager:
 
     def _ensure_connection(self) -> sqlite3.Connection:
         if self._conn is None:
+            db_path = Path(self._db_path)
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            managed_directory = Path.home() / ".hellochusquis"
+            if db_path.parent == managed_directory:
+                os.chmod(managed_directory, 0o700)
             self._conn = sqlite3.connect(
                 self._db_path, check_same_thread=False
             )
+            os.chmod(db_path, 0o600)
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")
