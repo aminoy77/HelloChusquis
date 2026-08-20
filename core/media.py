@@ -30,6 +30,11 @@ from typing import Any, Union
 _MAX_IMAGE_PIXELS = 25_000_000
 _MAX_BASE64_ENCODED_CHARS = 16 * 1024 * 1024
 _MAX_VISION_IMAGE_BYTES = 10 * 1024 * 1024
+_MAX_PDF_IMAGE_PAGES = 25
+_MAX_PDF_IMAGE_BYTES = 50 * 1024 * 1024
+_MAX_PDF_IMAGE_PAGE_BYTES = 10 * 1024 * 1024
+_MIN_PDF_IMAGE_DPI = 72
+_MAX_PDF_IMAGE_DPI = 300
 _IMAGE_REDUCE_QUALITY_STEPS = [85, 75, 65, 55, 45, 35]
 _DEFAULT_QR_SCALE = 6
 _DEFAULT_QR_MARGIN = 4
@@ -1117,52 +1122,73 @@ class PDFExtractor:
         dpi: int = 150,
         pages: list[int] | None = None,
     ) -> list[bytes]:
-        """Convert PDF pages to images. Returns list of image bytes."""
+        """Convert a bounded selection of PDF pages to bounded image output."""
+        if format not in {"png", "jpeg"}:
+            raise ValueError("format must be 'png' or 'jpeg'")
+        if not isinstance(dpi, int) or not _MIN_PDF_IMAGE_DPI <= dpi <= _MAX_PDF_IMAGE_DPI:
+            raise ValueError(f"dpi must be between {_MIN_PDF_IMAGE_DPI} and {_MAX_PDF_IMAGE_DPI}")
+        if pages is not None:
+            if not pages or len(pages) > _MAX_PDF_IMAGE_PAGES:
+                raise ValueError(f"PDF image page limit is {_MAX_PDF_IMAGE_PAGES}")
+            if any(not isinstance(page, int) or page < 1 for page in pages):
+                raise ValueError("pages must contain positive integers")
+
         tmp_in = None
-        out_pattern = None
+        output_directory = None
         try:
             if isinstance(path_or_bytes, bytes):
                 tmp_in = _tmp_path(".pdf")
-                with open(tmp_in, "wb") as f:
-                    f.write(path_or_bytes)
+                with open(tmp_in, "wb") as pdf_file:
+                    pdf_file.write(path_or_bytes)
                 in_path = tmp_in
             else:
                 in_path = str(path_or_bytes)
 
-            prefix = _tmp_path("")
-            if os.path.exists(prefix):
-                os.unlink(prefix)
-            os.makedirs(prefix, exist_ok=True) if not os.path.exists(prefix) else None
-            # Use a proper prefix directory
-            prefix_dir = tempfile.mkdtemp(prefix="pdf2img-")
-            out_pattern = os.path.join(prefix_dir, "page")
+            if pages is None:
+                metadata = self.extract_metadata(in_path)
+                if metadata.page_count > _MAX_PDF_IMAGE_PAGES:
+                    raise ValueError(f"PDF image page limit is {_MAX_PDF_IMAGE_PAGES}")
 
+            output_directory = tempfile.mkdtemp(prefix="hellochus-pdf2img-")
+            out_pattern = os.path.join(output_directory, "page")
+            extensions = (".png",) if format == "png" else (".jpg", ".jpeg")
             images: list[bytes] = []
+            retained_bytes = 0
+
+            def collect_output() -> None:
+                nonlocal retained_bytes
+                for filename in sorted(os.listdir(output_directory)):
+                    if not filename.lower().endswith(extensions):
+                        continue
+                    if len(images) >= _MAX_PDF_IMAGE_PAGES:
+                        raise ValueError(f"PDF image page limit is {_MAX_PDF_IMAGE_PAGES}")
+                    file_path = os.path.join(output_directory, filename)
+                    file_size = os.path.getsize(file_path)
+                    if file_size > _MAX_PDF_IMAGE_PAGE_BYTES:
+                        raise ValueError("PDF image page exceeds byte limit")
+                    if retained_bytes + file_size > _MAX_PDF_IMAGE_BYTES:
+                        raise ValueError("PDF image output exceeds byte limit")
+                    with open(file_path, "rb") as image_file:
+                        image = image_file.read(_MAX_PDF_IMAGE_PAGE_BYTES + 1)
+                    if len(image) > _MAX_PDF_IMAGE_PAGE_BYTES:
+                        raise ValueError("PDF image page exceeds byte limit")
+                    images.append(image)
+                    retained_bytes += len(image)
+                    os.unlink(file_path)
 
             if self._bin_pdftoppm:
-                cmd = [self._bin_pdftoppm, "-r", str(dpi), "-" + format, in_path, out_pattern]
+                base_command = [self._bin_pdftoppm, "-r", str(dpi), "-" + format]
                 if pages:
                     for page in pages:
-                        cmd = [self._bin_pdftoppm, "-r", str(dpi), "-f", str(page), "-l", str(page), "-" + format, in_path, out_pattern]
-                        _run(cmd, timeout=120)
-                        for fname in sorted(os.listdir(prefix_dir)):
-                            if fname.endswith(f".{format}") or fname.endswith(f".{format[0].upper() + format[1:]}"):
-                                fpath = os.path.join(prefix_dir, fname)
-                                with open(fpath, "rb") as f:
-                                    images.append(f.read())
-                                os.unlink(fpath)
+                        _run(base_command + ["-f", str(page), "-l", str(page), in_path, out_pattern], timeout=120)
+                        collect_output()
                 else:
-                    _run(cmd, timeout=120)
-                    for fname in sorted(os.listdir(prefix_dir)):
-                        if fname.endswith(f".{format}") or fname.endswith(f".{format[0].upper() + format[1:]}"):
-                            fpath = os.path.join(prefix_dir, fname)
-                            with open(fpath, "rb") as f:
-                                images.append(f.read())
-
+                    _run(base_command + [in_path, out_pattern], timeout=120)
+                    collect_output()
                 return images
 
             if self._bin_gs:
-                cmd = [
+                command = [
                     self._bin_gs,
                     f"-sDEVICE={'png16m' if format == 'png' else 'jpeg'}",
                     f"-r{dpi}",
@@ -1170,22 +1196,16 @@ class PDFExtractor:
                     "-dNOPAUSE", "-dBATCH",
                     in_path,
                 ]
-                _run(cmd, timeout=120)
-                for fname in sorted(os.listdir(prefix_dir)):
-                    if fname.endswith(f".{format}"):
-                        fpath = os.path.join(prefix_dir, fname)
-                        with open(fpath, "rb") as f:
-                            images.append(f.read())
+                _run(command, timeout=120)
+                collect_output()
                 return images
 
             raise RuntimeError("No PDF to image converter available (install poppler-utils or ghostscript)")
         finally:
             if tmp_in and os.path.exists(tmp_in):
                 os.unlink(tmp_in)
-            if out_pattern:
-                prefix_dir = os.path.dirname(out_pattern)
-                if os.path.isdir(prefix_dir):
-                    shutil.rmtree(prefix_dir, ignore_errors=True)
+            if output_directory and os.path.isdir(output_directory):
+                shutil.rmtree(output_directory, ignore_errors=True)
 
     # ----------------------------------------------------------------
     # PDF merging
