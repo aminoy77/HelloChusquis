@@ -65,6 +65,20 @@ class TestAgentApprovalGate(unittest.TestCase):
         with self.assertRaises(ValueError):
             agent.execute_approved(request_id)
 
+    def test_plugin_exception_does_not_expose_sensitive_detail(self):
+        agent = self._agent(require_approval=False)
+        agent._external_tool_modules = {}
+
+        def fail(**_kwargs):
+            raise RuntimeError("provider token=super-secret")
+
+        agent.plugins = [{"name": "failing-plugin", "run": fail}]
+        result = agent._dispatch_tool("failing-plugin", {})
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error, "failing-plugin tool failed. Check server logs.")
+        self.assertNotIn("super-secret", result.error)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1257,6 +1257,18 @@ class Agent:
         args: dict,
         approval_granted: bool = False,
     ) -> ToolResult:
+        def safe_tool_result_failure(tool_name: str) -> ToolResult:
+            logger.warning("%s tool returned a failure", tool_name)
+            return ToolResult(
+                success=False,
+                output="",
+                error=f"{tool_name} tool failed. Check server logs.",
+            )
+
+        def safe_tool_failure(tool_name: str, exc: Exception) -> ToolResult:
+            logger.error("%s tool failed (%s)", tool_name, type(exc).__name__)
+            return safe_tool_result_failure(tool_name)
+
         if name == "shell":
             cmd = args.get("command", "")
             unsafe_mode = os.getenv("HELLOCHUSQUIS_UNSAFE_MODE") == "1"
@@ -1387,12 +1399,14 @@ class Agent:
                     return ToolResult(success=success, output=output)
                 return ToolResult(success=True, output=str(result))
 
-            except Exception as e:
-                logger.error("Browser tool error: %s", e)
-                return ToolResult(success=False, output="", error=str(e))
+            except Exception as exc:
+                return safe_tool_failure("Browser", exc)
 
         if name == "web_fetch":
-            return self.web_fetch.run(**args)
+            result = self.web_fetch.run(**args)
+            if isinstance(result, ToolResult) and not result.success:
+                return safe_tool_result_failure("Web fetch")
+            return result
 
         if name == "speak":
             if not self.voice_manager:
@@ -1411,9 +1425,9 @@ class Agent:
                 )
                 if result.success:
                     return ToolResult(success=True, output=f"Audio: {result.audio_path}")
-                return ToolResult(success=False, output="", error=result.error or "TTS synthesis failed")
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
+                return safe_tool_result_failure("Voice")
+            except Exception as exc:
+                return safe_tool_failure("Voice", exc)
 
         if name == "media":
             action = args.get("action", "")
@@ -1446,8 +1460,8 @@ class Agent:
                 else:
                     return ToolResult(success=False, output="", error=f"Unknown media action: {action}")
                 return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
+            except Exception as exc:
+                return safe_tool_failure("Media", exc)
 
         if name == "mcp":
             action = args.get("action", "")
@@ -1466,15 +1480,13 @@ class Agent:
                     result = asyncio.get_event_loop().run_until_complete(
                         self.mcp_client.call_tool(server, tool, arguments)
                     )
-                    return ToolResult(
-                        success=result.get("success", False),
-                        output=str(result.get("data", result.get("error", ""))),
-                        error=result.get("error") if not result.get("success") else None,
-                    )
+                    if not result.get("success", False):
+                        return safe_tool_result_failure("MCP")
+                    return ToolResult(success=True, output=str(result.get("data", "")))
                 else:
                     return ToolResult(success=False, output="", error=f"Unknown MCP action: {action}")
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
+            except Exception as exc:
+                return safe_tool_failure("MCP", exc)
 
         # External tool modules - call run() directly from module
         if name in self._external_tool_modules:
@@ -1482,24 +1494,24 @@ class Agent:
                 module = self._external_tool_modules[name]
                 result = module.run(**args)
                 if isinstance(result, ToolResult):
-                    # Some modules return ToolResult directly — respect its flags
-                    return result
+                    # Some modules return ToolResult directly — preserve only safe failures.
+                    return result if result.success else safe_tool_result_failure(name)
                 text = str(result)
                 # Treat "Error: ..." prefixed strings as failures so the LLM
                 # sees accurate success flags instead of a success-wrapped error
                 if isinstance(result, str) and result.lower().startswith("error"):
-                    return ToolResult(success=False, output="", error=text)
+                    return safe_tool_result_failure(name)
                 return ToolResult(success=True, output=text)
-            except Exception as e:
-                return ToolResult(success=False, output="", error=f"{name} tool error: {e}")
+            except Exception as exc:
+                return safe_tool_failure(name, exc)
 
         for plugin in self.plugins:
             if plugin["name"] == name:
                 try:
                     result_text = plugin["run"](**args)
                     return ToolResult(success=True, output=str(result_text))
-                except Exception as e:
-                    return ToolResult(success=False, output="", error=str(e))
+                except Exception as exc:
+                    return safe_tool_failure(name, exc)
 
         return ToolResult(success=False, output="", error=f"Unknown tool: {name}. I can create this tool for you! Run `hellochusquis build` to create it with AI.")
 
