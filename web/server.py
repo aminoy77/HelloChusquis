@@ -173,7 +173,8 @@ def _session_id(request: Request) -> str:
 def _require_agent(http_request: Request | None = None):
     try:
         session_id = _session_id(http_request) if http_request is not None else None
-        return runtime.get(session_id=session_id)
+        scoped_session_id = f"web:{session_id}" if session_id is not None else None
+        return runtime.get(session_id=scoped_session_id)
     except AgentNotReadyError as exc:
         logger.warning("Agent runtime requested before ready: %s", exc)
         raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
