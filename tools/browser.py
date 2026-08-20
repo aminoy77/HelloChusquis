@@ -5,12 +5,13 @@ Persistent browser with human-like mouse movements, auto-recovery, health checks
 
 import asyncio
 import logging
-import os
 import threading
 import queue
-import time
 import uuid
-from typing import Any, Optional
+from typing import Optional
+from urllib.parse import urlsplit
+
+from tools.web_fetch import SsrFBlockedError, validate_url_safety
 
 from core.browser_agent import BrowserAgent, create_browser_agent
 
@@ -249,10 +250,18 @@ class PersistentBrowser:
     # ─── TASK HANDLERS ────────────────────────────────────────────
 
     async def _handle_navigate(self, url: str = '', **kwargs) -> dict:
-        if not url:
+        if not isinstance(url, str) or not url.strip():
             return {'success': False, 'error': 'URL required'}
+        url = url.strip()
         if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
+        try:
+            parsed = urlsplit(url)
+            if parsed.username is not None or parsed.password is not None:
+                raise ValueError("Navigation URL must not include credentials")
+            url = validate_url_safety(url)
+        except (SsrFBlockedError, ValueError):
+            return {'success': False, 'error': 'Unsafe navigation URL blocked'}
         success = await self._agent.navigate(url)
         return {
             'success': success,
