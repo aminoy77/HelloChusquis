@@ -11,11 +11,11 @@ Declarative plugin system:
 
 from __future__ import annotations
 
-import copy
 import importlib
 import importlib.util
 import json
 import logging
+import os
 import sys
 import threading
 from dataclasses import dataclass, field
@@ -251,14 +251,17 @@ class PluginLoader:
     # -- discovery --
 
     def discover(self) -> list[PluginCandidate]:
-        """Scan plugins_dir for plugin directories and single-file plugins."""
+        """Scan trusted local plugin code without following unsafe filesystem links."""
         self.plugins_dir.mkdir(parents=True, exist_ok=True)
+        os.chmod(self.plugins_dir, 0o700)
         candidates: list[PluginCandidate] = []
         seen: set[str] = set()
 
         # scan subdirectories
         for entry in sorted(self.plugins_dir.iterdir()):
             if entry.name.startswith(".") or entry.name in _SCANNED_IGNORE:
+                continue
+            if not self._is_trusted_entry(entry):
                 continue
             if entry.is_dir():
                 self._discover_directory(entry, candidates, seen)
@@ -275,6 +278,21 @@ class PluginLoader:
         logger.debug("discovered %d plugin candidate(s)", len(candidates))
         return candidates
 
+    def _is_trusted_entry(self, entry: Path) -> bool:
+        """Reject plugin paths that can escape or be modified by another local user."""
+        if entry.is_symlink():
+            logger.warning("Skipping symlinked plugin entry: %s", entry.name)
+            return False
+        try:
+            mode = entry.stat().st_mode
+        except OSError as exc:
+            logger.warning("Skipping inaccessible plugin entry %s (%s)", entry.name, type(exc).__name__)
+            return False
+        if mode & 0o022:
+            logger.warning("Skipping group/world-writable plugin entry: %s", entry.name)
+            return False
+        return True
+
     def _discover_directory(
         self,
         dir_path: Path,
@@ -282,8 +300,9 @@ class PluginLoader:
         seen: set[str],
     ) -> None:
         manifest_path = dir_path / PLUGIN_MANIFEST_FILENAME
-        has_manifest = manifest_path.exists()
-        has_init = (dir_path / "__init__.py").exists()
+        init_path = dir_path / "__init__.py"
+        has_manifest = manifest_path.exists() and self._is_trusted_entry(manifest_path)
+        has_init = init_path.exists() and self._is_trusted_entry(init_path)
 
         if has_manifest:
             key = str(dir_path.resolve())
@@ -300,15 +319,20 @@ class PluginLoader:
 
         # recurse one level deeper for nested structures
         for sub in sorted(dir_path.iterdir()):
+            if not self._is_trusted_entry(sub):
+                continue
             if sub.is_dir() and sub.name not in _SCANNED_IGNORE and not sub.name.startswith("."):
                 sub_manifest = sub / PLUGIN_MANIFEST_FILENAME
-                if sub_manifest.exists():
+                sub_init = sub / "__init__.py"
+                trusted_manifest = sub_manifest.exists() and self._is_trusted_entry(sub_manifest)
+                trusted_init = not sub_init.exists() or self._is_trusted_entry(sub_init)
+                if trusted_manifest and trusted_init:
                     key = str(sub.resolve())
                     if key not in seen:
                         seen.add(key)
                         candidates.append(PluginCandidate(
                             id_hint=sub.name,
-                            source=str(sub / "__init__.py") if (sub / "__init__.py").exists() else str(sub),
+                            source=str(sub_init) if sub_init.exists() else str(sub),
                             root_dir=str(sub),
                             manifest_path=str(sub_manifest),
                         ))
