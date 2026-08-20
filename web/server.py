@@ -164,9 +164,10 @@ def _require_agent(http_request: Request | None = None):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-# Rate limiters: /chat = 30/min, /models = 30/min, forced model refresh = 5/min,
+# Rate limiters: /chat and /models = 30/min, /feedback = 10/min, forced model refresh = 5/min,
 # /runtime/reload = 3/min, and /update-provider = 15/min.
 _chat_limiter = RateLimiter(requests_per_minute=30)
+_feedback_limiter = RateLimiter(requests_per_minute=10)
 _models_limiter = RateLimiter(requests_per_minute=30)
 _models_refresh_limiter = RateLimiter(requests_per_minute=5)
 _reload_limiter = RateLimiter(requests_per_minute=3)
@@ -178,8 +179,8 @@ def _get_client_ip(request: Request) -> str:
     return client.host if client else "unknown"
 
 
-def _require_administrative_rate_limit(limiter: RateLimiter, request: Request, route: str) -> None:
-    """Reject excessive costly administrative operations from one client."""
+def _require_rate_limit(limiter: RateLimiter, request: Request, route: str) -> None:
+    """Reject excessive costly or persistent operations from one client."""
     ip = _get_client_ip(request)
     if limiter.is_allowed(ip):
         return
@@ -202,7 +203,7 @@ class MessageRequest(BaseModel):
 
 class FeedbackRequest(BaseModel):
     type: Literal["positive", "negative"]
-    context: str = ""
+    context: str = Field(default="", max_length=500)
 
 
 class ApprovalDecisionRequest(BaseModel):
@@ -394,8 +395,9 @@ def chat_stream(req: MessageRequest, http_request: Request):
 
 
 @app.post("/feedback")
-def feedback(req: FeedbackRequest):
-    """Accept positive/negative feedback from frontend."""
+def feedback(req: FeedbackRequest, http_request: Request):
+    """Accept bounded feedback from authenticated frontend clients."""
+    _require_rate_limit(_feedback_limiter, http_request, "/feedback")
     add_feedback(req.type, req.context)
     return {"status": "ok"}
 
@@ -450,7 +452,7 @@ def decide_approval(
 @app.post("/runtime/reload")
 def reload_runtime(http_request: Request):
     """Reload provider configuration and clear cached HTTP sessions."""
-    _require_administrative_rate_limit(_reload_limiter, http_request, "/runtime/reload")
+    _require_rate_limit(_reload_limiter, http_request, "/runtime/reload")
     cleared_sessions = runtime.session_count
     if not runtime.refresh():
         raise HTTPException(status_code=503, detail=runtime.error or "Runtime reload failed")
@@ -520,9 +522,9 @@ def status(http_request: Request):
 @app.get("/models")
 def models(http_request: Request, provider: str = "", refresh: bool = False):
     """Available models for the requesting session's provider configuration."""
-    _require_administrative_rate_limit(_models_limiter, http_request, "/models")
+    _require_rate_limit(_models_limiter, http_request, "/models")
     if refresh:
-        _require_administrative_rate_limit(_models_refresh_limiter, http_request, "/models?refresh=true")
+        _require_rate_limit(_models_refresh_limiter, http_request, "/models?refresh=true")
     agent = _require_agent(http_request)
     known_names = {provider_status["name"] for provider_status in agent.pool.status()}
     if provider not in known_names:
@@ -544,7 +546,7 @@ class ProviderUpdate(BaseModel):
 @app.post("/update-provider")
 def update_provider(data: ProviderUpdate, http_request: Request):
     """Update provider configuration for the requesting in-memory session only."""
-    _require_administrative_rate_limit(_provider_update_limiter, http_request, "/update-provider")
+    _require_rate_limit(_provider_update_limiter, http_request, "/update-provider")
     agent = _require_agent(http_request)
     # Validate provider name exists
     known_names = {provider_status["name"] for provider_status in agent.pool.status()}

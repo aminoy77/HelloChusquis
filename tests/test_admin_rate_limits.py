@@ -86,6 +86,37 @@ class TestAdministrativeRateLimits(unittest.TestCase):
 
         pool.list_models.assert_called_once_with("Test Provider", refresh=True)
 
+    def test_web_feedback_returns_429_before_second_persistent_write(self):
+        limiter = self._one_request_limiter()
+        headers = {"Authorization": f"Bearer {web_server.REQUIRED_API_KEY}"}
+        with patch.object(web_server, "_feedback_limiter", limiter), patch.object(
+            web_server, "add_feedback"
+        ) as add_feedback:
+            client = TestClient(web_server.app)
+            self.assertEqual(
+                client.post("/feedback", json={"type": "positive", "context": "useful"}, headers=headers).status_code,
+                200,
+            )
+            self._assert_rate_limited(
+                client.post("/feedback", json={"type": "positive", "context": "again"}, headers=headers)
+            )
+
+        add_feedback.assert_called_once_with("positive", "useful")
+
+    def test_feedback_context_over_limit_is_rejected_before_persistence(self):
+        headers = {"Authorization": f"Bearer {web_server.REQUIRED_API_KEY}"}
+        oversized = {"type": "positive", "context": "x" * 501}
+        with patch.object(web_server, "add_feedback") as web_add_feedback, patch(
+            "core.learning.add_feedback"
+        ) as api_add_feedback:
+            web_response = TestClient(web_server.app).post("/feedback", json=oversized, headers=headers)
+            api_response = TestClient(api_main.app).post("/feedback", json=oversized, headers=headers)
+
+        self.assertEqual(web_response.status_code, 422)
+        self.assertEqual(api_response.status_code, 422)
+        web_add_feedback.assert_not_called()
+        api_add_feedback.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

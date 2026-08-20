@@ -1,35 +1,84 @@
+"""Bounded, thread-safe persistence for local agent learnings and feedback."""
+
+from __future__ import annotations
+
 import json
-from pathlib import Path
+import os
 from datetime import datetime
+from pathlib import Path
+import tempfile
+import threading
+
 from rich.console import Console
 
 console = Console()
 
 LEARNING_DIR = Path.home() / ".hellochusquis"
 LEARNING_FILE = LEARNING_DIR / "learnings.json"
+_LEARNING_LOCK = threading.RLock()
 
 
-def init():
-    LEARNING_DIR.mkdir(exist_ok=True)
-    if not LEARNING_FILE.exists():
-        LEARNING_FILE.write_text(json.dumps({
-            "tool_patterns": {},
-            "errors": [],
-            "system_prompt_improvements": [],
-            "feedback": {"positive": [], "negative": []},
-            "updated_at": None,
-        }, indent=2))
+def _empty_learnings() -> dict:
+    return {
+        "tool_patterns": {},
+        "errors": [],
+        "system_prompt_improvements": [],
+        "feedback": {"positive": [], "negative": []},
+        "updated_at": None,
+    }
+
+
+def _secure_storage_dir() -> None:
+    LEARNING_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(LEARNING_DIR, 0o700)
+
+
+def _write_atomically(data: dict) -> None:
+    """Write JSON through a same-directory temporary file then replace it."""
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{LEARNING_FILE.name}.",
+        suffix=".tmp",
+        dir=LEARNING_DIR,
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, indent=2, ensure_ascii=False)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary_name, 0o600)
+        os.replace(temporary_name, LEARNING_FILE)
+        os.chmod(LEARNING_FILE, 0o600)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def init() -> None:
+    """Initialize owner-only learning storage exactly once."""
+    with _LEARNING_LOCK:
+        _secure_storage_dir()
+        if not LEARNING_FILE.exists():
+            _write_atomically(_empty_learnings())
+        else:
+            os.chmod(LEARNING_FILE, 0o600)
 
 
 def load_learnings() -> dict:
-    init()
-    return json.loads(LEARNING_FILE.read_text())
+    """Load learnings from the protected local JSON store."""
+    with _LEARNING_LOCK:
+        init()
+        return json.loads(LEARNING_FILE.read_text(encoding="utf-8"))
 
 
-def save_learnings(data: dict):
-    init()
-    data["updated_at"] = datetime.now().isoformat()
-    LEARNING_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+def save_learnings(data: dict) -> None:
+    """Atomically replace local learnings after a complete serialization."""
+    with _LEARNING_LOCK:
+        _secure_storage_dir()
+        data["updated_at"] = datetime.now().isoformat()
+        _write_atomically(data)
 
 
 def build_learning_prompt(learnings: dict) -> str:
@@ -53,17 +102,15 @@ def build_learning_prompt(learnings: dict) -> str:
     return "\n".join(parts) if parts else ""
 
 
-def add_feedback(feedback_type: str, context: str):
-    learnings = load_learnings()
-    entry = {"context": context[:200], "timestamp": datetime.now().isoformat()}
-    if "feedback" not in learnings:
-        learnings["feedback"] = {"positive": [], "negative": []}
-    if feedback_type not in learnings["feedback"]:
-        learnings["feedback"][feedback_type] = []
-    learnings["feedback"][feedback_type].append(entry)
-    # Mantén máximo 50 entradas de feedback
-    learnings["feedback"][feedback_type] = learnings["feedback"][feedback_type][-50:]
-    save_learnings(learnings)
+def add_feedback(feedback_type: str, context: str) -> None:
+    """Append bounded feedback without losing concurrent updates."""
+    with _LEARNING_LOCK:
+        learnings = load_learnings()
+        entry = {"context": context[:200], "timestamp": datetime.now().isoformat()}
+        feedback = learnings.setdefault("feedback", {"positive": [], "negative": []})
+        feedback.setdefault(feedback_type, []).append(entry)
+        feedback[feedback_type] = feedback[feedback_type][-50:]
+        save_learnings(learnings)
 
 
 def analyze_and_learn(messages: list[dict], pool) -> None:
@@ -71,9 +118,9 @@ def analyze_and_learn(messages: list[dict], pool) -> None:
         return
 
     conversation = "\n".join(
-        f"{m['role']}: {m['content'][:300]}"
-        for m in messages
-        if m.get('content')
+        f"{message['role']}: {message['content'][:300]}"
+        for message in messages
+        if message.get("content")
     )
 
     try:
@@ -89,12 +136,12 @@ def analyze_and_learn(messages: list[dict], pool) -> None:
                     "- improvements: list of rules to improve future behavior (max 3)\n"
                     "Keep all strings short and actionable. "
                     "Respond ONLY with valid JSON, no markdown."
-                )
+                ),
             },
             {
                 "role": "user",
-                "content": f"Analyze this conversation:\n\n{conversation}"
-            }
+                "content": f"Analyze this conversation:\n\n{conversation}",
+            },
         ])
 
         choices = response.get("choices", [])
@@ -104,30 +151,29 @@ def analyze_and_learn(messages: list[dict], pool) -> None:
         content = content.replace("```json", "").replace("```", "").strip()
         new_learnings = json.loads(content)
 
-        learnings = load_learnings()
+        with _LEARNING_LOCK:
+            learnings = load_learnings()
 
-        # Merge tool patterns
-        for task, tools in new_learnings.get("tool_patterns", {}).items():
-            if task not in learnings["tool_patterns"]:
-                learnings["tool_patterns"][task] = []
-            for tool in tools:
-                if tool not in learnings["tool_patterns"][task]:
-                    learnings["tool_patterns"][task].append(tool)
+            for task, tools in new_learnings.get("tool_patterns", {}).items():
+                existing_tools = learnings.setdefault("tool_patterns", {}).setdefault(task, [])
+                for tool in tools:
+                    if tool not in existing_tools:
+                        existing_tools.append(tool)
 
-        # Merge errors — máximo 20
-        for error in new_learnings.get("errors", []):
-            if error not in learnings["errors"]:
-                learnings["errors"].append(error)
-        learnings["errors"] = learnings["errors"][-20:]
+            errors = learnings.setdefault("errors", [])
+            for error in new_learnings.get("errors", []):
+                if error not in errors:
+                    errors.append(error)
+            learnings["errors"] = errors[-20:]
 
-        # Merge improvements — máximo 20
-        for imp in new_learnings.get("improvements", []):
-            if imp not in learnings["system_prompt_improvements"]:
-                learnings["system_prompt_improvements"].append(imp)
-        learnings["system_prompt_improvements"] = learnings["system_prompt_improvements"][-20:]
+            improvements = learnings.setdefault("system_prompt_improvements", [])
+            for improvement in new_learnings.get("improvements", []):
+                if improvement not in improvements:
+                    improvements.append(improvement)
+            learnings["system_prompt_improvements"] = improvements[-20:]
 
-        save_learnings(learnings)
+            save_learnings(learnings)
         console.print("[dim]✓ Learnings updated.[/dim]")
 
     except Exception:
-        pass  # Si falla el análisis no pasa nada
+        pass  # Learning extraction must not disrupt the primary agent turn.

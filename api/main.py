@@ -168,6 +168,14 @@ class FeedbackRequest(BaseModel):
     type: Literal["positive", "negative"]
     context: str = ""
 
+    @field_validator("context")
+    @classmethod
+    def validate_context(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) > 500:
+            raise ValueError("Feedback context exceeds maximum length of 500 characters")
+        return value
+
 
 class ApprovalDecisionRequest(BaseModel):
     approve: bool
