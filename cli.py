@@ -8,7 +8,7 @@ import socket
 # Add project to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-KNOWN_COMMANDS = {"web", "api", "config", "setup", "doctor", "version", "help"}
+KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "version", "help"}
 
 
 def pick_free_port(host="127.0.0.1"):
@@ -21,6 +21,22 @@ def pick_free_port(host="127.0.0.1"):
         s.close()
 
 
+def _print_contract_summary() -> int:
+    """Print offline integration-contract results and return a shell-style status."""
+    from core.integration_contracts import check_integration_contracts, contract_summary
+
+    results = check_integration_contracts()
+    summary = contract_summary(results)
+    print(
+        f"Integration contracts: {summary['passed']}/{summary['total']} passed "
+        f"({summary['failed']} failed)"
+    )
+    for result in results:
+        marker = "PASS" if result.ok else "FAIL"
+        print(f"  [{marker}] {result.name}: {result.detail}")
+    return 0 if summary["failed"] == 0 else 1
+
+
 def _print_help():
     """Print CLI usage summary."""
     print("""HelloChusquis — autonomous terminal AI agent
@@ -31,6 +47,7 @@ Usage:
   hellochusquis api              Launch REST API
   hellochusquis config           Edit configuration
   hellochusquis setup            Run setup wizard
+  hellochusquis status           Show local readiness summary
   hellochusquis doctor           Check providers & dependencies
   hellochusquis version          Show version
   hellochusquis help             Show this help
@@ -42,13 +59,14 @@ Flags:
   --api-keys         Edit API keys only
   --providers        Edit providers only
   --port PORT        Port for web/api (default: 8080 api / 7272 web)
-  --host HOST        Host for web/api (default: 0.0.0.0 api / 127.0.0.1 web)
+  --host HOST        Host for web/api (default: 127.0.0.1)
   --contracts        Verify bundled integration contracts offline (with doctor)
 
 Examples:
   hellochusquis setup --quick       Quick first-time setup
   hellochusquis web --port 3000     Web UI on port 3000
   hellochusquis config --show       View masked config
+  hellochusquis status              Check local readiness
   hellochusquis api --host 0.0.0.0  API on all interfaces
 """)
 
@@ -63,7 +81,7 @@ def main():
     parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
     parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
     parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 7272 web)")
-    parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 0.0.0.0 api / 127.0.0.1 web)")
+    parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 127.0.0.1)")
     parser.add_argument("--contracts", action="store_true", help="Verify integration contracts offline (with doctor)")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
     args = parser.parse_args()
@@ -141,6 +159,29 @@ def main():
         edit_config(section)
         return
 
+    if args.command == "status":
+        from core.setup import ensure_config
+
+        try:
+            config = ensure_config(interactive=False)
+        except FileNotFoundError:
+            print("Status: setup required. Run: hellochusquis setup")
+        else:
+            providers = config.get("providers", [])
+            configured = sum(
+                1
+                for provider in providers
+                if provider.get("api_key", "").strip()
+                or "localhost" in provider.get("base_url", "").lower()
+            )
+            print(
+                f"Status: {configured}/{len(providers)} provider(s) configured. "
+                "Run 'hellochusquis doctor' for provider details."
+            )
+        if args.contracts:
+            _print_contract_summary()
+        return
+
     if args.command == "web":
         from web.server import start
         host = args.host or "127.0.0.1"
@@ -163,7 +204,7 @@ def main():
     if args.command == "api":
         from api.main import app
         import uvicorn
-        host = args.host or "0.0.0.0"
+        host = args.host or "127.0.0.1"
         port = args.port or 8080
         print(f"Starting HelloChusquis API on http://{host}:{port}")
         uvicorn.run(app, host=host, port=port)
@@ -171,17 +212,7 @@ def main():
 
     if args.command == "doctor":
         if args.contracts:
-            from core.integration_contracts import check_integration_contracts, contract_summary
-            results = check_integration_contracts()
-            summary = contract_summary(results)
-            print(
-                f"Integration contracts: {summary['passed']}/{summary['total']} passed "
-                f"({summary['failed']} failed)"
-            )
-            for result in results:
-                marker = "PASS" if result.ok else "FAIL"
-                print(f"  [{marker}] {result.name}: {result.detail}")
-            return 0 if summary["failed"] == 0 else 1
+            return _print_contract_summary()
         from core.setup import ensure_config, console
         from rich.panel import Panel
         try:
@@ -218,7 +249,7 @@ def main():
 
     # Validate unknown commands
     if args.command is not None:
-        print(f"Unknown command '{args.command}'. Try: web, api, config, setup, or nothing for chat.")
+        print(f"Unknown command '{args.command}'. Try: web, api, config, setup, status, or nothing for chat.")
         print("Run 'hellochusquis help' for full usage.")
         sys.exit(1)
 
