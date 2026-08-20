@@ -35,6 +35,11 @@ _MAX_PDF_IMAGE_BYTES = 50 * 1024 * 1024
 _MAX_PDF_IMAGE_PAGE_BYTES = 10 * 1024 * 1024
 _MIN_PDF_IMAGE_DPI = 72
 _MAX_PDF_IMAGE_DPI = 300
+_MIN_AUDIO_CHUNK_DURATION_MS = 1_000
+_MAX_AUDIO_CHUNK_DURATION_MS = 300_000
+_MAX_AUDIO_CHUNKS = 100
+_MAX_AUDIO_CHUNK_BYTES = 10 * 1024 * 1024
+_MAX_AUDIO_CHUNK_OUTPUT_BYTES = 50 * 1024 * 1024
 _IMAGE_REDUCE_QUALITY_STEPS = [85, 75, 65, 55, 45, 35]
 _DEFAULT_QR_SCALE = 6
 _DEFAULT_QR_MARGIN = 4
@@ -1494,13 +1499,24 @@ class AudioProcessor:
         chunk_duration_ms: int = 30_000,
         overlap_ms: int = 0,
     ) -> list[bytes]:
-        """Split audio into chunks of chunk_duration_ms milliseconds."""
+        """Split audio into a bounded sequence of PCM chunks with guaranteed progress."""
+        if not isinstance(chunk_duration_ms, int) or not _MIN_AUDIO_CHUNK_DURATION_MS <= chunk_duration_ms <= _MAX_AUDIO_CHUNK_DURATION_MS:
+            raise ValueError(
+                f"chunk_duration_ms must be between {_MIN_AUDIO_CHUNK_DURATION_MS} and {_MAX_AUDIO_CHUNK_DURATION_MS}"
+            )
+        if not isinstance(overlap_ms, int) or overlap_ms < 0:
+            raise ValueError("overlap_ms must be a non-negative integer")
+        if overlap_ms >= chunk_duration_ms:
+            raise ValueError("overlap_ms must be smaller than chunk_duration_ms")
+        if not self._bin_ffmpeg:
+            raise RuntimeError("ffmpeg not found on PATH")
+
         tmp_in = None
         try:
             if isinstance(path_or_bytes, bytes):
                 tmp_in = _tmp_path(".bin")
-                with open(tmp_in, "wb") as f:
-                    f.write(path_or_bytes)
+                with open(tmp_in, "wb") as audio_file:
+                    audio_file.write(path_or_bytes)
                 in_path = tmp_in
             else:
                 in_path = str(path_or_bytes)
@@ -1508,14 +1524,18 @@ class AudioProcessor:
             duration_ms = self.get_duration_ms(in_path)
             if duration_ms <= 0:
                 return []
+            stride_ms = chunk_duration_ms - overlap_ms
+            expected_chunks = math.ceil(max(0, duration_ms - overlap_ms) / stride_ms)
+            if expected_chunks > _MAX_AUDIO_CHUNKS:
+                raise ValueError(f"audio chunk limit is {_MAX_AUDIO_CHUNKS}")
 
             chunks: list[bytes] = []
+            retained_bytes = 0
             start_ms = 0
             while start_ms < duration_ms:
                 end_ms = min(start_ms + chunk_duration_ms, duration_ms)
                 tmp_out = _tmp_path(".wav")
-
-                if self._bin_ffmpeg:
+                try:
                     start_s = start_ms / 1000.0
                     duration_s = (end_ms - start_ms) / 1000.0
                     _run(
@@ -1531,13 +1551,21 @@ class AudioProcessor:
                         ],
                         timeout=30,
                     )
-                    with open(tmp_out, "rb") as f:
-                        chunks.append(f.read())
-                os.unlink(tmp_out)
-
-                start_ms += chunk_duration_ms - overlap_ms
-                if start_ms >= duration_ms:
-                    break
+                    file_size = os.path.getsize(tmp_out)
+                    if file_size > _MAX_AUDIO_CHUNK_BYTES:
+                        raise ValueError("audio chunk exceeds byte limit")
+                    if retained_bytes + file_size > _MAX_AUDIO_CHUNK_OUTPUT_BYTES:
+                        raise ValueError("audio chunk output exceeds byte limit")
+                    with open(tmp_out, "rb") as chunk_file:
+                        audio_chunk = chunk_file.read(_MAX_AUDIO_CHUNK_BYTES + 1)
+                    if len(audio_chunk) > _MAX_AUDIO_CHUNK_BYTES:
+                        raise ValueError("audio chunk exceeds byte limit")
+                    chunks.append(audio_chunk)
+                    retained_bytes += len(audio_chunk)
+                finally:
+                    if os.path.exists(tmp_out):
+                        os.unlink(tmp_out)
+                start_ms += stride_ms
 
             return chunks
         finally:
