@@ -1,9 +1,13 @@
-from tools.base import BaseTool, ToolResult
 import os
+import re
+
+import httpx
 
 
 PLUGIN_NAME = "salesforce"
 PLUGIN_DESCRIPTION = "Salesforce CRM integration"
+SALESFORCE_HTTP_TIMEOUT_SECONDS = 30
+_SALESFORCE_INSTANCE_RE = re.compile(r"^[A-Za-z0-9-]{1,63}$")
 
 SALESFORCE_SCHEMA = {
     "type": "function",
@@ -34,7 +38,9 @@ def run(action: str, sobject: str = "", fields: str = "", data: str = "") -> str
     
     if not instance:
         return "Error: SALESFORCE_INSTANCE (yourdomain) not set"
-    
+    if not _SALESFORCE_INSTANCE_RE.fullmatch(instance):
+        return "Error: SALESFORCE_INSTANCE is invalid"
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -43,10 +49,18 @@ def run(action: str, sobject: str = "", fields: str = "", data: str = "") -> str
     base = f"https://{instance}.salesforce.com/services/data/v58.0"
     
     if action == "list_objects":
-        resp = httpx.get(f"{base}/sobjects", headers=headers)
+        try:
+            resp = httpx.get(
+                f"{base}/sobjects",
+                headers=headers,
+                timeout=SALESFORCE_HTTP_TIMEOUT_SECONDS,
+                follow_redirects=False,
+            )
+        except httpx.HTTPError:
+            return "Error: Salesforce request failed"
         if resp.status_code == 200:
             objs = resp.json().get("sobjects", [])[:15]
-            return "Objects:\n" + "\n".join([f"• {o['name']}" for o in objs])
+            return "Objects:\n" + "\n".join([f"• {obj['name']}" for obj in objs])
         return f"Error: {resp.status_code}"
     
     if action == "query":
@@ -54,10 +68,19 @@ def run(action: str, sobject: str = "", fields: str = "", data: str = "") -> str
             return "Error: sobject required"
         
         q = f"SELECT {fields or '*'} FROM {sobject} LIMIT 10"
-        resp = httpx.get(f"{base}/query", params={"q": q}, headers=headers)
+        try:
+            resp = httpx.get(
+                f"{base}/query",
+                params={"q": q},
+                headers=headers,
+                timeout=SALESFORCE_HTTP_TIMEOUT_SECONDS,
+                follow_redirects=False,
+            )
+        except httpx.HTTPError:
+            return "Error: Salesforce request failed"
         if resp.status_code == 200:
             records = resp.json().get("records", [])
-            return "\n".join([str(r) for r in records[:5]])
+            return "\n".join([str(record) for record in records[:5]])
         return f"Error: {resp.status_code}"
     
     return f"Action {action} not fully implemented"
@@ -96,9 +119,6 @@ def servicenow(action: str = "", table: str = "", data: str = "") -> str:
 def snowflake(action: str = "", query: str = "") -> str:
     """Snowflake data warehouse."""
     account = os.getenv("SNOWFLAKE_ACCOUNT")
-    user = os.getenv("SNOWFLAKE_USER")
-    password = os.getenv("SNOWFLAKE_PASSWORD")
-    
     if not account:
         return "Error: SNOWFLAKE_ACCOUNT not set"
     
