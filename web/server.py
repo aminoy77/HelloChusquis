@@ -21,6 +21,7 @@ from typing import Literal
 from core.runtime import AgentNotReadyError, AgentRuntime
 from core.version import __version__
 import core.db_memory as db_memory
+from core.http_limits import RequestBodyLimitMiddleware
 from core.learning import load_learnings, add_feedback
 from core.rate_limiter import RateLimiter
 from core.logger import get_logger
@@ -118,63 +119,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Invalid API key"},
             )
         return await call_next(request)
-
-
-MAX_REQUEST_BODY_BYTES = 1_048_576
-
-
-class RequestBodyLimitMiddleware:
-    """Reject oversized HTTP request bodies before JSON or form parsing."""
-
-    def __init__(self, app, max_body_bytes: int = MAX_REQUEST_BODY_BYTES):
-        self.app = app
-        self.max_body_bytes = max_body_bytes
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or scope["method"] not in {"POST", "PUT", "PATCH"}:
-            await self.app(scope, receive, send)
-            return
-
-        headers = dict(scope.get("headers", []))
-        content_length = headers.get(b"content-length")
-        if content_length is not None:
-            try:
-                declared_size = int(content_length)
-            except ValueError:
-                await JSONResponse(status_code=400, content={"detail": "Invalid Content-Length header"})(scope, receive, send)
-                return
-            if declared_size < 0 or declared_size > self.max_body_bytes:
-                await JSONResponse(status_code=413, content={"detail": "Request body too large"})(scope, receive, send)
-                return
-
-        chunks = []
-        received_size = 0
-        while True:
-            message = await receive()
-            if message["type"] == "http.disconnect":
-                return
-            if message["type"] != "http.request":
-                continue
-            chunk = message.get("body", b"")
-            received_size += len(chunk)
-            if received_size > self.max_body_bytes:
-                await JSONResponse(status_code=413, content={"detail": "Request body too large"})(scope, receive, send)
-                return
-            chunks.append(chunk)
-            if not message.get("more_body", False):
-                break
-
-        body = b"".join(chunks)
-        body_sent = False
-
-        async def replay_body():
-            nonlocal body_sent
-            if body_sent:
-                return {"type": "http.disconnect"}
-            body_sent = True
-            return {"type": "http.request", "body": body, "more_body": False}
-
-        await self.app(scope, replay_body, send)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

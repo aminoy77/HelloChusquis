@@ -5,18 +5,19 @@ import unittest
 from fastapi.testclient import TestClient
 
 from api import main as api_main
+from core.http_limits import MAX_REQUEST_BODY_BYTES
 from web import server as web_server
 
 
 class TestRequestBodyLimits(unittest.TestCase):
     @staticmethod
-    def _oversized_body(module):
-        return b"x" * (module.MAX_REQUEST_BODY_BYTES + 1)
+    def _oversized_body():
+        return b"x" * (MAX_REQUEST_BODY_BYTES + 1)
 
     def test_api_rejects_oversized_authenticated_body(self):
         response = TestClient(api_main.app).post(
             "/feedback",
-            content=self._oversized_body(api_main),
+            content=self._oversized_body(),
             headers={
                 "Authorization": f"Bearer {api_main.REQUIRED_API_KEY}",
                 "Content-Type": "application/json",
@@ -31,7 +32,7 @@ class TestRequestBodyLimits(unittest.TestCase):
     def test_web_rejects_oversized_public_auth_body(self):
         response = TestClient(web_server.app).post(
             "/auth/verify",
-            content=self._oversized_body(web_server),
+            content=self._oversized_body(),
             headers={"Content-Type": "application/json"},
         )
 
