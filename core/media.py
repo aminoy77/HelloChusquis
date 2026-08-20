@@ -21,9 +21,7 @@ import subprocess
 import tempfile
 import time
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Any, BinaryIO, Optional, Sequence, Union
+from typing import Any, Union
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -210,6 +208,15 @@ class ImageProcessor:
     # Metadata / probing
     # ----------------------------------------------------------------
 
+    def _require_safe_pixel_count(self, path_or_bytes: Union[str, bytes]) -> None:
+        """Reject images that would require excessive decoded-memory resources."""
+        metadata = self.probe(path_or_bytes)
+        pixels = metadata.width * metadata.height
+        if pixels > _MAX_IMAGE_PIXELS:
+            raise ValueError(
+                f"Image exceeds pixel limit: {pixels} pixels (maximum {_MAX_IMAGE_PIXELS})"
+            )
+
     def probe(self, path_or_bytes: Union[str, bytes]) -> ImageMetadata:
         """Read image dimensions, format, orientation, EXIF from header."""
         if isinstance(path_or_bytes, bytes):
@@ -295,6 +302,7 @@ class ImageProcessor:
         enlarge: bool = False,
     ) -> bytes:
         """Resize image so longest side <= max_side, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -370,6 +378,7 @@ class ImageProcessor:
         height: int = 100,
     ) -> bytes:
         """Crop image to given rectangle, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -412,6 +421,7 @@ class ImageProcessor:
 
     def rotate(self, path_or_bytes: Union[str, bytes], degrees: float) -> bytes:
         """Rotate image by given degrees, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -449,6 +459,7 @@ class ImageProcessor:
 
     def flip(self, path_or_bytes: Union[str, bytes], horizontal: bool = True) -> bytes:
         """Flip image horizontally or vertically, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -488,6 +499,7 @@ class ImageProcessor:
 
     def convert(self, path_or_bytes: Union[str, bytes], to_format: str) -> bytes:
         """Convert image to target format (png, jpeg, webp, gif)."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -519,6 +531,7 @@ class ImageProcessor:
 
     def to_jpeg(self, data: bytes, quality: int = 85) -> bytes:
         """Convert image to JPEG."""
+        self._require_safe_pixel_count(data)
         tmp_in = _tmp_path(".bin")
         tmp_out = _tmp_path(".jpg")
         try:
@@ -545,6 +558,7 @@ class ImageProcessor:
 
     def to_webp(self, data: bytes, quality: int = 80) -> bytes:
         """Convert image to WebP."""
+        self._require_safe_pixel_count(data)
         tmp_in = _tmp_path(".bin")
         tmp_out = _tmp_path(".webp")
         try:
@@ -577,6 +591,7 @@ class ImageProcessor:
         quality: int = 75,
     ) -> bytes:
         """Generate a thumbnail image, return JPEG bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -1115,7 +1130,6 @@ class PDFExtractor:
                 cmd = [self._bin_pdftoppm, "-r", str(dpi), "-" + format, in_path, out_pattern]
                 if pages:
                     for page in pages:
-                        page_pattern = out_pattern
                         cmd = [self._bin_pdftoppm, "-r", str(dpi), "-f", str(page), "-l", str(page), "-" + format, in_path, out_pattern]
                         _run(cmd, timeout=120)
                         for fname in sorted(os.listdir(prefix_dir)):
@@ -1139,7 +1153,7 @@ class PDFExtractor:
                     self._bin_gs,
                     f"-sDEVICE={'png16m' if format == 'png' else 'jpeg'}",
                     f"-r{dpi}",
-                    f"-o", f"{out_pattern}-%03d.{format}",
+                    "-o", f"{out_pattern}-%03d.{format}",
                     "-dNOPAUSE", "-dBATCH",
                     in_path,
                 ]
@@ -1431,7 +1445,7 @@ class AudioProcessor:
             except ImportError:
                 pass
 
-            return f"Transcription requires whisper. Install: pip install openai-whisper"
+            return "Transcription requires whisper. Install: pip install openai-whisper"
         finally:
             if tmp_in and os.path.exists(tmp_in):
                 os.unlink(tmp_in)
