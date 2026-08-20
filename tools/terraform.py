@@ -1,6 +1,10 @@
-from tools.base import BaseTool, ToolResult
-import subprocess
 import os
+import subprocess
+
+import httpx
+
+
+TERRAFORM_TIMEOUT_SECONDS = 120
 
 
 PLUGIN_NAME = "terraform"
@@ -53,7 +57,16 @@ def run(action: str, directory: str = "", var: str = "", auto_approve: bool = Fa
     else:
         cwd = "."
     
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=TERRAFORM_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return f"Terraform timed out after {TERRAFORM_TIMEOUT_SECONDS} seconds"
     return result.stdout + result.stderr
 
 
