@@ -1,104 +1,76 @@
-from httpx import AsyncClient
+"""Twilio integration with validated account endpoints."""
+
+from __future__ import annotations
+
 import os
+import re
+
 import httpx
 
-
-async def send_message(auth: str, to: str, message: str) -> dict:
-    """Send SMS via Twilio."""
-    url = "https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
-    async with AsyncClient() as client:
-        r = await client.post(url, data={"To": to, "Body": message}, 
-            headers={"Authorization": f"Bearer {auth}"})
-        return r.json()
+_TWILIO_BASE = "https://api.twilio.com/2010-04-01"
+_ACCOUNT_SID_RE = re.compile(r"^AC[a-fA-F0-9]{32}$")
 
 
-async def list_messages(auth: str, to: str = None) -> dict:
-    """List Twilio messages."""
-    url = f"https://api.twilio.com/2010-04-01/Accounts/{{account_sid}}/Messages.json"
-    async with AsyncClient() as client:
-        r = await client.get(url, headers={"Authorization": f"Bearer {auth}"})
-        return r.json()
+def _account_sid(value: object) -> str:
+    sid = str(value or "")
+    if not _ACCOUNT_SID_RE.fullmatch(sid):
+        raise ValueError("Invalid Twilio account SID.")
+    return sid
 
 
-async def make_call(auth: str, to: str, url: str) -> dict:
-    """Make Twilio call."""
-    call_url = "https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json"
-    async with AsyncClient() as client:
-        r = await client.post(call_url, data={"To": to, "Url": url}, 
-            headers={"Authorization": f"Bearer {auth}"})
-        return r.json()
+def _phone(value: object) -> str:
+    phone = str(value or "")
+    if not re.fullmatch(r"\+[1-9][0-9]{7,14}", phone):
+        raise ValueError("Twilio phone numbers must use E.164 format.")
+    return phone
 
 
-async def get_call_log(auth: str, sid: str) -> dict:
-    """Get Twilio call log."""
-    url = f"https://api.twilio.com/2010-04-01/Accounts/{{account_sid}}/Calls/{sid}.json"
-    async with AsyncClient() as client:
-        r = await client.get(url, headers={"Authorization": f"Bearer {auth}"})
-        return r.json()
+def _message(value: object) -> str:
+    message = str(value or "")
+    if not message or len(message) > 1_600:
+        raise ValueError("Twilio message must contain 1 to 1600 characters.")
+    return message
 
 
-async def lookup_phone(auth: str, phone: str) -> dict:
-    """Lookup phone number."""
-    url = f"https://api.twilio.com/2010-04-01/Addresses/{phone}/Lookup.json"
-    async with AsyncClient() as client:
-        r = await client.get(url, headers={"Authorization": f"Bearer {auth}"})
-        return r.json()
+def _response_text(response: httpx.Response) -> str:
+    response.raise_for_status()
+    return str(response.json())[:2000]
 
 
 def run(action: str, **kwargs) -> str:
-    """Synchronous dispatcher for Twilio API actions."""
-    auth = kwargs.get("auth") or os.getenv("TWILIO_AUTH_TOKEN")
-    if not auth:
-        return "Error: No Twilio auth token found. Set TWILIO_AUTH_TOKEN environment variable."
+    """Execute validated Twilio operations through the current account."""
+    auth_token = kwargs.get("auth") or os.getenv("TWILIO_AUTH_TOKEN")
+    account_sid = kwargs.get("account_sid") or os.getenv("TWILIO_ACCOUNT_SID")
+    if not auth_token or not account_sid:
+        return "Error: Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN."
     try:
-        import asyncio
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            return _run_sync(action, auth, kwargs)
-        return loop.run_until_complete(_run_async(action, auth, kwargs))
-    except RuntimeError:
-        return _run_sync(action, auth, kwargs)
+        return _run_sync(action, _account_sid(account_sid), str(auth_token), kwargs)
+    except (httpx.HTTPError, ValueError) as exc:
+        return f"Error: {exc}"
 
 
-async def _run_async(action: str, auth: str, kwargs: dict) -> str:
-    """Async dispatcher for Twilio operations."""
-    if action == "send_message":
-        return str(await send_message(auth, kwargs.get("to", ""), kwargs.get("message", "")))
-    elif action == "list_messages":
-        return str(await list_messages(auth, kwargs.get("to")))
-    elif action == "make_call":
-        return str(await make_call(auth, kwargs.get("to", ""), kwargs.get("url", "")))
-    elif action == "get_call_log":
-        return str(await get_call_log(auth, kwargs.get("sid", "")))
-    elif action == "lookup_phone":
-        return str(await lookup_phone(auth, kwargs.get("phone", "")))
-    else:
-        return f"Error: Unknown action '{action}'. Available: send_message, list_messages, make_call, get_call_log, lookup_phone"
-
-
-def _run_sync(action: str, auth: str, kwargs: dict) -> str:
-    """Synchronous fallback using httpx.Client."""
+def _run_sync(action: str, account_sid: str, auth_token: str, kwargs: dict) -> str:
+    """Run a bounded Twilio request with HTTP Basic authentication."""
+    base_url = f"{_TWILIO_BASE}/Accounts/{account_sid}"
+    auth = (account_sid, auth_token)
+    client = httpx.Client(timeout=30, follow_redirects=False)
     try:
-        client = httpx.Client(timeout=30)
-        headers = {"Authorization": f"Bearer {auth}"}
         if action == "send_message":
-            r = client.post("https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json",
-                           data={"To": kwargs.get("to", ""), "Body": kwargs.get("message", "")}, headers=headers)
-            return str(r.json())[:2000]
+            response = client.post(
+                f"{base_url}/Messages.json",
+                data={"To": _phone(kwargs.get("to")), "Body": _message(kwargs.get("message"))},
+                auth=auth,
+            )
         elif action == "list_messages":
-            r = client.get("https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json", headers=headers)
-            return str(r.json())[:2000]
-        elif action == "make_call":
-            r = client.post("https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json",
-                           data={"To": kwargs.get("to", ""), "Url": kwargs.get("url", "")}, headers=headers)
-            return str(r.json())[:2000]
+            params = {"To": _phone(kwargs["to"])} if kwargs.get("to") else {"PageSize": 100}
+            response = client.get(f"{base_url}/Messages.json", params=params, auth=auth)
         elif action == "get_call_log":
-            r = client.get(f"https://api.twilio.com/2010-04-01/Accounts/{{account_sid}}/Calls/{kwargs.get('sid', '')}.json", headers=headers)
-            return str(r.json())[:2000]
-        elif action == "lookup_phone":
-            r = client.get(f"https://api.twilio.com/2010-04-01/Addresses/{kwargs.get('phone', '')}/Lookup.json", headers=headers)
-            return str(r.json())[:2000]
+            call_sid = str(kwargs.get("sid", ""))
+            if not re.fullmatch(r"^CA[a-fA-F0-9]{32}$", call_sid):
+                raise ValueError("Invalid Twilio call SID.")
+            response = client.get(f"{base_url}/Calls/{call_sid}.json", auth=auth)
         else:
-            return f"Error: Unknown action '{action}'. Available: send_message, list_messages, make_call, get_call_log, lookup_phone"
-    except Exception as e:
-        return f"Error: {str(e)}"
+            return "Error: Unknown action. Available: send_message, list_messages, get_call_log"
+        return _response_text(response)
+    finally:
+        client.close()
