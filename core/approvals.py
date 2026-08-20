@@ -46,6 +46,7 @@ class ApprovalRequest:
         data = asdict(self)
         data["status"] = self.status.value
         data["tool_args"] = redact_sensitive_data(self.tool_args)
+        data.pop("result_summary", None)
         return data
 
 

@@ -1182,7 +1182,7 @@ class Agent:
             request.tool_args,
             approval_granted=True,
         )
-        summary = result.output if result.success else result.error
+        summary = "Action completed successfully" if result.success else "Action execution failed"
         completed = self.approval_manager.complete_execution(request_id, result.success, summary)
         self._audit(
             "approval_executed",

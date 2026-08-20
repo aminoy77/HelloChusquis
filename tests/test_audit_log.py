@@ -131,7 +131,9 @@ class TestApprovalAuditEvents(unittest.TestCase):
         agent._audited_approval_ids = set()
         agent._session_id = "audit-session"
         agent.session_manager = _AuditSessionManager()
-        agent._dispatch_tool = lambda *args, **kwargs: ToolResult(success=True, output="done")
+        agent._dispatch_tool = lambda *args, **kwargs: ToolResult(
+            success=True, output="execution-secret"
+        )
 
         pending = agent._approval_required_result(
             "files",
@@ -147,6 +149,12 @@ class TestApprovalAuditEvents(unittest.TestCase):
         self.assertEqual(request_details["tool_args"]["api_key"], "[REDACTED]")
         self.assertNotIn("top-secret", str(request_details))
         self.assertTrue(agent.session_manager.events[-1][2]["success"])
+        completed = agent.approval_manager._requests[request_id]
+        self.assertEqual(completed.result_summary, "Action completed successfully")
+        self.assertNotIn("execution-secret", completed.result_summary)
+        public_request = agent.approval_manager.list_requests(include_finished=True)[0]
+        self.assertNotIn("result_summary", public_request)
+        self.assertNotIn("execution-secret", str(public_request))
 
 
 if __name__ == "__main__":
