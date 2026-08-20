@@ -1,5 +1,9 @@
-from tools.base import BaseTool, ToolResult
-import os
+"""Lightweight deterministic embeddings demonstration tool."""
+
+from __future__ import annotations
+
+import hashlib
+from pathlib import Path
 
 
 PLUGIN_NAME = "embeddings"
@@ -18,42 +22,31 @@ EMBEDDINGS_SCHEMA = {
                 "file": {"type": "string", "description": "File to embed"},
                 "query": {"type": "string", "description": "Search query"},
             },
-            "required": ["action"]
-        }
-    }
+            "required": ["action"],
+        },
+    },
 }
 
 
 def run(action: str, text: str = "", file: str = "", query: str = "") -> str:
-    """Generate embeddings."""
-    # Use OpenAI or local embeddings
-    try:
-        import numpy as np
-        
-        # Simple hash-based embedding (for demo)
-        # In production, use sentence-transformers or OpenAI
-        
-        if action == "create":
-            if file:
-                with open(file, "r") as f:
-                    text = f.read()
-            if not text:
-                return "Error: text or file required"
-            
-            # Create embedding vector
-            import hashlib
-            vec = [int(hashlib.md5((text + str(i)).encode()).hexdigest(), 16) % 100 / 100 for i in range(384)]
-            
-            return f"✓ Generated 384-dim embedding for {len(text)} chars"
-        
-        elif action == "search":
-            return "Embedding search requires vector DB setup"
-        
-        elif action == "batch":
-            return "Batch embedding requires file list"
-    
-    except ImportError:
-        return "Error: numpy needed for embeddings"
+    """Generate deterministic demo metadata; production use requires a vector provider."""
+    del query  # Reserved for the future search backend.
+    if action == "create":
+        if file:
+            try:
+                text = Path(file).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                return f"Error: could not read embedding file: {exc}"
+        if not text:
+            return "Error: text or file required"
+
+        embedding_id = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+        return f"✓ Generated 384-dim embedding for {len(text)} chars (id: {embedding_id})"
+    if action == "search":
+        return "Embedding search requires vector DB setup"
+    if action == "batch":
+        return "Batch embedding requires file list"
+    return f"Error: unknown embeddings action: {action}"
 
 
 if __name__ == "__main__":

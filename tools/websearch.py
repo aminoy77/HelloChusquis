@@ -14,7 +14,7 @@ _CACHE_TTL = 300  # 5 minutes
 
 def _cache_key(query: str, num_results: int, region: str, time_filter: str) -> str:
     raw = f"{query}|{num_results}|{region}|{time_filter}"
-    return hashlib.md5(raw.encode()).hexdigest()
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def _cache_get(key: str) -> Optional[list]:
