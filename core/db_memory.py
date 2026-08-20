@@ -570,23 +570,12 @@ class MemoryStore:
         importance: Optional[int] = None,
         re_embed: bool = True,
     ) -> None:
-        sets = ["updated_at=?"]
-        params: list = [_now_iso()]
-        if value is not None:
-            sets.append("value=?")
-            params.append(value)
-        if tags is not None:
-            sets.append("tags=?")
-            params.append(json.dumps(tags, ensure_ascii=False))
-        if category is not None:
-            sets.append("category=?")
-            params.append(category)
-        if importance is not None:
-            sets.append("importance=?")
-            params.append(importance)
-        params.append(entry_id)
+        tags_json = json.dumps(tags, ensure_ascii=False) if tags is not None else None
         self.conn.execute(
-            f"UPDATE memory_entries SET {', '.join(sets)} WHERE id=?", params
+            "UPDATE memory_entries SET updated_at=?, value=COALESCE(?, value), "
+            "tags=COALESCE(?, tags), category=COALESCE(?, category), "
+            "importance=COALESCE(?, importance) WHERE id=?",
+            (_now_iso(), value, tags_json, category, importance, entry_id),
         )
         self.conn.commit()
         self._dirty = True
@@ -638,21 +627,24 @@ class MemoryStore:
 
     @_locked
     def search_entries_keyword(self, query: str, limit: int = 20) -> List[MemoryEntry]:
-        tokens = re.findall(r"[\w\u00C0-\u024F]+", query.lower())
+        """Search with a fixed SQL statement and bounded, parameterized token set."""
+        tokens = list(dict.fromkeys(re.findall(r"[\w\u00C0-\u024F]+", query.lower())))[:20]
         if not tokens:
             return []
-        conditions = " OR ".join(["(LOWER(key) LIKE ? OR LOWER(value) LIKE ?)"] * len(tokens))
-        params: list = []
-        for t in tokens:
-            pat = f"%{t}%"
-            params.extend([pat, pat])
-        params.append(limit)
+        try:
+            bounded_limit = max(1, min(int(limit), 100))
+        except (TypeError, ValueError):
+            bounded_limit = 20
         rows = self.conn.execute(
-            f"SELECT id, session_id, key, value, tags, category, importance, created_at, updated_at "
-            f"FROM memory_entries WHERE {conditions} ORDER BY importance DESC, created_at DESC LIMIT ?",
-            params,
+            "SELECT id, session_id, key, value, tags, category, importance, created_at, updated_at "
+            "FROM memory_entries WHERE EXISTS ("
+            "SELECT 1 FROM json_each(?) AS token "
+            "WHERE LOWER(memory_entries.key) LIKE '%' || token.value || '%' "
+            "OR LOWER(memory_entries.value) LIKE '%' || token.value || '%'"
+            ") ORDER BY importance DESC, created_at DESC LIMIT ?",
+            (json.dumps(tokens, ensure_ascii=False), bounded_limit),
         ).fetchall()
-        return [self._row_to_entry(r) for r in rows]
+        return [self._row_to_entry(row) for row in rows]
 
     @_locked
     def get_entry_count(self) -> int:
