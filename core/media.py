@@ -28,6 +28,7 @@ from typing import Any, Union
 # ---------------------------------------------------------------------------
 
 _MAX_IMAGE_PIXELS = 25_000_000
+_MAX_BASE64_ENCODED_CHARS = 16 * 1024 * 1024
 _IMAGE_REDUCE_QUALITY_STEPS = [85, 75, 65, 55, 45, 35]
 _DEFAULT_QR_SCALE = 6
 _DEFAULT_QR_MARGIN = 4
@@ -735,8 +736,13 @@ class ImageProcessor:
 
     @staticmethod
     def decode_base64(b64: str) -> bytes:
-        """Decode base64 string to bytes."""
-        return base64.b64decode(b64)
+        """Decode bounded, valid base64 image data to bytes."""
+        if len(b64) > _MAX_BASE64_ENCODED_CHARS:
+            raise ValueError(f"base64 input exceeds {_MAX_BASE64_ENCODED_CHARS} characters")
+        try:
+            return base64.b64decode(b64, validate=True)
+        except (ValueError, TypeError) as exc:
+            raise ValueError("Invalid base64 data") from exc
 
     @staticmethod
     def to_data_url(data: bytes, mime: str = "image/png") -> str:
@@ -751,7 +757,7 @@ class ImageProcessor:
         if not match:
             raise ValueError("Invalid data URL format")
         mime = match.group(1)
-        payload = base64.b64decode(match.group(2))
+        payload = ImageProcessor.decode_base64(match.group(2))
         return payload, mime
 
     # ----------------------------------------------------------------
