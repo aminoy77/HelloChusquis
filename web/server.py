@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.responses import StreamingResponse
@@ -213,9 +213,25 @@ def _require_rate_limit(limiter: RateLimiter, request: Request, route: str) -> N
 # --- Request models ---
 
 class MessageRequest(BaseModel):
-    message: str
-    provider: str | None = None
-    model: str | None = None
+    message: str = Field(max_length=20_000)
+    provider: str | None = Field(default=None, max_length=200)
+    model: str | None = Field(default=None, max_length=256)
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Message cannot be empty")
+        return value
+
+    @field_validator("provider", "model")
+    @classmethod
+    def normalize_optional_selector(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
 
 
 class FeedbackRequest(BaseModel):
@@ -598,10 +614,10 @@ def models(http_request: Request, provider: str = "", refresh: bool = False):
 
 
 class ProviderUpdate(BaseModel):
-    name: str
-    key: str = ""
-    base: str = ""
-    model: str = ""
+    name: str = Field(min_length=1, max_length=200)
+    key: str = Field(default="", max_length=4096)
+    base: str = Field(default="", max_length=2048)
+    model: str = Field(default="", max_length=256)
 
 
 @app.post("/update-provider")

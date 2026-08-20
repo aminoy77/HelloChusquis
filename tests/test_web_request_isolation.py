@@ -6,6 +6,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from pydantic import ValidationError
+
 from tools.base import ToolResult
 from web import server as web_server
 
@@ -64,6 +66,12 @@ class TestWebRequestIsolation(unittest.TestCase):
 
     def test_web_auth_is_enabled_by_default(self):
         self.assertTrue(web_server.AUTH_ENABLED)
+
+    def test_message_request_bounds_provider_and_model_identifiers(self):
+        with self.assertRaises(ValidationError):
+            web_server.MessageRequest(message="hello", provider="p" * 201)
+        with self.assertRaises(ValidationError):
+            web_server.MessageRequest(message="hello", model="m" * 257)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from core.provider import ProviderPool
 from web import server as web_server
@@ -110,6 +111,16 @@ class TestProviderSessionScope(unittest.TestCase):
         self.assertEqual(raised.exception.status_code, 400)
         self.assertEqual(self.agent.pool.calls, [])
         self.assertEqual(self.agent.turn_acquisitions, 0)
+
+    def test_provider_update_bounds_all_free_text_fields(self):
+        with self.assertRaises(ValidationError):
+            web_server.ProviderUpdate(name="p" * 201)
+        with self.assertRaises(ValidationError):
+            web_server.ProviderUpdate(name="Test Provider", key="k" * 4097)
+        with self.assertRaises(ValidationError):
+            web_server.ProviderUpdate(name="Test Provider", base="h" * 2049)
+        with self.assertRaises(ValidationError):
+            web_server.ProviderUpdate(name="Test Provider", model="m" * 257)
 
     def test_provider_status_redacts_legacy_url_credentials_and_query(self):
         pool = ProviderPool(

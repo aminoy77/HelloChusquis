@@ -415,9 +415,8 @@ def get_audit_events(http_request: Request, limit: int = 100):
 
 
 def start(host: str = "127.0.0.1", port: int = 8080):
-    """Start the API server."""
-    logger.info("Starting HelloChusquis API on %s:%s", host, port)
-    print(f"API key: {REQUIRED_API_KEY}")
+    """Start the API server without revealing authentication credentials."""
+    logger.info("Starting authenticated HelloChusquis API on %s:%s", host, port)
     uvicorn.run(app, host=host, port=port)
 
 

@@ -60,6 +60,15 @@ class TestApiKeyPermissions(unittest.TestCase):
 
         self.assertNotIn(web_server.REQUIRED_API_KEY, str(info.call_args))
 
+    def test_api_start_does_not_print_or_log_the_api_key(self):
+        with patch.object(api_main.logger, "info") as info, patch.object(
+            api_main.uvicorn, "run"
+        ), patch("builtins.print") as printer:
+            api_main.start()
+
+        self.assertNotIn(api_main.REQUIRED_API_KEY, str(info.call_args))
+        self.assertNotIn(api_main.REQUIRED_API_KEY, str(printer.call_args))
+
 
 if __name__ == "__main__":
     unittest.main()
