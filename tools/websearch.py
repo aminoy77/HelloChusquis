@@ -10,6 +10,28 @@ from bs4 import BeautifulSoup
 
 _cache: dict = {}
 _CACHE_TTL = 300  # 5 minutes
+_SEARCH_RESPONSE_MAX_BYTES = 750_000
+_SEARCH_RESPONSE_CHUNK_BYTES = 64_000
+
+
+def _read_search_response(response: requests.Response) -> str:
+    """Read a search response incrementally under a fixed memory budget."""
+    chunks: list[bytes] = []
+    total = 0
+    try:
+        for chunk in response.iter_content(chunk_size=_SEARCH_RESPONSE_CHUNK_BYTES):
+            if not chunk:
+                continue
+            remaining = _SEARCH_RESPONSE_MAX_BYTES - total
+            if remaining <= 0:
+                break
+            chunks.append(chunk[:remaining])
+            total += min(len(chunk), remaining)
+            if len(chunk) > remaining:
+                break
+        return b"".join(chunks).decode("utf-8", errors="replace")
+    finally:
+        response.close()
 
 
 def _cache_key(query: str, num_results: int, region: str, time_filter: str) -> str:
@@ -55,9 +77,16 @@ def _search_ddg_lite(query: str, num_results: int, region: str, time_filter: str
     if time_filter and time_filter in _TIME_MAP:
         data["df"] = _TIME_MAP[time_filter]
 
-    resp = requests.post(url, data=data, headers=_HEADERS, timeout=10)
+    resp = requests.post(
+        url,
+        data=data,
+        headers=_HEADERS,
+        timeout=10,
+        allow_redirects=False,
+        stream=True,
+    )
     resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
+    soup = BeautifulSoup(_read_search_response(resp), "html.parser")
 
     results = []
     for link in soup.find_all("a", class_="result-link"):
@@ -92,9 +121,16 @@ def _search_ddg_html(query: str, num_results: int, region: str, time_filter: str
     if time_filter and time_filter in _TIME_MAP:
         data["df"] = _TIME_MAP[time_filter]
 
-    resp = requests.post(url, data=data, headers=_HEADERS, timeout=10)
+    resp = requests.post(
+        url,
+        data=data,
+        headers=_HEADERS,
+        timeout=10,
+        allow_redirects=False,
+        stream=True,
+    )
     resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
+    soup = BeautifulSoup(_read_search_response(resp), "html.parser")
 
     results = []
     for item in soup.find_all("div", class_="result"):
