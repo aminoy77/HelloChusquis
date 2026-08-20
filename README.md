@@ -25,6 +25,7 @@
 - **Bounded Rate Limiting** — per-client request windows cap retained client state at 10,000 entries, reject invalid settings, and clean up without allocating state for read-only limit checks
 - **Protected Administrative Operations** — runtime reloads allow at most 3 requests per minute per client, session-scoped provider updates allow 15, and model discovery allows 30 requests with only 5 forced remote refreshes; excess requests receive a `429` response with a `Retry-After` header
 - **Safe Learning Persistence** — feedback is capped at 10 submissions per minute per client with a 500-character request bound; local learning writes are serialized, atomic, and retained with owner-only file permissions
+- **Protected Provider Credentials** — provider configuration is written atomically under `~/.hellochusquis` with `0700` directory and `0600` file permissions, protecting locally stored API keys
 - **Safe HTTP Error Contracts** — unavailable runtimes, failed reloads, approval conflicts, and execution failures return stable public messages while detailed diagnostics remain confined to server logs
 - **Browser Injection Defenses** — the web interface sends a strict per-response Content Security Policy with a script nonce, restrictive source lists, and baseline anti-framing, anti-sniffing, referrer, and permissions controls
 - **Global Request Bounds** — API and web reject declared or streamed request bodies larger than 1 MiB with a `413` response before parsing, while normal requests retain their existing contracts

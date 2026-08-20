@@ -1,6 +1,8 @@
 import yaml
 import httpx
+import os
 from pathlib import Path
+import tempfile
 from rich.console import Console
 from rich.prompt import Prompt, Confirm, IntPrompt
 from rich.panel import Panel
@@ -8,6 +10,32 @@ from rich.table import Table
 
 console = Console()
 CONFIG_PATH = Path("config.yaml")
+
+
+def _save_config_securely(config: dict) -> Path:
+    """Atomically write provider credentials with owner-only permissions."""
+    config_dir = Path.home() / ".hellochusquis"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(config_dir, 0o700)
+    config_path = config_dir / "config.yaml"
+    descriptor, temporary_path = tempfile.mkstemp(
+        prefix=".config.", suffix=".tmp", dir=config_dir
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(yaml.dump(config, allow_unicode=True, sort_keys=False))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary_path, 0o600)
+        os.replace(temporary_path, config_path)
+        os.chmod(config_path, 0o600)
+        return config_path
+    except Exception:
+        try:
+            os.unlink(temporary_path)
+        except FileNotFoundError:
+            pass
+        raise
 
 KNOWN_PROVIDERS = [
     # ============ Major Providers ============
@@ -475,10 +503,7 @@ def run_setup():
         }
     }
 
-    config_dir = Path.home() / ".hellochusquis"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    config_path = config_dir / "config.yaml"
-    config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
+    config_path = _save_config_securely(config)
     console.print(f"\n[#5eb97e]✓ Config saved to {config_path}[/#5eb97e]")
     _check_providers_valid(config)
     return config
@@ -536,12 +561,12 @@ def run_quick_setup() -> dict:
 
     config_dir = Path.home() / ".hellochusquis"
     config_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(config_dir, 0o700)
     workspace_path = config_dir / "workspace"
     workspace_path.mkdir(parents=True, exist_ok=True)
     config["settings"]["workspace_dirs"] = [str(workspace_path)]
+    config_path = _save_config_securely(config)
 
-    config_path = config_dir / "config.yaml"
-    config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
     console.print("\n[#5eb97e]✓ Ready. Starting HelloChusquis...[/#5eb97e]")
     console.print(f"[dim]Config saved to: {config_path}[/dim]")
     console.print(f"[dim]Provider: {provider_info['name']} → {model}[/dim]")
@@ -700,10 +725,7 @@ def edit_config(section: str = None):
             "memory_retention_days": retention_days,
         }
     
-    config_dir = Path.home() / ".hellochusquis"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    config_path = config_dir / "config.yaml"
-    config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
+    config_path = _save_config_securely(config)
     console.print(f"\n[#5eb97e]✓ Config saved to {config_path}[/#5eb97e]")
     _check_providers_valid(config)
     return config
