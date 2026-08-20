@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from fastapi import HTTPException
 
+from core.provider import ProviderPool
 from web import server as web_server
 
 
@@ -97,6 +98,39 @@ class TestProviderSessionScope(unittest.TestCase):
         self.assertEqual(self.agent.pool.calls, [])
         self.assertEqual(self.agent.turn_acquisitions, 0)
         self.assertEqual(self.agent.turn_releases, 0)
+
+    def test_provider_update_rejects_url_with_embedded_credentials(self):
+        update = web_server.ProviderUpdate(
+            name="Test Provider", base="https://user:top-secret@example.test/v1"
+        )
+        with patch.object(web_server, "_require_agent", return_value=self.agent):
+            with self.assertRaises(HTTPException) as raised:
+                web_server.update_provider(update, self.request)
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertEqual(self.agent.pool.calls, [])
+        self.assertEqual(self.agent.turn_acquisitions, 0)
+
+    def test_provider_status_redacts_legacy_url_credentials_and_query(self):
+        pool = ProviderPool(
+            config={
+                "providers": [
+                    {
+                        "name": "Test Provider",
+                        "base_url": "https://example.test/v1",
+                        "api_key": "key",
+                        "model": "test-model",
+                    }
+                ]
+            }
+        )
+        pool.providers[0].base_url = "https://user:top-secret@example.test/v1?token=also-secret"
+
+        status = pool.status()[0]
+
+        self.assertEqual(status["base_url"], "https://example.test/v1")
+        self.assertNotIn("top-secret", status["base_url"])
+        self.assertNotIn("also-secret", status["base_url"])
 
 
 if __name__ == "__main__":

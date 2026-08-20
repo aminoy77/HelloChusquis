@@ -14,10 +14,10 @@ import json
 import hmac
 import re
 import secrets
-import urllib.parse
 from pathlib import Path
 from typing import Literal
 
+from core.provider import validate_provider_base_url
 from core.runtime import AgentNotReadyError, AgentRuntime
 from core.version import __version__
 import core.db_memory as db_memory
@@ -614,21 +614,20 @@ def update_provider(data: ProviderUpdate, http_request: Request):
     if data.name not in known_names:
         raise HTTPException(status_code=404, detail=f"Provider '{data.name}' not found")
 
-    # Validate base URL scheme if provided
+    base_url = ""
     if data.base:
-        parsed = urllib.parse.urlparse(data.base)
-        if parsed.scheme not in ("http", "https"):
-            raise HTTPException(status_code=400, detail="Base URL must use http or https scheme")
-        if not parsed.hostname:
-            raise HTTPException(status_code=400, detail="Base URL must have a valid host")
+        try:
+            base_url = validate_provider_base_url(data.base)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if not agent.try_acquire_turn():
         raise HTTPException(status_code=409, detail="This conversation is already processing another request")
     try:
         if data.key:
             agent.pool.update_api_key(data.name, data.key)
-        if data.base:
-            agent.pool.update_base_url(data.name, data.base)
+        if base_url:
+            agent.pool.update_base_url(data.name, base_url)
         if data.model:
             agent.pool.update_model(data.name, data.model)
         return {"status": "ok", "provider": data.name, "scope": "session"}

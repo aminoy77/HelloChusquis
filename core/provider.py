@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from urllib.parse import urlsplit, urlunsplit
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -11,6 +12,49 @@ import yaml
 from core.logger import get_logger
 
 logger = get_logger("provider")
+
+
+def validate_provider_base_url(base_url: str) -> str:
+    """Return a canonical provider endpoint or reject unsafe URL components."""
+    if not isinstance(base_url, str):
+        raise ValueError("Provider base URL must be a string")
+
+    candidate = base_url.strip()
+    try:
+        parsed = urlsplit(candidate)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("Provider base URL must have a valid host and port") from exc
+
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Provider base URL must use http or https scheme")
+    if not parsed.hostname:
+        raise ValueError("Provider base URL must have a valid host")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("Provider base URL must not include credentials")
+    if parsed.query or parsed.fragment:
+        raise ValueError("Provider base URL must not include query or fragment")
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("Provider base URL must have a valid host and port")
+
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
+
+
+def public_provider_base_url(base_url: str) -> str:
+    """Return a redacted endpoint for status, including legacy configurations."""
+    try:
+        parsed = urlsplit(base_url)
+        host = parsed.hostname
+        port = parsed.port
+    except (TypeError, ValueError):
+        return "[invalid provider URL]"
+
+    if parsed.scheme not in {"http", "https"} or not host:
+        return "[invalid provider URL]"
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    netloc = f"{host}:{port}" if port is not None else host
+    return urlunsplit((parsed.scheme, netloc, parsed.path.rstrip("/"), "", ""))
 
 
 @dataclass
@@ -115,7 +159,7 @@ class ProviderPool:
         for provider_config in sorted(providers_list, key=lambda item: item.get("priority", 0)):
             provider = Provider(
                 name=provider_config["name"],
-                base_url=provider_config["base_url"].rstrip("/"),
+                base_url=validate_provider_base_url(provider_config["base_url"]),
                 api_key=provider_config.get("api_key", ""),
                 model=provider_config["model"],
                 priority=provider_config.get("priority", 0),
@@ -277,9 +321,6 @@ class ProviderPool:
 
         Returns the JSON payload on success; raises for HTTP errors.
         """
-        if not provider.base_url.startswith(('http://', 'https://')):
-            provider.base_url = 'https://' + provider.base_url
-
         payload: Dict[str, Any] = {
             "model": model or provider.model,
             "messages": messages,
@@ -313,7 +354,7 @@ class ProviderPool:
                 {
                     "name": p.name,
                     "model": p.model,
-                    "base_url": p.base_url,
+                    "base_url": public_provider_base_url(p.base_url),
                     "status": "exhausted" if p.exhausted else "ready",
                     "avg_ms": round(p.avg_response_time * 1000) if p.avg_response_time else 0,
                     "calls": p.total_calls,
@@ -364,7 +405,7 @@ class ProviderPool:
         """Update base URL for a provider."""
         for p in self.providers:
             if p.name == name:
-                p.base_url = base_url
+                p.base_url = validate_provider_base_url(base_url)
                 logger.info("Updated base URL for %s", name)
                 return True
         return False
@@ -380,7 +421,13 @@ class ProviderPool:
 
     def add_provider(self, name: str, api_key: str, base_url: str, model: str, priority: int = 1):
         """Add a new provider."""
-        provider = Provider(name=name, api_key=api_key, base_url=base_url, model=model, priority=priority)
+        provider = Provider(
+            name=name,
+            api_key=api_key,
+            base_url=validate_provider_base_url(base_url),
+            model=model,
+            priority=priority,
+        )
         self.providers.append(provider)
         logger.info("Added provider %s", name)
         return True
