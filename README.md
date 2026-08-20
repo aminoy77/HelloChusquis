@@ -23,6 +23,7 @@
 - **Serialized Session Turns** — a session processes one chat request at a time, preventing concurrent requests from interleaving context or tool state; retry a `409` response after the active turn ends
 - **Persistent Approval Audit** — requested, decided, and executed high-impact actions are retained per HTTP session with redacted arguments and can be inspected after a runtime reload; closed HTTP sessions are pruned to the 200 most recent records
 - **Bounded Rate Limiting** — per-client request windows cap retained client state at 10,000 entries, reject invalid settings, and clean up without allocating state for read-only limit checks
+- **Protected Administrative Operations** — runtime reloads allow at most 3 requests per minute per client, while session-scoped provider updates allow 15; excess requests receive a `429` response with a `Retry-After` header
 - **Offline Integration Contracts** — `doctor --contracts` verifies the import and local entry-point contract of every bundled external integration without calling third-party services
 
 ## Quick Start

@@ -164,7 +164,29 @@ def _require_agent(http_request: Request | None = None):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+# Rate limiters: /chat = 30/min, /runtime/reload = 3/min, /update-provider = 15/min.
 _chat_limiter = RateLimiter(requests_per_minute=30)
+_reload_limiter = RateLimiter(requests_per_minute=3)
+_provider_update_limiter = RateLimiter(requests_per_minute=15)
+
+
+def _get_client_ip(request: Request) -> str:
+    client = getattr(request, "client", None)
+    return client.host if client else "unknown"
+
+
+def _require_administrative_rate_limit(limiter: RateLimiter, request: Request, route: str) -> None:
+    """Reject excessive costly administrative operations from one client."""
+    ip = _get_client_ip(request)
+    if limiter.is_allowed(ip):
+        return
+    retry_after = max(1, int(limiter.get_retry_after(ip) + 0.999))
+    logger.warning("Rate limit exceeded on %s from %s", route, ip)
+    raise HTTPException(
+        status_code=429,
+        detail="Too many administrative requests",
+        headers={"Retry-After": str(retry_after)},
+    )
 
 
 # --- Request models ---
@@ -423,8 +445,9 @@ def decide_approval(
 
 
 @app.post("/runtime/reload")
-def reload_runtime():
+def reload_runtime(http_request: Request):
     """Reload provider configuration and clear cached HTTP sessions."""
+    _require_administrative_rate_limit(_reload_limiter, http_request, "/runtime/reload")
     cleared_sessions = runtime.session_count
     if not runtime.refresh():
         raise HTTPException(status_code=503, detail=runtime.error or "Runtime reload failed")
@@ -515,6 +538,7 @@ class ProviderUpdate(BaseModel):
 @app.post("/update-provider")
 def update_provider(data: ProviderUpdate, http_request: Request):
     """Update provider configuration for the requesting in-memory session only."""
+    _require_administrative_rate_limit(_provider_update_limiter, http_request, "/update-provider")
     agent = _require_agent(http_request)
     # Validate provider name exists
     known_names = {provider_status["name"] for provider_status in agent.pool.status()}

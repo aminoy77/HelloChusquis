@@ -96,13 +96,29 @@ app = FastAPI(title="HelloChusquis API", version=__version__)
 app.add_middleware(AuthMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# Rate limiters: /chat = 30/min, /feedback = 10/min
+# Rate limiters: /chat = 30/min, /feedback = 10/min, /runtime/reload = 3/min.
 _chat_limiter = RateLimiter(requests_per_minute=30)
 _feedback_limiter = RateLimiter(requests_per_minute=10)
+_reload_limiter = RateLimiter(requests_per_minute=3)
 
 
 def _get_client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    client = getattr(request, "client", None)
+    return client.host if client else "unknown"
+
+
+def _require_administrative_rate_limit(limiter: RateLimiter, request: Request, route: str) -> None:
+    """Reject excessive costly administrative operations from one client."""
+    ip = _get_client_ip(request)
+    if limiter.is_allowed(ip):
+        return
+    retry_after = max(1, int(limiter.get_retry_after(ip) + 0.999))
+    logger.warning("Rate limit exceeded on %s from %s", route, ip)
+    raise HTTPException(
+        status_code=429,
+        detail="Too many administrative requests",
+        headers={"Retry-After": str(retry_after)},
+    )
 
 # The API stays live even before first-time setup. Endpoints that need an
 # agent return a clear 503 until the user runs `hellochusquis setup`.
@@ -245,8 +261,9 @@ def decide_approval(
 
 
 @app.post("/runtime/reload")
-def reload_runtime():
+def reload_runtime(http_request: Request):
     """Reload provider configuration and clear cached HTTP sessions."""
+    _require_administrative_rate_limit(_reload_limiter, http_request, "/runtime/reload")
     cleared_sessions = runtime.session_count
     if not runtime.refresh():
         raise HTTPException(status_code=503, detail=runtime.error or "Runtime reload failed")
