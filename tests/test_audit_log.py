@@ -68,6 +68,25 @@ class TestAuditEndpoints(unittest.TestCase):
         self.assertEqual(agent.limits, [7, 9])
 
 
+class TestSessionRetention(unittest.TestCase):
+    def test_prune_removes_only_oldest_closed_http_sessions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = SessionManager(Path(directory) / "sessions.db")
+            manager.create_session("http", session_id="closed-1")
+            manager.create_session("http", session_id="closed-2")
+            manager.create_session("http", session_id="closed-3")
+            manager.create_session("http", session_id="active-session")
+            for session_id in ("closed-1", "closed-2", "closed-3"):
+                manager.close_session(session_id)
+
+            self.assertEqual(manager.prune_closed_sessions("http", keep=2), 1)
+            self.assertIsNone(manager.get_session("closed-1"))
+            self.assertIsNotNone(manager.get_session("closed-2"))
+            self.assertIsNotNone(manager.get_session("closed-3"))
+            self.assertIsNotNone(manager.get_session("active-session"))
+            manager.close()
+
+
 class TestHistoryRecovery(unittest.TestCase):
     def test_session_manager_returns_recent_messages_in_chronological_order(self):
         with tempfile.TemporaryDirectory() as directory:

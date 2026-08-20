@@ -30,6 +30,7 @@ from ui.terminal import print_tool_call, print_tool_result, console
 from core.logger import get_logger
 
 logger = get_logger("agent")
+MAX_PERSISTED_HTTP_SESSIONS = 200
 
 # Import tool modules directly (they provide run functions)
 import tools.github as github_module
@@ -1207,6 +1208,10 @@ class Agent:
         self._pending_tool_results = []
         self.approval_manager.cancel_pending()
         if self._persistent_session:
+            self.session_manager.close_session(self._session_id)
+            self.session_manager.prune_closed_sessions(
+                "http", keep=MAX_PERSISTED_HTTP_SESSIONS
+            )
             self.session_manager.close()
             return
         self.session_manager.delete_session(self._session_id)

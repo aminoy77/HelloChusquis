@@ -369,6 +369,27 @@ class SessionManager:
         """Mark session as closed."""
         return self.update_session(session_id, status=SessionStatus.CLOSED)
 
+    def prune_closed_sessions(self, agent_id: str, *, keep: int = 200) -> int:
+        """Delete oldest closed sessions for an agent, retaining the newest set."""
+        keep = max(0, int(keep))
+        with self._lock:
+            conn = self._ensure_connection()
+            rows = conn.execute(
+                """SELECT session_id FROM sessions
+                   WHERE agent_id = ? AND status = ?
+                   ORDER BY updated_at DESC, session_id DESC
+                   LIMIT -1 OFFSET ?""",
+                (agent_id, SessionStatus.CLOSED.value, keep),
+            ).fetchall()
+            session_ids = [row["session_id"] for row in rows]
+            for session_id in session_ids:
+                conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+                conn.execute("DELETE FROM compaction_log WHERE session_id = ?", (session_id,))
+                conn.execute("DELETE FROM audit_events WHERE session_id = ?", (session_id,))
+                conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+            conn.commit()
+            return len(session_ids)
+
     def delete_session(self, session_id: str) -> bool:
         """Delete session and all its messages."""
         with self._lock:
