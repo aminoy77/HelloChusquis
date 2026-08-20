@@ -45,6 +45,29 @@ SUPPORTED_AUDIO_FORMATS = {"mp3", "wav", "ogg", "flac", "m4a", "opus"}
 MAX_CHUNK_CHARS = 4000  # safe limit before splitting text for synthesis
 MAX_RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_BASE = 1.5
+MAX_TTS_AUDIO_BYTES = 10 * 1024 * 1024
+TTS_STREAM_CHUNK_BYTES = 64 * 1024
+
+
+def _read_bounded_tts_audio(response: Any) -> bytes:
+    """Read remote audio incrementally without retaining an unbounded response."""
+    try:
+        content_length = int(response.headers.get("Content-Length", "0"))
+    except (TypeError, ValueError):
+        content_length = 0
+    if content_length > MAX_TTS_AUDIO_BYTES:
+        raise ValueError(f"TTS audio exceeds {MAX_TTS_AUDIO_BYTES} bytes")
+
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in response.iter_content(chunk_size=TTS_STREAM_CHUNK_BYTES):
+        if not chunk:
+            continue
+        total += len(chunk)
+        if total > MAX_TTS_AUDIO_BYTES:
+            raise ValueError(f"TTS audio exceeds {MAX_TTS_AUDIO_BYTES} bytes")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 # ---------------------------------------------------------------------------
 # Enums & dataclasses
@@ -395,8 +418,11 @@ class OpenAITTS(TTSProvider):
         resp_format = output_format if output_format in {"mp3", "opus", "aac", "flac", "wav", "pcm"} else "mp3"
 
         start = time.monotonic()
+        response = None
+        tmp_path: str | None = None
+        succeeded = False
         try:
-            resp = self._retry_request(
+            response = self._retry_request(
                 requests.post,
                 f"{self.base_url}/audio/speech",
                 headers={
@@ -411,20 +437,20 @@ class OpenAITTS(TTSProvider):
                     "speed": max(0.25, min(4.0, speed)),
                 },
                 timeout=60,
+                stream=True,
             )
-            resp.raise_for_status()
-
+            response.raise_for_status()
+            audio_bytes = _read_bounded_tts_audio(response)
             latency = (time.monotonic() - start) * 1000
             ext = resp_format if resp_format != "pcm" else "wav"
-
             with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
-                tmp.write(resp.content)
+                tmp.write(audio_bytes)
                 tmp_path = tmp.name
-
+            succeeded = True
             return TTSResult(
                 success=True,
                 audio_path=tmp_path,
-                audio_bytes=resp.content,
+                audio_bytes=audio_bytes,
                 provider=self.provider_id,
                 voice_id=voice,
                 latency_ms=latency,
@@ -432,6 +458,11 @@ class OpenAITTS(TTSProvider):
             )
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
+        finally:
+            if response is not None:
+                response.close()
+            if tmp_path and not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         return [
@@ -494,8 +525,11 @@ class ElevenLabsTTS(TTSProvider):
         vid = voice_id or "21m00Tcm4TlvDq8ikWAM"
 
         start = time.monotonic()
+        response = None
+        tmp_path: str | None = None
+        succeeded = False
         try:
-            resp = self._retry_request(
+            response = self._retry_request(
                 requests.post,
                 f"{self.base_url}/text-to-speech/{vid}",
                 headers={
@@ -513,20 +547,21 @@ class ElevenLabsTTS(TTSProvider):
                     },
                 },
                 timeout=60,
+                stream=True,
             )
-            resp.raise_for_status()
-
+            response.raise_for_status()
+            audio_bytes = _read_bounded_tts_audio(response)
             latency = (time.monotonic() - start) * 1000
             with tempfile.NamedTemporaryFile(
                 suffix=f".{output_format}", delete=False
             ) as tmp:
-                tmp.write(resp.content)
+                tmp.write(audio_bytes)
                 tmp_path = tmp.name
-
+            succeeded = True
             return TTSResult(
                 success=True,
                 audio_path=tmp_path,
-                audio_bytes=resp.content,
+                audio_bytes=audio_bytes,
                 provider=self.provider_id,
                 voice_id=vid,
                 latency_ms=latency,
@@ -534,6 +569,11 @@ class ElevenLabsTTS(TTSProvider):
             )
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
+        finally:
+            if response is not None:
+                response.close()
+            if tmp_path and not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         if not self.api_key:
