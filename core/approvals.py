@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from enum import Enum
+import re
 import secrets
 import threading
 import time
@@ -84,6 +85,10 @@ _MUTATING_PREFIXES = (
     "deploy", "destroy", "start", "stop", "restart", "invoke", "trigger",
     "write", "set", "enable", "disable", "grant", "revoke",
 )
+_SQL_MUTATING_KEYWORDS = re.compile(
+    r"\b(?:ALTER|CREATE|DELETE|DROP|GRANT|INSERT|REVOKE|TRUNCATE|UPDATE)\b",
+    re.IGNORECASE,
+)
 
 
 def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
@@ -110,6 +115,10 @@ def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
         return "Una llamada MCP puede ejecutar una acción externa no reversible."
     if normalized == "cloudinary" and action == "upload":
         return "La carga a Cloudinary puede transferir archivos o datos fuera del agente."
+    if normalized == "postgresql" and action == "execute":
+        return "La ejecución SQL puede modificar o destruir datos de PostgreSQL."
+    if normalized == "postgresql" and action == "query" and _SQL_MUTATING_KEYWORDS.search(str(tool_args.get("sql", ""))):
+        return "La consulta SQL contiene una operación que puede modificar datos de PostgreSQL."
     if action.startswith(_MUTATING_PREFIXES):
         return f"La acción externa '{action}' puede modificar recursos o enviar datos."
     return None
