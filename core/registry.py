@@ -3,7 +3,12 @@ from pathlib import Path
 
 import httpx
 
-from core.plugins import validate_plugin_name, write_plugin_code
+from core.plugins import (
+    MAX_PLUGIN_DOWNLOAD_BYTES,
+    validate_plugin_download_url,
+    validate_plugin_name,
+    write_plugin_code,
+)
 
 
 class PluginRegistry:
@@ -48,11 +53,13 @@ class PluginRegistry:
 
         try:
             async def install_async():
-                url = self.remote[name]["url"]
-                async with httpx.AsyncClient() as client:
+                url = validate_plugin_download_url(self.remote[name]["url"])
+                async with httpx.AsyncClient(follow_redirects=False) as client:
                     r = await client.get(url, timeout=30)
-                    code = r.text
-                    return write_plugin_code(name, code)
+                    r.raise_for_status()
+                    if len(r.content) > MAX_PLUGIN_DOWNLOAD_BYTES:
+                        raise ValueError("plugin download is too large")
+                    return write_plugin_code(name, r.text)
 
             path = asyncio.run(install_async())
             self.local[name] = str(path)

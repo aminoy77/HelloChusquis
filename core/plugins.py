@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Optional
+from urllib.parse import urlsplit
+
+from tools.web_fetch import SsrFBlockedError, validate_url_safety
 
 logger = logging.getLogger("hellochusquis.plugins")
 
@@ -35,6 +38,7 @@ PLUGINS_DIR = Path.home() / ".hellochusquis" / "plugins"
 REGISTRY_URL = "https://raw.githubusercontent.com/aminoy77/HelloChusquis-plugins/main/registry.json"
 PLUGIN_MANIFEST_FILENAME = "plugin.json"
 MAX_PLUGIN_MANIFEST_BYTES = 256 * 1024
+MAX_PLUGIN_DOWNLOAD_BYTES = 1_048_576
 _PLUGIN_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
 
 
@@ -43,6 +47,21 @@ def validate_plugin_name(name: str) -> str:
     if not isinstance(name, str) or not _PLUGIN_NAME_RE.fullmatch(name):
         raise ValueError("Plugin name must be 1-64 letters, digits, or underscores and start with a letter")
     return name
+
+
+def validate_plugin_download_url(url: str) -> str:
+    """Validate a public HTTPS plugin download URL before connecting."""
+    if not isinstance(url, str) or not url.strip():
+        raise ValueError("Plugin download URL is required")
+    parsed = urlsplit(url.strip())
+    if parsed.scheme != "https":
+        raise ValueError("Plugin download URL must use HTTPS")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("Plugin download URL must not include credentials")
+    try:
+        return validate_url_safety(url.strip())
+    except (SsrFBlockedError, ValueError) as exc:
+        raise ValueError("Plugin download URL is unsafe") from exc
 
 
 def _secure_plugins_dir() -> None:
@@ -962,8 +981,10 @@ def install_plugin(name: str) -> None:
 
     try:
         with httpx.Client(timeout=30, verify=True) as client:
-            r = client.get(REGISTRY_URL)
+            r = client.get(validate_plugin_download_url(REGISTRY_URL), follow_redirects=False)
             r.raise_for_status()
+            if len(r.content) > MAX_PLUGIN_DOWNLOAD_BYTES:
+                raise ValueError("plugin registry response is too large")
             registry = r.json()
     except Exception as exc:
         logger.error("could not fetch plugin registry: %s", exc)
@@ -973,11 +994,17 @@ def install_plugin(name: str) -> None:
         logger.error("plugin '%s' not found in registry. available: %s", name, ", ".join(registry.keys()))
         return
 
-    url = registry[name]["url"]
+    try:
+        url = validate_plugin_download_url(registry[name]["url"])
+    except (KeyError, ValueError) as exc:
+        logger.error("invalid plugin download URL for '%s': %s", name, exc)
+        return
     try:
         with httpx.Client(timeout=30, verify=True) as client:
-            r = client.get(url)
+            r = client.get(url, follow_redirects=False)
             r.raise_for_status()
+            if len(r.content) > MAX_PLUGIN_DOWNLOAD_BYTES:
+                raise ValueError("plugin download is too large")
             plugin_code = r.text
     except Exception as exc:
         logger.error("could not download plugin: %s", exc)

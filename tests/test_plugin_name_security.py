@@ -13,6 +13,15 @@ class TestPluginNameSecurity(unittest.TestCase):
             with self.assertRaises(ValueError):
                 plugins.validate_plugin_name(name)
 
+    def test_plugin_download_urls_require_public_https_without_credentials(self):
+        for url in (
+            "http://example.com/plugin.py",
+            "https://127.0.0.1/plugin.py",
+            "https://token@example.com/plugin.py",
+        ):
+            with self.assertRaises(ValueError):
+                plugins.validate_plugin_download_url(url)
+
     def test_builder_rejects_unsafe_name_before_generating_or_writing(self):
         with patch.object(builder, "research_api") as research:
             with self.assertRaises(ValueError):
