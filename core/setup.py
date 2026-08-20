@@ -369,11 +369,11 @@ def _validate_api_key(api_key: str) -> bool:
 def _prompt_api_key(provider_name: str, existing_key: str = "") -> str:
     """Prompt for API key with validation loop. Keeps existing key if user blanks out."""
     while True:
-        label = f"  API Key [{existing_key[:4]}***]" if existing_key else "  API Key"
+        f"  API Key [{existing_key[:4]}***]" if existing_key else "  API Key"
         api_key = Prompt.ask(f"[bold]Paste your API key for {provider_name}[/bold]", password=True)
         if not api_key or not api_key.strip():
             if existing_key:
-                console.print(f"  [dim]Keeping existing key.[/dim]")
+                console.print("  [dim]Keeping existing key.[/dim]")
                 return existing_key
             console.print("[red]API key cannot be empty. Try again or press Ctrl+C to cancel.[/red]")
             continue
@@ -486,7 +486,6 @@ def run_setup():
 
 def run_quick_setup() -> dict:
     """First-run setup: choose 1 provider from the ENTIRE list, then a model."""
-    from rich.prompt import Prompt
     from rich.console import Console
 
     console = Console()
@@ -543,14 +542,23 @@ def run_quick_setup() -> dict:
 
     config_path = config_dir / "config.yaml"
     config_path.write_text(yaml.dump(config, allow_unicode=True, sort_keys=False))
-    console.print(f"\n[#5eb97e]✓ Ready. Starting HelloChusquis...[/#5eb97e]")
+    console.print("\n[#5eb97e]✓ Ready. Starting HelloChusquis...[/#5eb97e]")
     console.print(f"[dim]Config saved to: {config_path}[/dim]")
     console.print(f"[dim]Provider: {provider_info['name']} → {model}[/dim]")
     _check_providers_valid(config)
     return config
 
 
-def ensure_config(quick: bool = False, full: bool = False) -> dict:
+def ensure_config(
+    quick: bool = False, full: bool = False, interactive: bool = True
+) -> dict:
+    """Load configuration, optionally starting the terminal setup wizard.
+
+    Interactive clients may guide a first-time user through setup. Services
+    such as the REST API and web UI must pass ``interactive=False`` so that a
+    missing configuration becomes a recoverable readiness state rather than an
+    input prompt that blocks process startup.
+    """
     # Busca config en varias ubicaciones posibles
     possible_paths = [
         Path("config.yaml"),
@@ -561,7 +569,7 @@ def ensure_config(quick: bool = False, full: bool = False) -> dict:
     for path in possible_paths:
         if path.exists():
             with open(path) as f:
-                config = yaml.safe_load(f)
+                config = yaml.safe_load(f) or {}
             # Actualiza system prompt si es viejo
             if "agent" not in config:
                 config["agent"] = {"system_prompt": SYSTEM_PROMPT}
@@ -569,13 +577,19 @@ def ensure_config(quick: bool = False, full: bool = False) -> dict:
                 config["agent"]["system_prompt"] = SYSTEM_PROMPT
             return config
 
+    if not interactive:
+        searched = ", ".join(str(path) for path in possible_paths)
+        raise FileNotFoundError(
+            "No provider configuration found. Run 'hellochusquis setup' first. "
+            f"Searched: {searched}"
+        )
+
     # No config found - use quick setup by default, or full if requested
     if full:
         console.print("[yellow]No config found. Running full setup...[/yellow]\n")
         return run_setup()
-    else:
-        console.print("[yellow]No config found. Running quick setup...[/yellow]\n")
-        return run_quick_setup()
+    console.print("[yellow]No config found. Running quick setup...[/yellow]\n")
+    return run_quick_setup()
 
 
 def edit_config(section: str = None):
@@ -654,9 +668,9 @@ def edit_config(section: str = None):
                 new_key = ""
             if new_key:
                 providers[i]["api_key"] = new_key
-                console.print(f"    ✓ Updated")
+                console.print("    ✓ Updated")
             else:
-                console.print(f"    ✓ Kept existing")
+                console.print("    ✓ Kept existing")
         config["providers"] = providers
     
     if section == "settings" or section is None:
@@ -696,9 +710,13 @@ def edit_config(section: str = None):
 
 
 def show_config():
-    """Show current configuration with masked API keys."""
-    config = ensure_config()
-    
+    """Show current configuration with masked API keys without prompting."""
+    try:
+        config = ensure_config(interactive=False)
+    except FileNotFoundError:
+        console.print("[yellow]No configuration found. Run: hellochusquis setup[/yellow]")
+        return None
+
     console.print(Panel(
         "[bold #f5a623]HelloChusquis Configuration[/bold #f5a623]",
         expand=False

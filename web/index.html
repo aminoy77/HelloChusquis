@@ -575,6 +575,13 @@
         .tool-call.success .ic { color: var(--green); }
         .tool-call.error .ic { color: var(--red); }
         .tool-call.error { border-left: 2px solid var(--red); }
+        .approval-card { margin-top: 10px; padding: 12px; border: 1px solid var(--accent-border); background: var(--accent-soft); border-radius: var(--radius); }
+        .approval-title { font-size: 0.72rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+        .approval-detail { margin-top: 6px; font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; }
+        .approval-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .approval-actions button { font: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+        .approval-approve { background: var(--accent); color: var(--bg); border: 1px solid var(--accent); }
+        .approval-deny { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
 
         .thinking { align-self: flex-start; display: flex; gap: 5px; align-items: center; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; border-radius: 14px; animation: fadeUp 0.24s var(--ease); }
         .thinking span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: bounce 1.2s infinite; opacity: 0.35; }
@@ -1273,10 +1280,17 @@
         set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
         del(k) { try { localStorage.removeItem(k); } catch (e) {} },
     };
+    function createSessionId() {
+        if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+        return 'hc-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+    }
+    const sessionId = storage.get('hc_session') || createSessionId();
+    storage.set('hc_session', sessionId);
 
     // ---------- state ----------
     const state = {
         token: storage.get('hc_token') || '',
+        sessionId,
         authRequired: false,
         authHint: '',
         provider: '',
@@ -1335,7 +1349,10 @@
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
     }
     async function fetchJson(url, opts = {}) {
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-HelloChusquis-Session': state.sessionId,
+        };
         if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
         if (opts.headers) Object.assign(headers, opts.headers);
         const init = { ...opts, headers };
@@ -1648,6 +1665,51 @@
         messages.scrollTop = messages.scrollHeight;
         return el;
     }
+    function renderApprovalCard(container, requestId, detail) {
+        const card = document.createElement('section');
+        card.className = 'approval-card';
+        const title = document.createElement('div');
+        title.className = 'approval-title';
+        title.textContent = 'Approval required';
+        const text = document.createElement('div');
+        text.className = 'approval-detail';
+        text.textContent = detail || 'This action can modify data or execute code.';
+        const actions = document.createElement('div');
+        actions.className = 'approval-actions';
+        const approve = document.createElement('button');
+        approve.className = 'approval-approve';
+        approve.textContent = 'Approve and execute';
+        const deny = document.createElement('button');
+        deny.className = 'approval-deny';
+        deny.textContent = 'Reject';
+        const decide = async (approved) => {
+            approve.disabled = true;
+            deny.disabled = true;
+            try {
+                const result = await fetchJson('/approvals/' + encodeURIComponent(requestId), {
+                    method: 'POST', body: { approve: approved },
+                });
+                if (!approved) {
+                    text.textContent = 'Action rejected. No tool was executed.';
+                    return;
+                }
+                const toolResult = result.result || {};
+                text.textContent = toolResult.success
+                    ? 'Action executed: ' + (toolResult.output || 'completed')
+                    : 'Execution failed: ' + (toolResult.error || 'unknown error');
+            } catch (error) {
+                text.textContent = 'Could not record approval: ' + ((error && error.message) || 'request failed');
+            }
+        };
+        approve.addEventListener('click', () => decide(true));
+        deny.addEventListener('click', () => decide(false));
+        actions.appendChild(approve);
+        actions.appendChild(deny);
+        card.appendChild(title);
+        card.appendChild(text);
+        card.appendChild(actions);
+        container.appendChild(card);
+    }
     function finalizeAssistant(el, cancelled) {
         if (!el) return;
         delete el.dataset.streaming;
@@ -1701,6 +1763,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-HelloChusquis-Session': state.sessionId,
                     ...(state.token ? { Authorization: 'Bearer ' + state.token } : {}),
                 },
                 body: JSON.stringify({ message: text, provider: state.provider || null, model: state.model || null }),
@@ -1747,10 +1810,24 @@
                         row.innerHTML = ICONS.tool + esc(ev.tool || 'tool') + (args ? ' <span style="opacity:.55">' + esc(args) + '</span>' : '');
                         tc.appendChild(row);
                         messages.scrollTop = messages.scrollHeight;
+                    } else if (ev.type === 'approval_required') {
+                        if (thinking) { thinking.remove(); thinking = null; }
+                        assistant = assistant || ensureAssistant();
+                        const approval = ev.approval || {};
+                        const bubble = assistant.querySelector('.message-bubble');
+                        bubble.textContent = '';
+                        renderApprovalCard(bubble, approval.id, approval.reason);
                     } else if (ev.type === 'error') {
                         if (thinking) { thinking.remove(); thinking = null; }
                         assistant = assistant || ensureAssistant();
-                        assistant.querySelector('.message-bubble').innerHTML = '<p><em>' + esc(ev.content || 'Error') + '</em></p>';
+                        const approvalMatch = /^Error:\s*Approval required:\s*(apr_[A-Za-z0-9_-]+)\.\s*(.*)$/i.exec(ev.content || '');
+                        const bubble = assistant.querySelector('.message-bubble');
+                        if (approvalMatch) {
+                            bubble.textContent = '';
+                            renderApprovalCard(bubble, approvalMatch[1], approvalMatch[2]);
+                        } else {
+                            bubble.innerHTML = '<p><em>' + esc(ev.content || 'Error') + '</em></p>';
+                        }
                     } else if (ev.type === 'done') {
                         break;
                     }

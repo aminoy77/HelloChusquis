@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -37,12 +37,19 @@ class ProviderPool:
     metrics.
     """
 
-    def __init__(self, config_path: str | Path = "config.yaml") -> None:
+    def __init__(
+        self,
+        config_path: str | Path = "config.yaml",
+        config: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self.providers: List[Provider] = []
         self.reset_after_seconds: float = 3600  # default 1 hour
         self.timeout: int = 15  # seconds
         self._models_cache: Dict[str, tuple] = {}  # name -> (fetched_at, models)
-        self._load(Path(config_path))
+        if config is None:
+            self._load(Path(config_path))
+        else:
+            self._load_config(config, source="provided configuration")
 
     # ---------------------------------------------------------------------
     # Configuration loading
@@ -50,71 +57,71 @@ class ProviderPool:
     def _load(self, config_path: Path) -> None:
         """Load provider definitions from *config_path*.
 
-        Raises
-        ------
-        FileNotFoundError
-            If the configuration file does not exist.
-        yaml.YAMLError
-            If the YAML cannot be parsed.
+        Configurations containing only local providers are valid: they have no
+        API key by design, so the first existing file remains a candidate even
+        when its valid-key count is zero.
         """
         from pathlib import Path as PathLib
 
-        def load_config(path):
-            """Load config from path, return (config_dict, provider_count) or (None, 0)."""
+        def load_config(path: Path) -> tuple[Optional[dict], int]:
             if not path.is_file():
                 return None, 0
             with path.open() as f:
-                config = yaml.safe_load(f) or {}
-            providers_list = config.get("providers", [])
+                loaded = yaml.safe_load(f) or {}
+            providers_list = loaded.get("providers", [])
             if isinstance(providers_list, dict):
                 providers_list = list(providers_list.values())
-            # Count providers with valid API keys
-            valid_count = sum(1 for p in providers_list if p.get("api_key", "").strip())
-            return config, valid_count
+            valid_count = sum(
+                1 for provider in providers_list if provider.get("api_key", "").strip()
+            )
+            return loaded, valid_count
 
-        # Check multiple locations for config, preferring ones with valid API keys
-        # CWD config checked FIRST — project-specific overrides global
         possible_paths = [
             config_path,
             PathLib.home() / "config.yaml",
             PathLib.home() / ".hellochusquis" / "config.yaml",
         ]
-
-        best_config = None
-        best_valid_count = 0
-        best_path = None
+        best_config: Optional[dict] = None
+        best_valid_count = -1
+        best_path: Optional[Path] = None
 
         for path in possible_paths:
-            config, valid_count = load_config(path)
-            if config is not None and valid_count > best_valid_count:
-                best_config = config
+            loaded, valid_count = load_config(path)
+            if loaded is not None and valid_count > best_valid_count:
+                best_config = loaded
                 best_valid_count = valid_count
                 best_path = path
-                if valid_count >= 2:  # Found a config with at least 2 valid providers
+                if valid_count >= 2:
                     break
 
-        if best_config is None:
-            raise FileNotFoundError(f"Configuration file not found. Searched: {[str(p) for p in possible_paths]}")
+        if best_config is None or best_path is None:
+            raise FileNotFoundError(
+                f"Configuration file not found. Searched: {[str(path) for path in possible_paths]}"
+            )
+        self._load_config(best_config, source=str(best_path))
 
-        config = best_config
-
+    def _load_config(self, config: Dict[str, Any], source: str) -> None:
+        """Populate the pool from an already loaded configuration mapping."""
         settings = config.get("settings", {})
         self.reset_after_seconds = settings.get("provider_reset_hours", 1) * 3600
         self.timeout = settings.get("timeout_seconds", 15)
 
         providers_cfg_raw = config.get("providers", [])
-        providers_list = list(providers_cfg_raw.values()) if isinstance(providers_cfg_raw, dict) else providers_cfg_raw
-        
-        for p in sorted(providers_list, key=lambda x: x.get("priority", 0)):
+        providers_list = (
+            list(providers_cfg_raw.values())
+            if isinstance(providers_cfg_raw, dict)
+            else providers_cfg_raw
+        )
+        for provider_config in sorted(providers_list, key=lambda item: item.get("priority", 0)):
             provider = Provider(
-                name=p["name"],
-                base_url=p["base_url"].rstrip("/"),
-                api_key=p["api_key"],
-                model=p["model"],
-                priority=p["priority"],
+                name=provider_config["name"],
+                base_url=provider_config["base_url"].rstrip("/"),
+                api_key=provider_config.get("api_key", ""),
+                model=provider_config["model"],
+                priority=provider_config.get("priority", 0),
             )
             self.providers.append(provider)
-        logger.info("Loaded %d providers from %s", len(self.providers), config_path)
+        logger.info("Loaded %d providers from %s", len(self.providers), source)
 
     # ---------------------------------------------------------------------
     # Provider state helpers

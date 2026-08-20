@@ -41,8 +41,9 @@ Flags:
   --show             Show current config (masked keys)
   --api-keys         Edit API keys only
   --providers        Edit providers only
-  --port PORT        Port for web/api (default: 8080 api / 8000 web)
+  --port PORT        Port for web/api (default: 8080 api / 7272 web)
   --host HOST        Host for web/api (default: 0.0.0.0 api / 127.0.0.1 web)
+  --contracts        Verify bundled integration contracts offline (with doctor)
 
 Examples:
   hellochusquis setup --quick       Quick first-time setup
@@ -61,8 +62,9 @@ def main():
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
     parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
     parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
-    parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 8000 web)")
+    parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 7272 web)")
     parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 0.0.0.0 api / 127.0.0.1 web)")
+    parser.add_argument("--contracts", action="store_true", help="Verify integration contracts offline (with doctor)")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
     args = parser.parse_args()
 
@@ -168,10 +170,26 @@ def main():
         return
 
     if args.command == "doctor":
+        if args.contracts:
+            from core.integration_contracts import check_integration_contracts, contract_summary
+            results = check_integration_contracts()
+            summary = contract_summary(results)
+            print(
+                f"Integration contracts: {summary['passed']}/{summary['total']} passed "
+                f"({summary['failed']} failed)"
+            )
+            for result in results:
+                marker = "PASS" if result.ok else "FAIL"
+                print(f"  [{marker}] {result.name}: {result.detail}")
+            return 0 if summary["failed"] == 0 else 1
         from core.setup import ensure_config, console
         from rich.panel import Panel
-
-        config = ensure_config()
+        try:
+            config = ensure_config(interactive=False)
+        except FileNotFoundError:
+            console.print("[red]No providers configured.[/red]")
+            console.print("[dim]Run: hellochusquis setup[/dim]")
+            return
         providers = config.get("providers", [])
 
         console.print(Panel(
@@ -195,7 +213,7 @@ def main():
             else:
                 console.print(f"  [green]✓[/green] {name} — key configured")
 
-        console.print(f"\n[dim]Edit config: hellochusquis config[/dim]")
+        console.print("\n[dim]Edit config: hellochusquis config[/dim]")
         return
 
     # Validate unknown commands

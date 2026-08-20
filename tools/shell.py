@@ -15,22 +15,16 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
-import io
-import json
 import logging
 import os
 import pty
 import re
-import selectors
 import signal
-import struct
 import subprocess
 import sys
-import termios
 import threading
 import time
 import uuid
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from typing import (
@@ -42,7 +36,6 @@ from typing import (
     Optional,
     Set,
     Tuple,
-    Union,
 )
 
 from tools.base import BaseTool, ToolResult
@@ -62,6 +55,7 @@ DEFAULT_MAX_CONCURRENT = 4
 DEFAULT_KILL_GRACE_MS = 2000
 POLL_INTERVAL_MS = 100
 DEFAULT_LOG_TAIL_LINES = 200
+DEFAULT_MAX_FINISHED_SESSIONS = 100
 ZOMBIE_CLEANUP_INTERVAL_S = 30
 
 
@@ -513,10 +507,17 @@ class ExecAutoReviewer:
 # ---------------------------------------------------------------------------
 
 class ProcessManager:
-    """Track running processes, send signals, poll output, clean zombies, manage groups."""
-
-    def __init__(self, kill_grace_ms: int = DEFAULT_KILL_GRACE_MS):
+    """Track processes with bounded retention for completed sessions."""
+    def __init__(
+        self,
+        kill_grace_ms: int = DEFAULT_KILL_GRACE_MS,
+        max_finished_sessions: int = DEFAULT_MAX_FINISHED_SESSIONS,
+    ):
+        if max_finished_sessions < 1:
+            raise ValueError("max_finished_sessions must be at least 1")
         self.kill_grace_ms = kill_grace_ms
+        self.max_finished_sessions = max_finished_sessions
+
         self._sessions: Dict[str, ProcessSession] = {}
         self._finished: Dict[str, ProcessSession] = {}
         self._lock = threading.Lock()
@@ -765,6 +766,8 @@ class ProcessManager:
             session.pty_master = None
             with self._lock:
                 self._finished[session_id] = session
+                while len(self._finished) > self.max_finished_sessions:
+                    self._finished.pop(next(iter(self._finished)))
 
     def cleanup_zombies(self) -> int:
         cleaned = 0
@@ -840,7 +843,6 @@ class CommandQueue:
             if total_depth > self.capacity:
                 raise QueueFullError(f"Queue at capacity ({self.capacity})")
 
-            seq = self._next_seq
             self._next_seq += 1
 
         result_container: Dict[str, Any] = {}

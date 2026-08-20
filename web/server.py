@@ -4,7 +4,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -12,16 +11,15 @@ from starlette.responses import JSONResponse
 from starlette.responses import StreamingResponse
 import uvicorn
 import json
-import hashlib
 import hmac
+import re
 import secrets
 import urllib.parse
 from pathlib import Path
 from typing import Literal
 
-from core.setup import ensure_config
-from core.agent import Agent
-from core.plugins import load_plugins
+from core.runtime import AgentNotReadyError, AgentRuntime
+from core.version import __version__
 import core.db_memory as db_memory
 from core.learning import load_learnings, add_feedback
 from core.rate_limiter import RateLimiter
@@ -34,32 +32,38 @@ _AUTH_DIR = Path.home() / ".hellochusquis"
 _AUTH_KEY_FILE = _AUTH_DIR / "api_key.txt"
 
 
+def _secure_api_key_storage() -> None:
+    """Restrict local credential storage to the current operating-system user."""
+    _AUTH_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(_AUTH_DIR, 0o700)
+    if _AUTH_KEY_FILE.exists():
+        os.chmod(_AUTH_KEY_FILE, 0o600)
+
+
 def _load_or_create_api_key() -> str:
-    """Load existing API key or generate and persist a new one."""
+    """Load or generate a key with owner-only filesystem permissions."""
     env_key = os.environ.get("HELLOCHUSQUIS_API_KEY", "")
     if env_key:
         return env_key
-
+    _secure_api_key_storage()
     if _AUTH_KEY_FILE.exists():
         existing = _AUTH_KEY_FILE.read_text().strip()
         if existing:
             return existing
-
-    # Auto-generate and persist
-    _AUTH_DIR.mkdir(parents=True, exist_ok=True)
     token = secrets.token_urlsafe(32)
     _AUTH_KEY_FILE.write_text(token + "\n")
+    os.chmod(_AUTH_KEY_FILE, 0o600)
     return token
 
 
+
 REQUIRED_API_KEY = _load_or_create_api_key()
-# Auth is opt-in. The web UI exposes an agent with shell access; leaving it
-# open on localhost still allows CSRF/PNA/DNS-rebinding-driven attacks from
-# any website or local process. For trusted local use the app opens without a
-# key. Set HELLOCHUSQUIS_AUTH=1 (or true/yes/on) to require the access key
-# (trusted LAN / kiosk / shared machines).
-_AUTH_ENABLED = os.environ.get("HELLOCHUSQUIS_AUTH", "").strip().lower() in ("1", "true", "yes", "on")
-AUTH_ENABLED = _AUTH_ENABLED
+# The web UI can execute shell, file, browser and integration tools. It is
+# therefore protected by default, including on localhost. Set
+# HELLOCHUSQUIS_AUTH=0 only for an intentionally trusted, isolated local
+# development session; never use that override on a shared machine or network.
+_auth_setting = os.environ.get("HELLOCHUSQUIS_AUTH", "").strip().lower()
+AUTH_ENABLED = _auth_setting not in ("0", "false", "no", "off")
 
 
 def _auth_hint() -> str:
@@ -84,7 +88,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        # Auth is disabled by default (local web UI)
+        # Explicit local-development override only.
         if not AUTH_ENABLED:
             return await call_next(request)
 
@@ -116,10 +120,49 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add defensive headers to every web response, including auth failures."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=()")
+        return response
+
+
 app = FastAPI()
 app.add_middleware(AuthMiddleware)
-config = ensure_config()
-agent = Agent(config)
+app.add_middleware(SecurityHeadersMiddleware)
+# Keep the web server alive before initial setup; agent-dependent routes return
+# a clear 503 until a provider is configured.
+runtime = AgentRuntime()
+
+
+_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+
+
+def _session_id(request: Request) -> str:
+    """Return the explicit session required by stateful HTTP operations."""
+    supplied = request.headers.get("x-hellochusquis-session", "").strip()
+    if not supplied:
+        raise HTTPException(
+            status_code=400,
+            detail="X-HelloChusquis-Session header is required for stateful operations",
+        )
+    if not _SESSION_ID_RE.fullmatch(supplied):
+        raise HTTPException(status_code=400, detail="Invalid X-HelloChusquis-Session header")
+    return supplied
+
+
+def _require_agent(http_request: Request | None = None):
+    try:
+        session_id = _session_id(http_request) if http_request is not None else None
+        return runtime.get(session_id=session_id)
+    except AgentNotReadyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
 
 _chat_limiter = RateLimiter(requests_per_minute=30)
 
@@ -135,6 +178,10 @@ class MessageRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     type: Literal["positive", "negative"]
     context: str = ""
+
+
+class ApprovalDecisionRequest(BaseModel):
+    approve: bool
 
 
 class ConfigRequest(BaseModel):
@@ -168,23 +215,24 @@ def auth_verify(req: MessageRequest):
 
 @app.get("/health")
 def health_check():
-    providers = agent.pool.status()
-    total = len(providers)
-    ready = sum(1 for p in providers if p["status"] == "ready")
+    providers = runtime.provider_status()
+    ready = sum(1 for provider in providers if provider["status"] == "ready")
     return {
         "status": "ok",
-        "version": "1.4.3",
+        "version": __version__,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "providers": {"total": total, "ready": ready},
+        "providers": {"total": len(providers), "ready": ready},
+        "agent_ready": runtime.is_ready,
     }
 
 
 @app.get("/health/ready")
 def readiness_probe():
-    providers = agent.pool.status()
-    ready = sum(1 for p in providers if p["status"] == "ready")
-    if ready == 0:
-        raise HTTPException(status_code=503, detail="No providers ready")
+    readiness = runtime.readiness()
+    if not readiness["ready"]:
+        raise HTTPException(status_code=503, detail=readiness.get("error", "No providers ready"))
+    providers = readiness["providers"]
+    ready = sum(1 for provider in providers if provider["status"] == "ready")
     return {"status": "ok", "ready_providers": ready}
 
 
@@ -216,9 +264,10 @@ def chat(req: MessageRequest, http_request: Request):
         raise HTTPException(status_code=400, detail="Message too long (max 20000 chars)")
 
     logger.info("Chat request from %s", ip)
+    agent = _require_agent(http_request)
 
     if user_input == "/clear":
-        agent.history.clear()
+        agent.clear_conversation()
         return {"response": "Historial limpiado.", "tool_calls": []}
 
     if user_input == "/status":
@@ -227,27 +276,25 @@ def chat(req: MessageRequest, http_request: Request):
         return {"response": "\n".join(lines), "tool_calls": []}
 
     tool_calls_log = []
-    original_dispatch = agent._dispatch_tool
 
-    def logged_dispatch(name, args):
-        result = original_dispatch(name, args)
+    def record_tool_call(name, args, result):
         tool_calls_log.append({
             "tool": name,
             "args": args,
             "success": result.success,
-            "output": result.output[:200]
+            "output": result.output[:200],
         })
-        return result
-
-    agent._dispatch_tool = logged_dispatch
 
     try:
-        response = agent.run(user_input, provider=req.provider, model=req.model)
+        response = agent.run(
+            user_input,
+            provider=req.provider,
+            model=req.model,
+            tool_result_callback=record_tool_call,
+        )
     except RuntimeError as e:
         logger.error("Chat error: %s", e)
         response = f"Error: {e}"
-    finally:
-        agent._dispatch_tool = original_dispatch
 
     return {"response": response, "tool_calls": tool_calls_log}
 
@@ -271,8 +318,9 @@ def chat_stream(req: MessageRequest, http_request: Request):
     if len(user_input) > 20000:
         raise HTTPException(status_code=400, detail="Message too long (max 20000 chars)")
 
+    agent = _require_agent(http_request)
     if user_input == "/clear":
-        agent.history.clear()
+        agent.clear_conversation()
         text = "Historial limpiado."
         return StreamingResponse(
             iter([f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n",
@@ -296,11 +344,12 @@ def chat_stream(req: MessageRequest, http_request: Request):
             for ev in agent.stream_run(user_input, provider=req.provider, model=req.model):
                 payload = json.dumps(ev, ensure_ascii=False)
                 yield f"data: {payload}\n\n"
-        except RuntimeError as e:
-            yield f"data: {json.dumps({'type': 'error', 'content': f'Error: {e}'})}\n\n"
-        except Exception as e:
+        except RuntimeError:
+            logger.warning("Stream execution failed")
+            yield f"data: {json.dumps({'type': 'error', 'content': 'Stream failed. Check server logs.'})}\n\n"
+        except Exception:
             logger.exception("Stream failed")
-            yield f"data: {json.dumps({'type': 'error', 'content': f'Error: {e}'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'content': 'Stream failed. Check server logs.'})}\n\n"
 
     return StreamingResponse(
         event_gen(),
@@ -317,22 +366,83 @@ def feedback(req: FeedbackRequest):
 
 
 @app.post("/clear")
-def clear_history():
-    """Clear agent conversation history."""
-    agent.history.clear()
-    return {"status": "ok", "message": "History cleared"}
+def clear_history(http_request: Request):
+    """Clear the requesting session's in-memory and persistent history."""
+    result = _require_agent(http_request).clear_conversation()
+    return {"status": "ok", "message": "History cleared", **result}
+
+
+@app.get("/approvals")
+def list_approvals(http_request: Request):
+    """List pending high-impact actions for the authenticated client session."""
+    return {"approvals": _require_agent(http_request).pending_approvals()}
+
+
+@app.post("/approvals/{request_id}")
+def decide_approval(
+    request_id: str,
+    decision: ApprovalDecisionRequest,
+    http_request: Request,
+):
+    """Approve or reject one pending action and execute only after approval."""
+    agent = _require_agent(http_request)
+    try:
+        approval = agent.decide_approval(request_id, decision.approve)
+        if not decision.approve:
+            return {"approval": approval, "executed": False}
+        result = agent.execute_approved(request_id)
+        return {
+            "approval": {**approval, "status": "executed"},
+            "executed": True,
+            "result": {
+                "success": result.success,
+                "output": result.output,
+                "error": result.error,
+            },
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.post("/runtime/reload")
+def reload_runtime():
+    """Reload provider configuration and clear cached HTTP sessions."""
+    cleared_sessions = runtime.session_count
+    if not runtime.refresh():
+        raise HTTPException(status_code=503, detail=runtime.error or "Runtime reload failed")
+    return {
+        "status": "ok",
+        "agent_ready": runtime.is_ready,
+        "sessions_cleared": cleared_sessions,
+        "version": __version__,
+    }
 
 
 @app.post("/config")
 def update_config(req: ConfigRequest):
-    """Accept config updates from frontend (non-destructive)."""
-    return {"status": "ok"}
+    """Compatibility endpoint: configuration is edited by the setup CLI."""
+    raise HTTPException(
+        status_code=409,
+        detail="Use 'hellochusquis config' to edit settings, then POST /runtime/reload.",
+    )
 
 
 @app.get("/status")
-def status():
+def status(http_request: Request):
+    if not runtime.is_ready:
+        return {
+            "agent_ready": False,
+            "active_sessions": 0,
+            "providers": [],
+            "plugins": [],
+            "error": runtime.error,
+            "auth_enabled": AUTH_ENABLED,
+        }
+    agent = _require_agent(http_request)
     providers = agent.pool.status()
-    plugins = [{"name": p["name"]} for p in agent.plugins]
+    plugins = [{"name": plugin["name"]} for plugin in agent.plugins]
     summary = db_memory.load_summary()
     sessions = 0
     try:
@@ -349,6 +459,8 @@ def status():
         pass
     learnings = load_learnings()
     return {
+        "agent_ready": True,
+        "active_sessions": runtime.session_count,
         "providers": providers,
         "plugins": plugins,
         "memory": {
@@ -364,9 +476,10 @@ def status():
 
 
 @app.get("/models")
-def models(provider: str = "", refresh: bool = False):
-    """Available models for a provider (cached server-side, ~5 min TTL)."""
-    known_names = {p["name"] for p in agent.pool.status()}
+def models(http_request: Request, provider: str = "", refresh: bool = False):
+    """Available models for the requesting session's provider configuration."""
+    agent = _require_agent(http_request)
+    known_names = {provider_status["name"] for provider_status in agent.pool.status()}
     if provider not in known_names:
         raise HTTPException(status_code=404, detail=f"Provider '{provider}' not found")
     try:
@@ -384,10 +497,11 @@ class ProviderUpdate(BaseModel):
 
 
 @app.post("/update-provider")
-def update_provider(data: ProviderUpdate):
-    """Update provider configuration."""
+def update_provider(data: ProviderUpdate, http_request: Request):
+    """Update provider configuration for the requesting in-memory session only."""
+    agent = _require_agent(http_request)
     # Validate provider name exists
-    known_names = {p["name"] for p in agent.pool.status()}
+    known_names = {provider_status["name"] for provider_status in agent.pool.status()}
     if data.name not in known_names:
         raise HTTPException(status_code=404, detail=f"Provider '{data.name}' not found")
 
@@ -406,7 +520,7 @@ def update_provider(data: ProviderUpdate):
             agent.pool.update_base_url(data.name, data.base)
         if data.model:
             agent.pool.update_model(data.name, data.model)
-        return {"status": "ok", "provider": data.name}
+        return {"status": "ok", "provider": data.name, "scope": "session"}
     except Exception:
         logger.exception("update-provider failed")
         raise HTTPException(status_code=500, detail="Failed to update provider")
@@ -416,7 +530,7 @@ def start(host: str = "127.0.0.1", port: int = 8000):
     if AUTH_ENABLED:
         logger.info("Auth enabled — API key: %s (%s)", REQUIRED_API_KEY, _auth_hint())
     else:
-        logger.info("Auth disabled — set HELLOCHUSQUIS_AUTH=1 to protect the web UI")
+        logger.warning("Auth disabled by HELLOCHUSQUIS_AUTH=0; use only in an isolated local development environment")
     uvicorn.run(app, host=host, port=port, log_level="warning")
 
 

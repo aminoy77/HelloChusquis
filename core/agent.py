@@ -1,6 +1,7 @@
 import json
 import os
-import time
+import re
+from pathlib import Path
 from typing import Optional
 import core.db_memory as memory
 import core.learning as learning
@@ -16,13 +17,13 @@ from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
 from core.security_evaluator import evaluate_command_safety
 from core.tool_policy import (
-    ToolPolicy, ToolLoopDetector, SecurityAuditor, DangerousToolDetector,
-    ToolPolicyConfig, LoopDetectionConfig, SessionState as PolicySessionState,
+    ToolPolicy, ToolLoopDetector, SecurityAuditor, ToolPolicyConfig, LoopDetectionConfig, SessionState as PolicySessionState,
     Severity,
 )
 from core.session import SessionManager
 from core.voice import VoiceManager
-from core.mcp import get_client as get_mcp_client, MCPTransport
+from core.mcp import get_client as get_mcp_client
+from core.approvals import ApprovalManager
 from ui.terminal import print_tool_call, print_tool_result, console
 from core.logger import get_logger
 
@@ -1011,8 +1012,10 @@ def _build_tools_schema(plugins: list) -> list:
 
 
 class Agent:
-    def __init__(self, config: dict):
-        self.pool = ProviderPool()
+    def __init__(self, config: dict, require_approval: bool = False):
+        self.pool = ProviderPool(config=config)
+        self.require_approval = require_approval
+        self.approval_manager = ApprovalManager()
         self.history = History()
         self._pending_tool_results = []
         self.workspace = WorkspaceManager(config["settings"]["workspace_dirs"])
@@ -1089,16 +1092,6 @@ class Agent:
             )
 
         # Available integrations list for proposing new tools
-        available_integrations = [
-            "stripe", "square", "plaid",  # Payments
-            "twilio", "sendgrid", "resend", "brevo",  # Communication
-            "vercel", "supabase", "sentry", "datadog", "pagerduty",  # DevOps
-            "shopify", "hubspot", "mailchimp", "airtable", "clerk",  # CRM/Marketing
-            "contentful", "sanity",  # CMS
-            "algolia", "cloudinary", "posthog", "launchdarkly", "upstash",  # Tools
-            "clickup", "raycast", "bitbucket", "n8n", "pipedream", "retool", "workato", "make",  # Automation
-            "calendly", "zoom"  # Meetings
-        ]
         
         self._external_tool_modules = {
             "github": github_module, "slack": slack_module, "discord": discord_module,
@@ -1120,7 +1113,66 @@ class Agent:
             "retool": retool_module, "workato": workato_module, "make": make_module
         }
 
-    def _dispatch_tool(self, name: str, args: dict) -> ToolResult:
+    def pending_approvals(self) -> list[dict]:
+        """Return pending high-impact actions for this agent session only."""
+        return self.approval_manager.list_requests()
+
+    def decide_approval(self, request_id: str, approved: bool) -> dict:
+        """Record one user decision for a high-impact action."""
+        return self.approval_manager.decide(request_id, approved).to_public_dict()
+
+    def execute_approved(self, request_id: str) -> ToolResult:
+        """Consume an approved action and dispatch it exactly once."""
+        request = self.approval_manager.claim_execution(request_id)
+        result = self._dispatch_tool(
+            request.tool_name,
+            request.tool_args,
+            approval_granted=True,
+        )
+        summary = result.output if result.success else result.error
+        self.approval_manager.complete_execution(request_id, result.success, summary)
+        return result
+
+    def clear_conversation(self) -> dict[str, int]:
+        """Remove session history and invalidate pending work for this agent."""
+        self.history.clear()
+        self._pending_tool_results = []
+        self.session_manager.clear_history(self._session_id)
+        cancelled_approvals = self.approval_manager.cancel_pending()
+        return {"cancelled_approvals": cancelled_approvals}
+
+    def dispose_session(self) -> None:
+        """Permanently remove this agent session's persisted conversation."""
+        self.history.clear()
+        self._pending_tool_results = []
+        self.approval_manager.cancel_pending()
+        self.session_manager.delete_session(self._session_id)
+
+    def _approval_required_result(self, tool_name: str, tool_args: dict) -> Optional[ToolResult]:
+        """Return an actionable blocked result for unapproved high-impact calls."""
+        if not self.require_approval:
+            return None
+        try:
+            request = self.approval_manager.request_for(tool_name, tool_args)
+        except RuntimeError as exc:
+            return ToolResult(success=False, output="", error=f"Approval queue unavailable: {exc}")
+        if request is None:
+            return None
+        return ToolResult(
+            success=False,
+            output="",
+            error=(
+                f"Approval required: {request.id}. {request.reason} "
+                "Ask the user to approve or deny this action before execution."
+            ),
+        )
+
+    def _dispatch_tool(
+        self,
+        name: str,
+        args: dict,
+        approval_granted: bool = False,
+    ) -> ToolResult:
         if name == "shell":
             cmd = args.get("command", "")
             unsafe_mode = os.getenv("HELLOCHUSQUIS_UNSAFE_MODE") == "1"
@@ -1144,10 +1196,17 @@ class Agent:
         if name == "files":
             path = args.get("path", "")
             if not self.workspace.is_allowed(path):
-                granted = self.workspace.request_access(path)
-                if not granted:
-                    return ToolResult(success=False, output="", error="Access denied by user")
-                self.files.allow_dir(path)
+                if approval_granted:
+                    # The request owner has already approved this exact action
+                    # through the authenticated HTTP approval flow. Do not block
+                    # a server worker on a terminal prompt.
+                    self.workspace.allowed.append(Path(path).expanduser().resolve())
+                    self.files.allow_dir(path)
+                else:
+                    granted = self.workspace.request_access(path)
+                    if not granted:
+                        return ToolResult(success=False, output="", error="Access denied by user")
+                    self.files.allow_dir(path)
             return self.files.run(**args)
 
         if name == "browser":
@@ -1408,7 +1467,14 @@ class Agent:
 
         return [{"role": "system", "content": system}, *self.history.get()]
 
-    def run(self, user_input: str, provider: Optional[str] = None, model: Optional[str] = None) -> str:
+    def run(
+        self,
+        user_input: str,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        tool_result_callback=None,
+    ) -> str:
+        """Run one agent turn, optionally observing tools for this request only."""
         self.history.add("user", user_input)
         self.session_manager.append_message(self._session_id, "user", user_input)
         messages = self._build_messages()
@@ -1478,25 +1544,29 @@ class Agent:
                             logger.warning("Loop detected for %s: %s", tool_name, loop_result.message)
                             result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
                         else:
-                            # --- Plugin hooks: before_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("before_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args)
-                                    except Exception:
-                                        pass
+                            approval_result = self._approval_required_result(tool_name, tool_args)
+                            if approval_result is not None:
+                                result = approval_result
+                            else:
+                                # --- Plugin hooks: before_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("before_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args)
+                                        except Exception:
+                                            pass
 
-                            result = self._dispatch_tool(tool_name, tool_args)
+                                result = self._dispatch_tool(tool_name, tool_args)
 
-                            # --- Plugin hooks: after_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("after_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args, result)
-                                    except Exception:
-                                        pass
+                                # --- Plugin hooks: after_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("after_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args, result)
+                                        except Exception:
+                                            pass
 
                     # --- Record tool call for loop detector ---
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
@@ -1504,6 +1574,11 @@ class Agent:
                 if not result.success:
                     logger.error("Tool error: %s — %s", tool_name, result.error)
                 print_tool_result(result.success, result.output)
+                if callable(tool_result_callback):
+                    try:
+                        tool_result_callback(tool_name, tool_args, result)
+                    except Exception as exc:
+                        logger.warning("Tool result callback failed: %s", exc)
 
                 tool_msg = {
                     "role": "tool",
@@ -1595,31 +1670,44 @@ class Agent:
                         if loop_result.stuck:
                             result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
                         else:
-                            # --- Plugin hooks: before_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("before_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args)
-                                    except Exception:
-                                        pass
-
-                            result = self._dispatch_tool(tool_name, tool_args)
-
-                            # --- Plugin hooks: after_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("after_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args, result)
-                                    except Exception:
-                                        pass
-
+                            approval_result = self._approval_required_result(tool_name, tool_args)
+                            if approval_result is not None:
+                                result = approval_result
+                                approval_match = re.search(r"Approval required: (apr_[A-Za-z0-9_-]+)\.", result.error)
+                                if approval_match:
+                                    approval_id = approval_match.group(1)
+                                    pending = next(
+                                        (
+                                            item for item in self.pending_approvals()
+                                            if item["id"] == approval_id
+                                        ),
+                                        None,
+                                    )
+                                    if pending is not None:
+                                        yield {"type": "approval_required", "approval": pending}
+                            else:
+                                # --- Plugin hooks: before_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("before_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args)
+                                        except Exception:
+                                            pass
+                                result = self._dispatch_tool(tool_name, tool_args)
+                                # --- Plugin hooks: after_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("after_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args, result)
+                                        except Exception:
+                                            pass
                     # --- Record tool call for loop detector ---
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
-
                 if not result.success:
                     logger.error("Stream tool error: %s — %s", tool_name, result.error)
+
                 print_tool_result(result.success, result.output)
 
                 tool_msg = {
