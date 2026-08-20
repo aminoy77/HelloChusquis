@@ -17,6 +17,7 @@ import math
 import os
 import re
 import threading
+import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -1605,26 +1606,49 @@ class CronService:
     # -- Persistence --------------------------------------------------------
 
     def _save(self) -> None:
-        """Persist jobs to JSON file."""
+        """Persist jobs atomically with owner-only filesystem permissions."""
         with self._lock:
             store = {
                 "version": 1,
                 "jobs": [j.to_dict() for j in self._jobs.values()],
             }
+        temporary_path: str | None = None
         try:
             self._store_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self._store_path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(store, indent=2))
-            tmp.replace(self._store_path)
+            os.chmod(self._store_path.parent, 0o700)
+            descriptor, temporary_path = tempfile.mkstemp(
+                prefix=f".{self._store_path.name}.",
+                suffix=".tmp",
+                dir=self._store_path.parent,
+            )
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(store, indent=2))
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.chmod(temporary_path, 0o600)
+            os.replace(temporary_path, self._store_path)
+            temporary_path = None
+            os.chmod(self._store_path, 0o600)
         except OSError as exc:
             logger.error("Failed to persist cron store: %s", exc)
+        finally:
+            if temporary_path is not None:
+                try:
+                    os.unlink(temporary_path)
+                except FileNotFoundError:
+                    pass
 
     def _load(self) -> None:
-        """Load jobs from JSON file."""
+        """Load jobs from a regular, owner-only persisted store."""
         if not self._store_path.exists():
             return
+        if self._store_path.is_symlink():
+            logger.error("Refusing symlinked cron store")
+            return
         try:
-            data = json.loads(self._store_path.read_text())
+            os.chmod(self._store_path.parent, 0o700)
+            os.chmod(self._store_path, 0o600)
+            data = json.loads(self._store_path.read_text(encoding="utf-8"))
             version = data.get("version", 1)
             jobs_data = data.get("jobs", []) if version == 1 else data if isinstance(data, list) else []
 
