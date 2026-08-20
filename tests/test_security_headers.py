@@ -1,5 +1,6 @@
 """HTTP security header contract tests."""
 
+import re
 import unittest
 
 from fastapi.testclient import TestClient
@@ -25,6 +26,13 @@ class TestSecurityHeaders(unittest.TestCase):
         self.assertEqual(response.headers["x-content-type-options"], "nosniff")
         self.assertEqual(response.headers["x-frame-options"], "DENY")
         self.assertEqual(response.headers["referrer-policy"], "no-referrer")
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        csp = response.headers["content-security-policy"]
+        self.assertIn("default-src 'self'", csp)
+        self.assertNotIn("script-src 'unsafe-inline'", csp)
+        nonce_match = re.search(r"script-src 'nonce-([^']+)'", csp)
+        self.assertIsNotNone(nonce_match)
+        self.assertIn(f'<script nonce="{nonce_match.group(1)}">', response.text)
 
 
 if __name__ == "__main__":

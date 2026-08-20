@@ -130,6 +130,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=()")
+        response.headers.setdefault("Cache-Control", "no-store")
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'",
+        )
         return response
 
 
@@ -221,8 +226,19 @@ class ConfigRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
+    """Serve the UI with a per-response nonce for its single inline script."""
+    nonce = secrets.token_urlsafe(18)
     html_path = Path(__file__).parent / "index.html"
-    return html_path.read_text()
+    html = html_path.read_text(encoding="utf-8").replace("<script>", f'<script nonce="{nonce}">', 1)
+    csp = (
+        "default-src 'self'; "
+        f"script-src 'nonce-{nonce}'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src https://fonts.gstatic.com; "
+        "img-src 'self' data:; connect-src 'self'; base-uri 'none'; "
+        "form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+    )
+    return HTMLResponse(html, headers={"Content-Security-Policy": csp})
 
 
 @app.get("/auth/check")
