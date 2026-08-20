@@ -56,6 +56,7 @@ DEFAULT_KILL_GRACE_MS = 2000
 POLL_INTERVAL_MS = 100
 DEFAULT_LOG_TAIL_LINES = 200
 DEFAULT_MAX_FINISHED_SESSIONS = 100
+OUTPUT_TRUNCATION_MARKER = "[output truncated]\n"
 ZOMBIE_CLEANUP_INTERVAL_S = 30
 
 
@@ -512,11 +513,15 @@ class ProcessManager:
         self,
         kill_grace_ms: int = DEFAULT_KILL_GRACE_MS,
         max_finished_sessions: int = DEFAULT_MAX_FINISHED_SESSIONS,
+        max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
     ):
         if max_finished_sessions < 1:
             raise ValueError("max_finished_sessions must be at least 1")
+        if max_output_bytes < 1:
+            raise ValueError("max_output_bytes must be at least 1")
         self.kill_grace_ms = kill_grace_ms
         self.max_finished_sessions = max_finished_sessions
+        self.max_output_bytes = max_output_bytes
 
         self._sessions: Dict[str, ProcessSession] = {}
         self._finished: Dict[str, ProcessSession] = {}
@@ -571,9 +576,10 @@ class ProcessManager:
                 flags = fcntl.fcntl(pty_master_fd, fcntl.F_GETFL)
                 fcntl.fcntl(pty_master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
+                # This interactive terminal intentionally uses a shell after the shared gate.
                 proc = subprocess.Popen(
                     command,
-                    shell=True,
+                    shell=True,  # nosec B602
                     cwd=effective_cwd,
                     env=effective_env,
                     stdin=pty_slave_fd,
@@ -584,9 +590,10 @@ class ProcessManager:
                 os.close(pty_slave_fd)
                 session.pty_slave = None
             else:
+                # This interactive terminal intentionally uses a shell after the shared gate.
                 proc = subprocess.Popen(
                     command,
-                    shell=True,
+                    shell=True,  # nosec B602
                     cwd=effective_cwd,
                     env=effective_env,
                     stdout=subprocess.PIPE,
@@ -612,6 +619,23 @@ class ProcessManager:
 
         return session
 
+    def _append_output(self, session: ProcessSession, attribute: str, text: str) -> None:
+        """Append text while retaining only a byte-bounded, UTF-8-safe tail."""
+        combined = getattr(session, attribute) + text
+        encoded = combined.encode("utf-8", errors="replace")
+        if len(encoded) <= self.max_output_bytes:
+            setattr(session, attribute, combined)
+            return
+
+        marker = OUTPUT_TRUNCATION_MARKER.encode("utf-8")
+        if self.max_output_bytes <= len(marker):
+            retained = marker[: self.max_output_bytes]
+        else:
+            tail_size = self.max_output_bytes - len(marker)
+            retained = marker + encoded[-tail_size:]
+        setattr(session, attribute, retained.decode("utf-8", errors="ignore"))
+        session.truncated = True
+
     def poll_output(self, session_id: str, timeout_s: float = 0.1) -> Optional[str]:
         with self._lock:
             session = self._sessions.get(session_id)
@@ -626,7 +650,7 @@ class ProcessManager:
                 if data:
                     text = data.decode("utf-8", errors="replace")
                     new_output += text
-                    session.stdout_buffer += text
+                    self._append_output(session, "stdout_buffer", text)
             except OSError:
                 pass
         else:
@@ -653,12 +677,12 @@ class ProcessManager:
                         if chunk:
                             text = chunk.decode("utf-8", errors="replace")
                             new_output += text
-                            session.stderr_buffer += text
+                            self._append_output(session, "stderr_buffer", text)
                 except (BlockingIOError, ValueError, OSError):
                     pass
 
         if new_output:
-            session.aggregated += new_output
+            self._append_output(session, "aggregated", new_output)
 
         if session.process.poll() is not None and not session.ended_at:
             session.ended_at = time.time()
@@ -987,7 +1011,10 @@ class ShellTool(BaseTool):
         self.max_output_bytes = max_output_bytes
         self.allow_background = allow_background
         self.auto_review_enabled = auto_review
-        self.process_manager = ProcessManager(kill_grace_ms=kill_grace_ms)
+        self.process_manager = ProcessManager(
+            kill_grace_ms=kill_grace_ms,
+            max_output_bytes=max_output_bytes,
+        )
         self.command_queue = CommandQueue(
             max_concurrent=max_concurrent,
             capacity=queue_capacity,
