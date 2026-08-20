@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 import os
+import re
 import httpx
+
+_PATH_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _path_id(value: object, label: str) -> str:
+    identifier = str(value or "")
+    if not _PATH_ID_RE.fullmatch(identifier):
+        raise ValueError(f"Invalid Sentry {label} ID.")
+    return identifier
 
 PLUGIN_NAME = "sentry"
 PLUGIN_DESCRIPTION = "Sentry error tracking and performance monitoring"
@@ -30,7 +40,7 @@ def run(action: str, **kwargs) -> str:
             issue_id = kwargs.get("id")
             if not issue_id:
                 return "Error: Issue ID required for get_issue"
-            r = httpx.get(f"{base_url}/issues/{issue_id}/", headers=headers, timeout=30)
+            r = httpx.get(f"{base_url}/issues/{_path_id(issue_id, 'issue')}/", headers=headers, timeout=30)
             return _fmt(r)
 
         elif action == "list_projects":
@@ -45,7 +55,7 @@ def run(action: str, **kwargs) -> str:
             id = kwargs.get("id")
             if not id:
                 return "Error: Project ID required for get_stats"
-            r = httpx.get(f"{base_url}/projects/{id}/stats/", headers=headers, params={"stat": "all"}, timeout=30)
+            r = httpx.get(f"{base_url}/projects/{_path_id(id, 'project')}/stats/", headers=headers, params={"stat": "all"}, timeout=30)
             return _fmt(r)
 
         else:
