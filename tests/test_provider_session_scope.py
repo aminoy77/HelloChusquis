@@ -4,6 +4,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from fastapi import HTTPException
+
 from web import server as web_server
 
 
@@ -32,6 +34,20 @@ class _Agent:
     def __init__(self):
         self.pool = _Pool()
         self.plugins = []
+        self.turn_available = True
+        self.turn_acquisitions = 0
+        self.turn_releases = 0
+
+    def try_acquire_turn(self):
+        if not self.turn_available:
+            return False
+        self.turn_available = False
+        self.turn_acquisitions += 1
+        return True
+
+    def release_turn(self):
+        self.turn_available = True
+        self.turn_releases += 1
 
 
 class TestProviderSessionScope(unittest.TestCase):
@@ -66,6 +82,21 @@ class TestProviderSessionScope(unittest.TestCase):
         self.assertEqual(response["scope"], "session")
         self.assertIn(("key", "Test Provider", "new-key"), self.agent.pool.calls)
         self.assertIn(("model", "Test Provider", "test-model"), self.agent.pool.calls)
+        self.assertEqual(self.agent.turn_acquisitions, 1)
+        self.assertEqual(self.agent.turn_releases, 1)
+        self.assertTrue(self.agent.turn_available)
+
+    def test_provider_update_does_not_mutate_during_active_session_turn(self):
+        self.agent.turn_available = False
+        update = web_server.ProviderUpdate(name="Test Provider", key="new-key")
+        with patch.object(web_server, "_require_agent", return_value=self.agent):
+            with self.assertRaises(HTTPException) as raised:
+                web_server.update_provider(update, self.request)
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertEqual(self.agent.pool.calls, [])
+        self.assertEqual(self.agent.turn_acquisitions, 0)
+        self.assertEqual(self.agent.turn_releases, 0)
 
 
 if __name__ == "__main__":

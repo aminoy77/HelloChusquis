@@ -568,6 +568,8 @@ def update_provider(data: ProviderUpdate, http_request: Request):
         if not parsed.hostname:
             raise HTTPException(status_code=400, detail="Base URL must have a valid host")
 
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
     try:
         if data.key:
             agent.pool.update_api_key(data.name, data.key)
@@ -579,6 +581,8 @@ def update_provider(data: ProviderUpdate, http_request: Request):
     except Exception:
         logger.exception("update-provider failed")
         raise HTTPException(status_code=500, detail="Failed to update provider")
+    finally:
+        agent.release_turn()
 
 
 def start(host: str = "127.0.0.1", port: int = 8000):

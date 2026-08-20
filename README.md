@@ -20,7 +20,7 @@
 - **Recoverable HTTP Startup** — API and web servers remain live before setup and expose readiness instead of blocking on prompts
 - **Isolated HTTP Sessions** — each client session receives separate agent context and history, with bounded LRU retention
 - **Human Approval Gate** — HTTP agents stop high-impact actions such as shell execution, file mutation, external writes, MCP calls, and browser submissions until the session owner confirms them
-- **Serialized Session Turns** — a session processes one chat request at a time, preventing concurrent requests from interleaving context or tool state; retry a `409` response after the active turn ends
+- **Serialized Session Turns** — a session processes one chat request at a time, preventing concurrent requests from interleaving context or tool state; session-scoped provider changes use the same guard and return `409` while a turn is active
 - **Persistent Approval Audit** — requested, decided, and executed high-impact actions are retained per HTTP session with redacted arguments and can be inspected after a runtime reload; closed HTTP sessions are pruned to the 200 most recent records
 - **Bounded Rate Limiting** — per-client request windows cap retained client state at 10,000 entries, reject invalid settings, and clean up without allocating state for read-only limit checks
 - **Protected Administrative Operations** — runtime reloads allow at most 3 requests per minute per client, session-scoped provider updates allow 15, and model discovery allows 30 requests with only 5 forced remote refreshes; excess requests receive a `429` response with a `Retry-After` header
