@@ -252,6 +252,8 @@ def decide_approval(
 ):
     """Approve or reject one pending action and execute only after approval."""
     agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
     try:
         approval = agent.decide_approval(request_id, decision.approve)
         if not decision.approve:
@@ -272,6 +274,8 @@ def decide_approval(
     except ValueError as exc:
         logger.warning("Approval request cannot be completed: %s", exc)
         raise HTTPException(status_code=409, detail="Approval request cannot be completed") from exc
+    finally:
+        agent.release_turn()
 
 
 @app.post("/runtime/reload")
@@ -388,8 +392,14 @@ def feedback(request: FeedbackRequest, http_request: Request):
 
 @app.post("/clear")
 def clear_history(http_request: Request):
-    result = _require_agent(http_request).clear_conversation()
-    return {"status": "ok", "message": "History cleared", **result}
+    agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
+    try:
+        result = agent.clear_conversation()
+        return {"status": "ok", "message": "History cleared", **result}
+    finally:
+        agent.release_turn()
 
 
 @app.get("/history")

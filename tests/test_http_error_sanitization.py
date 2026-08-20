@@ -25,6 +25,12 @@ class _FailingChatAgent:
 
 
 class _MissingApprovalAgent:
+    def try_acquire_turn(self):
+        return True
+
+    def release_turn(self):
+        pass
+
     def decide_approval(self, *_args, **_kwargs):
         raise KeyError(_SECRET_DETAIL)
 
