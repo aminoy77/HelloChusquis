@@ -1203,19 +1203,33 @@ class Agent:
         )
         return result
 
+    def _audit_cancelled_approvals(self, requests, reason: str) -> None:
+        """Persist cancellation outcomes without retaining tool arguments or results."""
+        for request in requests:
+            self._audit(
+                "approval_cancelled",
+                {
+                    "approval_id": request.id,
+                    "tool_name": request.tool_name,
+                    "reason": reason,
+                },
+            )
+
     def clear_conversation(self) -> dict[str, int]:
         """Remove session history and invalidate pending work for this agent."""
         self.history.clear()
         self._pending_tool_results = []
         self.session_manager.clear_history(self._session_id)
-        cancelled_approvals = self.approval_manager.cancel_pending()
-        return {"cancelled_approvals": cancelled_approvals}
+        cancelled_requests = self.approval_manager.cancel_pending_requests()
+        self._audit_cancelled_approvals(cancelled_requests, "conversation_cleared")
+        return {"cancelled_approvals": len(cancelled_requests)}
 
     def dispose_session(self) -> None:
         """Release this agent while retaining the audit trail for HTTP sessions."""
         self.history.clear()
         self._pending_tool_results = []
-        self.approval_manager.cancel_pending()
+        cancelled_requests = self.approval_manager.cancel_pending_requests()
+        self._audit_cancelled_approvals(cancelled_requests, "session_disposed")
         if self._persistent_session:
             self.session_manager.close_session(self._session_id)
             self.session_manager.prune_closed_sessions(

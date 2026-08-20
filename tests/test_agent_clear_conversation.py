@@ -17,9 +17,13 @@ class _History:
 class _SessionManager:
     def __init__(self):
         self.cleared_ids = []
+        self.audit_events = []
 
     def clear_history(self, session_id):
         self.cleared_ids.append(session_id)
+
+    def log_audit_event(self, session_id, event_type, details):
+        self.audit_events.append((session_id, event_type, details))
 
 
 class TestAgentClearConversation(unittest.TestCase):
@@ -40,6 +44,20 @@ class TestAgentClearConversation(unittest.TestCase):
         self.assertEqual(agent.session_manager.cleared_ids, ["persisted-session"])
         self.assertEqual(agent._pending_tool_results, [])
         self.assertEqual(result, {"cancelled_approvals": 1})
+        self.assertEqual(
+            agent.session_manager.audit_events,
+            [
+                (
+                    "persisted-session",
+                    "approval_cancelled",
+                    {
+                        "approval_id": pending.id,
+                        "tool_name": "files",
+                        "reason": "conversation_cleared",
+                    },
+                )
+            ],
+        )
         with self.assertRaises(ValueError):
             agent.approval_manager.decide(pending.id, approved=True)
 

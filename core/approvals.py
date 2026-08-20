@@ -159,18 +159,22 @@ class ApprovalManager:
                 requests = [request for request in requests if request.status is ApprovalStatus.PENDING]
             return [request.to_public_dict() for request in reversed(requests)]
 
-    def cancel_pending(self) -> int:
-        """Cancel all pending requests when their conversation is cleared."""
+    def cancel_pending_requests(self) -> list[ApprovalRequest]:
+        """Atomically cancel and return all still-pending requests."""
         with self._lock:
             now = self._clock()
             self._expire_locked(now)
-            cancelled = 0
+            cancelled: list[ApprovalRequest] = []
             for request in self._requests.values():
                 if request.status is ApprovalStatus.PENDING:
                     request.status = ApprovalStatus.CANCELLED
                     request.decided_at = now
-                    cancelled += 1
+                    cancelled.append(request)
             return cancelled
+
+    def cancel_pending(self) -> int:
+        """Cancel all pending requests when their conversation is cleared."""
+        return len(self.cancel_pending_requests())
 
     def decide(self, request_id: str, approved: bool) -> ApprovalRequest:
         """Record one decision. Only a pending, non-expired request may change."""
