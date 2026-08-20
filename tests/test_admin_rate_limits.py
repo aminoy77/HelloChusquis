@@ -86,6 +86,20 @@ class TestAdministrativeRateLimits(unittest.TestCase):
 
         pool.list_models.assert_called_once_with("Test Provider", refresh=True)
 
+    def test_web_auth_verify_returns_429_after_public_attempt_limit(self):
+        limiter = self._one_request_limiter()
+        with patch.object(web_server, "_auth_verify_limiter", limiter):
+            client = TestClient(web_server.app)
+            self.assertEqual(
+                client.post("/auth/verify", json={"message": "wrong-key"}).status_code,
+                401,
+            )
+            response = client.post("/auth/verify", json={"message": "wrong-key"})
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.json()["detail"], "Too many verification attempts")
+        self.assertGreaterEqual(int(response.headers["retry-after"]), 1)
+
     def test_web_feedback_returns_429_before_second_persistent_write(self):
         limiter = self._one_request_limiter()
         headers = {"Authorization": f"Bearer {web_server.REQUIRED_API_KEY}"}

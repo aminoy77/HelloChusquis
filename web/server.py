@@ -173,13 +173,14 @@ def _require_agent(http_request: Request | None = None):
 
 
 # Rate limiters: /chat and /models = 30/min, /feedback = 10/min, forced model refresh = 5/min,
-# /runtime/reload = 3/min, and /update-provider = 15/min.
+# /runtime/reload = 3/min, /update-provider = 15/min, and public key verification = 20/min.
 _chat_limiter = RateLimiter(requests_per_minute=30)
 _feedback_limiter = RateLimiter(requests_per_minute=10)
 _models_limiter = RateLimiter(requests_per_minute=30)
 _models_refresh_limiter = RateLimiter(requests_per_minute=5)
 _reload_limiter = RateLimiter(requests_per_minute=3)
 _provider_update_limiter = RateLimiter(requests_per_minute=15)
+_auth_verify_limiter = RateLimiter(requests_per_minute=20)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -251,8 +252,17 @@ def auth_check():
 
 
 @app.post("/auth/verify")
-def auth_verify(req: MessageRequest):
-    """Verify a bearer token. Returns 200 if valid."""
+def auth_verify(req: MessageRequest, http_request: Request):
+    """Verify a bearer token with a bounded number of public attempts."""
+    ip = _get_client_ip(http_request)
+    if not _auth_verify_limiter.is_allowed(ip):
+        retry_after = max(1, int(_auth_verify_limiter.get_retry_after(ip) + 0.999))
+        logger.warning("Rate limit exceeded on /auth/verify from %s", ip)
+        raise HTTPException(
+            status_code=429,
+            detail="Too many verification attempts",
+            headers={"Retry-After": str(retry_after)},
+        )
     if _verify_token(req.message):
         return {"status": "ok"}
     raise HTTPException(status_code=401, detail="Invalid API key")
