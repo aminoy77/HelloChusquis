@@ -29,6 +29,7 @@ from typing import Any, Union
 
 _MAX_IMAGE_PIXELS = 25_000_000
 _MAX_BASE64_ENCODED_CHARS = 16 * 1024 * 1024
+_MAX_VISION_IMAGE_BYTES = 10 * 1024 * 1024
 _IMAGE_REDUCE_QUALITY_STEPS = [85, 75, 65, 55, 45, 35]
 _DEFAULT_QR_SCALE = 6
 _DEFAULT_QR_MARGIN = 4
@@ -798,13 +799,19 @@ class ImageProcessor:
             return "Error: No API key available. Set VISION_API_KEY or ANTHROPIC_API_KEY."
 
         if isinstance(path_or_bytes, bytes):
-            b64 = self.encode_base64(path_or_bytes)
-            mime = _detect_mime_from_bytes(path_or_bytes)
+            raw = path_or_bytes
         else:
-            with open(path_or_bytes, "rb") as f:
-                raw = f.read()
-            b64 = self.encode_base64(raw)
-            mime = _detect_mime_from_bytes(raw)
+            try:
+                if os.path.getsize(path_or_bytes) > _MAX_VISION_IMAGE_BYTES:
+                    return f"Error: image exceeds {_MAX_VISION_IMAGE_BYTES} bytes"
+                with open(path_or_bytes, "rb") as image_file:
+                    raw = image_file.read(_MAX_VISION_IMAGE_BYTES + 1)
+            except OSError as exc:
+                return f"Error: unable to read image: {exc}"
+        if len(raw) > _MAX_VISION_IMAGE_BYTES:
+            return f"Error: image exceeds {_MAX_VISION_IMAGE_BYTES} bytes"
+        b64 = self.encode_base64(raw)
+        mime = _detect_mime_from_bytes(raw)
 
         # Anthropic API
         if os.getenv("ANTHROPIC_API_KEY") or "claude" in model.lower():
