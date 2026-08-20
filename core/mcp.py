@@ -12,6 +12,7 @@ Implements the Model Context Protocol. Provides:
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 import json
 import logging
 import os
@@ -27,6 +28,10 @@ from urllib.parse import urlsplit
 from tools.web_fetch import SsrFBlockedError, validate_url_safety
 
 logger = logging.getLogger(__name__)
+
+MCP_STDIO_MAX_DIAGNOSTIC_LINES = 100
+MCP_STDIO_MAX_LINE_BYTES = 65_536
+MCP_STDIO_STOP_TIMEOUT_SECONDS = 5
 
 
 def validate_mcp_remote_url(url: str) -> str:
@@ -171,7 +176,7 @@ class StdioTransport(MCPTransport):
         self.cwd = cwd
         self._process: Optional[subprocess.Popen[bytes]] = None
         self._connected = False
-        self._stderr_lines: list[str] = []
+        self._stderr_lines: deque[str] = deque(maxlen=MCP_STDIO_MAX_DIAGNOSTIC_LINES)
         self._stderr_task: Optional[asyncio.Task[None]] = None
 
     @property
@@ -210,7 +215,7 @@ class StdioTransport(MCPTransport):
         try:
             while True:
                 line = await loop.run_in_executor(
-                    None, self._process.stderr.readline
+                    None, self._process.stderr.readline, MCP_STDIO_MAX_LINE_BYTES
                 )
                 if not line:
                     break
@@ -234,9 +239,13 @@ class StdioTransport(MCPTransport):
         if not self.is_connected or not self._process or not self._process.stdout:
             return None
         loop = asyncio.get_event_loop()
-        line = await loop.run_in_executor(None, self._process.stdout.readline)
+        line = await loop.run_in_executor(
+            None, self._process.stdout.readline, MCP_STDIO_MAX_LINE_BYTES
+        )
         if not line:
             return None
+        if len(line) >= MCP_STDIO_MAX_LINE_BYTES and not line.endswith(b"\n"):
+            raise ParseError("MCP stdio response exceeds the line-size limit")
         text = line.decode("utf-8", errors="replace").strip()
         if not text:
             return None
@@ -257,9 +266,10 @@ class StdioTransport(MCPTransport):
             try:
                 self._process.terminate()
                 try:
-                    self._process.wait(timeout=5)
+                    self._process.wait(timeout=MCP_STDIO_STOP_TIMEOUT_SECONDS)
                 except subprocess.TimeoutExpired:
                     self._process.kill()
+                    self._process.wait(timeout=MCP_STDIO_STOP_TIMEOUT_SECONDS)
             except Exception:
                 pass
             for stream in (self._process.stdin, self._process.stdout, self._process.stderr):
