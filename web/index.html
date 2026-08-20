@@ -1622,9 +1622,17 @@
         bubble.innerHTML = renderMarkdown(text);
         el.querySelector('.copy').addEventListener('click', () => copyText(bubble.innerText));
         const like = el.querySelector('.like');
-        if (like) like.addEventListener('click', () => { sendFeedback('positive', text); toast('Thanks for the feedback'); });
+        if (like) like.addEventListener('click', async () => {
+            like.disabled = true;
+            if (await sendFeedback('positive', text)) toast('Thanks for the feedback');
+            else { like.disabled = false; toast('Could not record feedback'); }
+        });
         const dislike = el.querySelector('.dislike');
-        if (dislike) dislike.addEventListener('click', () => { sendFeedback('negative', text); toast('Feedback recorded'); });
+        if (dislike) dislike.addEventListener('click', async () => {
+            dislike.disabled = true;
+            if (await sendFeedback('negative', text)) toast('Feedback recorded');
+            else { dislike.disabled = false; toast('Could not record feedback'); }
+        });
         el.querySelector('.delete').addEventListener('click', () => el.remove());
         messages.appendChild(el);
         messages.scrollTop = messages.scrollHeight;
@@ -1658,8 +1666,18 @@
             '<div class="tool-calls"></div>';
         const bubble = el.querySelector('.message-bubble');
         el.querySelector('.copy').addEventListener('click', () => copyText(bubble.innerText));
-        el.querySelector('.like').addEventListener('click', () => { sendFeedback('positive', bubble.innerText); toast('Thanks for the feedback'); });
-        el.querySelector('.dislike').addEventListener('click', () => { sendFeedback('negative', bubble.innerText); toast('Feedback recorded'); });
+        const like = el.querySelector('.like');
+        const dislike = el.querySelector('.dislike');
+        like.addEventListener('click', async () => {
+            like.disabled = true;
+            if (await sendFeedback('positive', bubble.innerText)) toast('Thanks for the feedback');
+            else { like.disabled = false; toast('Could not record feedback'); }
+        });
+        dislike.addEventListener('click', async () => {
+            dislike.disabled = true;
+            if (await sendFeedback('negative', bubble.innerText)) toast('Feedback recorded');
+            else { dislike.disabled = false; toast('Could not record feedback'); }
+        });
         el.querySelector('.delete').addEventListener('click', () => el.remove());
         messages.appendChild(el);
         messages.scrollTop = messages.scrollHeight;
@@ -1870,8 +1888,15 @@
         catch (e) { toast('Copy failed'); }
     }
     async function sendFeedback(type, context) {
-        try { await fetchJson('/feedback', { method: 'POST', body: { type: type, context: (context || '').slice(0, 500) } }); }
-        catch (e) {}
+        try {
+            await fetchJson('/feedback', {
+                method: 'POST',
+                body: { type: type, context: (context || '').slice(0, 500) },
+            });
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
     async function clearHistory() {
         try { await fetchJson('/clear', { method: 'POST' }); clearChat(); }

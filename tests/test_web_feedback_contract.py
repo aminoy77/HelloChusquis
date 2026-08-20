@@ -20,6 +20,11 @@ class TestWebFeedbackContract(unittest.TestCase):
 
         self.assertNotIn("sendFeedback('up'", index_html)
         self.assertNotIn("sendFeedback('down'", index_html)
+        self.assertIn("return true;", index_html)
+        self.assertIn("return false;", index_html)
+        self.assertIn("if (await sendFeedback('positive'", index_html)
+        self.assertIn("if (await sendFeedback('negative'", index_html)
+        self.assertIn("Could not record feedback", index_html)
 
 
 if __name__ == "__main__":
