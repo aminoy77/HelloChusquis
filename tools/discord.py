@@ -2,6 +2,16 @@ from httpx import AsyncClient
 import os
 import httpx
 
+MAX_DISCORD_MEMBERS = 1000
+
+
+def _member_limit(value: object) -> int:
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return 20
+    return max(1, min(limit, MAX_DISCORD_MEMBERS))
+
 
 def run(action: str, **kwargs) -> str:
     """Synchronous dispatcher for Discord API actions."""
@@ -28,7 +38,7 @@ async def _run_async(action: str, token: str, kwargs: dict) -> str:
     elif action == "create_channel":
         return await create_channel(kwargs.get("guild_id", ""), kwargs.get("name", ""), kwargs.get("type", 0), token)
     elif action == "list_channels":
-        return await get_guild_members(kwargs.get("guild_id", ""), kwargs.get("limit", 20), token)
+        return await get_guild_members(kwargs.get("guild_id", ""), _member_limit(kwargs.get("limit", 20)), token)
     else:
         return f"Error: Unknown action '{action}'. Available: send_message, send_embed, create_channel, list_channels"
 
@@ -96,13 +106,13 @@ async def add_reaction(channel_id: str, message_id: str, emoji: str, access_toke
     """Add reaction to Discord message."""
     url = f"https://discord.com/api/v10/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me"
     async with AsyncClient() as client:
-        r = await client.put(url, headers={"Authorization": f"Bot {access_token}"})
+        await client.put(url, headers={"Authorization": f"Bot {access_token}"})
         return {"reacted": True}
 
 
 async def get_guild_members(guild_id: str, limit: int, access_token: str) -> dict:
     """Get Discord guild members."""
-    url = f"https://discord.com/api/v10/guilds/{guild_id}/members?limit={limit}"
-    async with AsyncClient() as client:
-        r = await client.get(url, headers={"Authorization": f"Bot {access_token}"})
+    url = f"https://discord.com/api/v10/guilds/{guild_id}/members"
+    async with AsyncClient(timeout=30, follow_redirects=False) as client:
+        r = await client.get(url, params={"limit": _member_limit(limit)}, headers={"Authorization": f"Bot {access_token}"})
         return r.json()
