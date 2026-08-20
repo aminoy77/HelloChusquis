@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -32,6 +33,17 @@ logger = logging.getLogger(__name__)
 MCP_STDIO_MAX_DIAGNOSTIC_LINES = 100
 MCP_STDIO_MAX_LINE_BYTES = 65_536
 MCP_STDIO_STOP_TIMEOUT_SECONDS = 5
+_DEFAULT_MCP_FILESYSTEM_DIRECTORY = Path.home() / ".hellochusquis" / "mcp-files"
+
+
+def _ensure_default_filesystem_workspace(root: Path | None = None) -> Path:
+    """Create the owner-only filesystem root used by the default MCP server."""
+    workspace = root or _DEFAULT_MCP_FILESYSTEM_DIRECTORY
+    if workspace.is_symlink():
+        raise ValueError("default MCP filesystem workspace must not be a symlink")
+    workspace.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(workspace, 0o700)
+    return workspace
 
 
 def validate_mcp_remote_url(url: str) -> str:
@@ -1426,7 +1438,7 @@ class MCPToolBridgeEntry:
 DEFAULT_MCP_SERVERS: dict[str, dict] = {
     "filesystem": {
         "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", ""],
     },
     "git": {
         "command": "npx",
@@ -1451,10 +1463,13 @@ def build_default_configs() -> dict[str, MCPServerConfig]:
     """Build MCPServerConfig instances from DEFAULT_MCP_SERVERS."""
     configs: dict[str, MCPServerConfig] = {}
     for name, cfg in DEFAULT_MCP_SERVERS.items():
+        args = list(cfg.get("args", []))
+        if name == "filesystem":
+            args[-1] = str(_ensure_default_filesystem_workspace())
         configs[name] = MCPServerConfig(
             name=name,
             command=cfg.get("command", ""),
-            args=cfg.get("args", []),
+            args=args,
             transport_type="stdio",
         )
     return configs
