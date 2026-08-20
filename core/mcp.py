@@ -15,11 +15,10 @@ import asyncio
 import json
 import logging
 import os
-import signal
+import shutil
 import subprocess
 import sys
 import time
-import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -163,18 +162,20 @@ class StdioTransport(MCPTransport):
         if self._connected:
             return
         loop = asyncio.get_event_loop()
-        # Build merged env
-        merged_env = os.environ.copy()
-        if self.env:
-            merged_env.update(self.env)
+        # Resolve the executable before spawning, but pass only explicitly
+        # configured variables to avoid leaking host credentials into a server.
+        command = self.command
+        if not os.path.isabs(command):
+            command = shutil.which(command) or command
+        process_env = dict(self.env or {})
         self._process = await loop.run_in_executor(
             None,
             lambda: subprocess.Popen(
-                [self.command] + self.args,
+                [command] + self.args,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=merged_env,
+                env=process_env,
                 cwd=self.cwd,
             ),
         )
@@ -241,6 +242,9 @@ class StdioTransport(MCPTransport):
                     self._process.kill()
             except Exception:
                 pass
+            for stream in (self._process.stdin, self._process.stdout, self._process.stderr):
+                if stream is not None:
+                    stream.close()
             self._process = None
 
 
