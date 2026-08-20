@@ -11,9 +11,6 @@ class FilesTool(BaseTool):
 
     def _is_allowed(self, path: Path) -> bool:
         path = path.expanduser().resolve()
-        # Always allow anything under home directory
-        if str(path).startswith(str(Path.home())):
-            return True
         return any(
             path == allowed or allowed in path.parents
             for allowed in self.allowed_dirs
