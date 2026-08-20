@@ -1,6 +1,22 @@
-from tools.base import BaseTool, ToolResult
 import httpx
 import os
+from urllib.parse import urlsplit
+
+
+def _jira_base_url(value: object) -> str:
+    raw_url = str(value or "").strip().rstrip("/")
+    parsed = urlsplit(raw_url)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("Jira URL must be an HTTPS origin without path or credentials.")
+    return raw_url
 
 
 PLUGIN_NAME = "jira"
@@ -53,7 +69,10 @@ def run(action: str, project: str = "", issue_key: str = "", summary: str = "",
     if not creds["url"] or not creds["email"] or not creds["token"]:
         return "Error: Jira credentials not found. Set JIRA_URL, JIRA_EMAIL, and JIRA_TOKEN."
     
-    base_url = creds["url"].rstrip("/")
+    try:
+        base_url = _jira_base_url(creds["url"])
+    except ValueError as exc:
+        return f"Error: {exc}"
     auth = (creds["email"], creds["token"])
     headers = {"Content-Type": "application/json"}
     
