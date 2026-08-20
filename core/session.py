@@ -350,27 +350,22 @@ class SessionManager:
         """Update session fields. Returns ``True`` if a row was changed."""
         with self._lock:
             conn = self._ensure_connection()
-            sets: list[str] = ["updated_at = ?"]
-            params: list[Any] = [time.time()]
-            if title is not None:
-                sets.append("title = ?")
-                params.append(title)
-            if model is not None:
-                sets.append("model = ?")
-                params.append(model)
-            if context_window is not None:
-                sets.append("context_window = ?")
-                params.append(context_window)
-            if status is not None:
-                sets.append("status = ?")
-                params.append(status.value)
-            if extra is not None:
-                sets.append("extra = ?")
-                params.append(json.dumps(extra))
-            params.append(session_id)
+            serialized_extra = json.dumps(extra) if extra is not None else None
+            status_value = status.value if status is not None else None
             cur = conn.execute(
-                f"UPDATE sessions SET {', '.join(sets)} WHERE session_id = ?",
-                params,
+                "UPDATE sessions SET updated_at = ?, title = COALESCE(?, title), "
+                "model = COALESCE(?, model), context_window = COALESCE(?, context_window), "
+                "status = COALESCE(?, status), extra = COALESCE(?, extra) "
+                "WHERE session_id = ?",
+                (
+                    time.time(),
+                    title,
+                    model,
+                    context_window,
+                    status_value,
+                    serialized_extra,
+                    session_id,
+                ),
             )
             conn.commit()
             return cur.rowcount > 0
