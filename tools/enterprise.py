@@ -8,6 +8,9 @@ PLUGIN_NAME = "salesforce"
 PLUGIN_DESCRIPTION = "Salesforce CRM integration"
 SALESFORCE_HTTP_TIMEOUT_SECONDS = 30
 _SALESFORCE_INSTANCE_RE = re.compile(r"^[A-Za-z0-9-]{1,63}$")
+_SALESFORCE_OBJECTS = frozenset({"Account", "Contact", "Lead", "Opportunity"})
+_SALESFORCE_FIELD_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)?$")
+_SALESFORCE_DEFAULT_FIELDS = ("Id", "Name")
 
 SALESFORCE_SCHEMA = {
     "type": "function",
@@ -66,8 +69,16 @@ def run(action: str, sobject: str = "", fields: str = "", data: str = "") -> str
     if action == "query":
         if not sobject:
             return "Error: sobject required"
-        
-        q = f"SELECT {fields or '*'} FROM {sobject} LIMIT 10"
+        if sobject not in _SALESFORCE_OBJECTS:
+            return "Error: invalid Salesforce object"
+        requested_fields = [field.strip() for field in fields.split(",") if field.strip()]
+        if not requested_fields:
+            requested_fields = list(_SALESFORCE_DEFAULT_FIELDS)
+        if len(requested_fields) > 20 or any(
+            not _SALESFORCE_FIELD_RE.fullmatch(field) for field in requested_fields
+        ):
+            return "Error: invalid Salesforce fields"
+        q = f"SELECT {', '.join(requested_fields)} FROM {sobject} LIMIT 10"
         try:
             resp = httpx.get(
                 f"{base}/query",
