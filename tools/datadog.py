@@ -14,7 +14,6 @@ def run(action: str, **kwargs) -> str:
     import asyncio
     try:
         loop = asyncio.get_running_loop()
-        import concurrent.futures
         fut = asyncio.run_coroutine_threadsafe(_run_async(action, api_key, kwargs), loop)
         return fut.result(timeout=30)
     except RuntimeError:
@@ -50,7 +49,7 @@ def _run_sync(action: str, api_key: str, kwargs: dict) -> str:
             }, headers=headers)
             return str(r.json())[:2000]
         elif action == "get_metrics":
-            r = client.get(f"https://api.datadoghq.com/api/v1/query?query={kwargs.get('query', '')}", headers=headers)
+            r = client.get("https://api.datadoghq.com/api/v1/query", headers=headers, params={"query": kwargs.get("query", "")})
             return str(r.json())[:2000]
         elif action == "create_dashboard":
             r = client.post("https://api.datadoghq.com/api/v1/dashboard",
@@ -84,9 +83,9 @@ async def send_metric(key: str, metric: str, value: float, tags: Optional[dict] 
 
 async def get_metrics(key: str, query: str, from_: int = None) -> dict:
     """Query DataDog metrics."""
-    url = f"https://api.datadoghq.com/api/v1/query?query={query}"
+    url = "https://api.datadoghq.com/api/v1/query"
     async with AsyncClient() as client:
-        r = await client.get(url, headers={"DD-API-KEY": key})
+        r = await client.get(url, headers={"DD-API-KEY": key}, params={"query": query})
         return r.json()
 
 
