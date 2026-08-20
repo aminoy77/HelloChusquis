@@ -32,6 +32,12 @@ class TestApprovalClassification(unittest.TestCase):
         self.assertIsNotNone(approval_reason("terraform", {"action": "destroy"}))
         self.assertIsNone(approval_reason("terraform", {"action": "plan"}))
 
+    def test_kubernetes_mutating_operations_need_approval(self):
+        self.assertIsNotNone(approval_reason("kubernetes", {"action": "apply"}))
+        self.assertIsNotNone(approval_reason("kubernetes", {"action": "delete"}))
+        self.assertIsNotNone(approval_reason("kubernetes", {"action": "scale"}))
+        self.assertIsNone(approval_reason("kubernetes", {"action": "pods"}))
+
     def test_browser_script_injection_needs_approval(self):
         self.assertIsNotNone(
             approval_reason("browser", {"action": "execute_script", "script": "return document.cookie"})
