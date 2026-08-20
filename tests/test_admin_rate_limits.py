@@ -1,7 +1,8 @@
 """HTTP regression tests for costly administrative endpoint rate limits."""
 
 import unittest
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
@@ -60,6 +61,30 @@ class TestAdministrativeRateLimits(unittest.TestCase):
             payload = {"name": "any-provider"}
             self.assertEqual(client.post("/update-provider", json=payload, headers=headers).status_code, 503)
             self._assert_rate_limited(client.post("/update-provider", json=payload, headers=headers))
+
+    def test_forced_model_refresh_returns_429_before_second_provider_call(self):
+        general_limiter = self._one_request_limiter()
+        refresh_limiter = self._one_request_limiter()
+        pool = SimpleNamespace(
+            status=lambda: [{"name": "Test Provider"}],
+            list_models=Mock(return_value=["test-model"]),
+        )
+        agent = SimpleNamespace(pool=pool)
+        headers = {
+            "Authorization": f"Bearer {web_server.REQUIRED_API_KEY}",
+            "X-HelloChusquis-Session": "models-session",
+        }
+        with patch.object(web_server, "_models_limiter", general_limiter), patch.object(
+            web_server, "_models_refresh_limiter", refresh_limiter
+        ), patch.object(web_server, "_require_agent", return_value=agent):
+            client = TestClient(web_server.app)
+            first = client.get("/models?provider=Test%20Provider&refresh=true", headers=headers)
+            self.assertEqual(first.status_code, 200)
+            self._assert_rate_limited(
+                client.get("/models?provider=Test%20Provider&refresh=true", headers=headers)
+            )
+
+        pool.list_models.assert_called_once_with("Test Provider", refresh=True)
 
 
 if __name__ == "__main__":

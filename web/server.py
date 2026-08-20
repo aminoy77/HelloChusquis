@@ -164,8 +164,11 @@ def _require_agent(http_request: Request | None = None):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-# Rate limiters: /chat = 30/min, /runtime/reload = 3/min, /update-provider = 15/min.
+# Rate limiters: /chat = 30/min, /models = 30/min, forced model refresh = 5/min,
+# /runtime/reload = 3/min, and /update-provider = 15/min.
 _chat_limiter = RateLimiter(requests_per_minute=30)
+_models_limiter = RateLimiter(requests_per_minute=30)
+_models_refresh_limiter = RateLimiter(requests_per_minute=5)
 _reload_limiter = RateLimiter(requests_per_minute=3)
 _provider_update_limiter = RateLimiter(requests_per_minute=15)
 
@@ -517,6 +520,9 @@ def status(http_request: Request):
 @app.get("/models")
 def models(http_request: Request, provider: str = "", refresh: bool = False):
     """Available models for the requesting session's provider configuration."""
+    _require_administrative_rate_limit(_models_limiter, http_request, "/models")
+    if refresh:
+        _require_administrative_rate_limit(_models_refresh_limiter, http_request, "/models?refresh=true")
     agent = _require_agent(http_request)
     known_names = {provider_status["name"] for provider_status in agent.pool.status()}
     if provider not in known_names:
