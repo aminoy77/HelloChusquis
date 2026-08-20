@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from fastapi.testclient import TestClient
+
 from api import main as api_main
 from web import server as web_server
 
@@ -42,6 +44,21 @@ class TestApiKeyPermissions(unittest.TestCase):
 
             self._assert_mode(key_dir, 0o700)
             self._assert_mode(key_file, 0o600)
+
+    def test_public_auth_check_does_not_reveal_local_key_path(self):
+        response = TestClient(web_server.app).get("/auth/check")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(str(web_server._AUTH_KEY_FILE), response.json()["key_hint"])
+        self.assertNotIn(str(Path.home()), response.json()["key_hint"])
+
+    def test_web_start_does_not_log_the_api_key(self):
+        with patch.object(web_server, "AUTH_ENABLED", True), patch.object(
+            web_server.logger, "info"
+        ) as info, patch.object(web_server.uvicorn, "run"):
+            web_server.start()
+
+        self.assertNotIn(web_server.REQUIRED_API_KEY, str(info.call_args))
 
 
 if __name__ == "__main__":

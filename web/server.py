@@ -68,12 +68,19 @@ AUTH_ENABLED = _auth_setting not in ("0", "false", "no", "off")
 
 
 def _auth_hint() -> str:
-    """Human-readable hint about where the API key lives."""
+    """Operator-only hint about where the API key lives."""
     if os.environ.get("HELLOCHUSQUIS_API_KEY"):
         return "Set via the HELLOCHUSQUIS_API_KEY environment variable."
     if _AUTH_KEY_FILE.exists():
         return f"Stored in {_AUTH_KEY_FILE}"
     return f"Generate one by starting the server (saved to {_AUTH_KEY_FILE})"
+
+
+def _public_auth_hint() -> str:
+    """Return a location-free credential hint suitable for unauthenticated clients."""
+    if os.environ.get("HELLOCHUSQUIS_API_KEY"):
+        return "Configured by the server administrator."
+    return "Configured in local HelloChusquis settings."
 
 
 def _verify_token(token: str) -> bool:
@@ -247,7 +254,7 @@ def auth_check():
     """Tell the frontend whether auth is required (and where the key lives)."""
     return {
         "auth_required": AUTH_ENABLED,
-        "key_hint": _auth_hint() if AUTH_ENABLED else "",
+        "key_hint": _public_auth_hint() if AUTH_ENABLED else "",
     }
 
 
@@ -633,7 +640,7 @@ def update_provider(data: ProviderUpdate, http_request: Request):
 
 def start(host: str = "127.0.0.1", port: int = 8000):
     if AUTH_ENABLED:
-        logger.info("Auth enabled — API key: %s (%s)", REQUIRED_API_KEY, _auth_hint())
+        logger.info("Auth enabled — API key configured (%s)", _auth_hint())
     else:
         logger.warning("Auth disabled by HELLOCHUSQUIS_AUTH=0; use only in an isolated local development environment")
     uvicorn.run(app, host=host, port=port, log_level="warning")
