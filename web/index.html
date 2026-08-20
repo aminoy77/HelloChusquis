@@ -1622,9 +1622,9 @@
         bubble.innerHTML = renderMarkdown(text);
         el.querySelector('.copy').addEventListener('click', () => copyText(bubble.innerText));
         const like = el.querySelector('.like');
-        if (like) like.addEventListener('click', () => { sendFeedback('up', text); toast('Thanks for the feedback'); });
+        if (like) like.addEventListener('click', () => { sendFeedback('positive', text); toast('Thanks for the feedback'); });
         const dislike = el.querySelector('.dislike');
-        if (dislike) dislike.addEventListener('click', () => { sendFeedback('down', text); toast('Feedback recorded'); });
+        if (dislike) dislike.addEventListener('click', () => { sendFeedback('negative', text); toast('Feedback recorded'); });
         el.querySelector('.delete').addEventListener('click', () => el.remove());
         messages.appendChild(el);
         messages.scrollTop = messages.scrollHeight;
@@ -1658,8 +1658,8 @@
             '<div class="tool-calls"></div>';
         const bubble = el.querySelector('.message-bubble');
         el.querySelector('.copy').addEventListener('click', () => copyText(bubble.innerText));
-        el.querySelector('.like').addEventListener('click', () => { sendFeedback('up', bubble.innerText); toast('Thanks for the feedback'); });
-        el.querySelector('.dislike').addEventListener('click', () => { sendFeedback('down', bubble.innerText); toast('Feedback recorded'); });
+        el.querySelector('.like').addEventListener('click', () => { sendFeedback('positive', bubble.innerText); toast('Thanks for the feedback'); });
+        el.querySelector('.dislike').addEventListener('click', () => { sendFeedback('negative', bubble.innerText); toast('Feedback recorded'); });
         el.querySelector('.delete').addEventListener('click', () => el.remove());
         messages.appendChild(el);
         messages.scrollTop = messages.scrollHeight;
