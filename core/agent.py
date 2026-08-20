@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import re
@@ -24,7 +25,7 @@ from core.tool_policy import (
 from core.session import SessionManager
 from core.voice import VoiceManager
 from core.mcp import get_client as get_mcp_client
-from core.approvals import ApprovalManager
+from core.approvals import ApprovalManager, redact_sensitive_data
 from ui.terminal import print_tool_call, print_tool_result, console
 from core.logger import get_logger
 
@@ -1013,11 +1014,17 @@ def _build_tools_schema(plugins: list) -> list:
 
 
 class Agent:
-    def __init__(self, config: dict, require_approval: bool = False):
+    def __init__(
+        self,
+        config: dict,
+        require_approval: bool = False,
+        session_key: str | None = None,
+    ):
         self.pool = ProviderPool(config=config)
         self.require_approval = require_approval
         self.approval_manager = ApprovalManager()
         self._turn_lock = threading.Lock()
+        self._audited_approval_ids: set[str] = set()
         self.history = History()
         self._pending_tool_results = []
         self.workspace = WorkspaceManager(config["settings"]["workspace_dirs"])
@@ -1070,9 +1077,16 @@ class Agent:
         )
         os.makedirs(os.path.dirname(sessions_db), exist_ok=True)
         self.session_manager = SessionManager(sessions_db)
+        self._persistent_session = session_key is not None
+        storage_session_id = (
+            f"http_{hashlib.sha256(session_key.encode('utf-8')).hexdigest()}"
+            if session_key
+            else None
+        )
         self._session_id = self.session_manager.create_session(
-            agent_id="main",
+            agent_id="http" if storage_session_id else "main",
             model=config.get("model", "default"),
+            session_id=storage_session_id,
         )
 
         # Voice/TTS
@@ -1124,13 +1138,30 @@ class Agent:
         if self._turn_lock.locked():
             self._turn_lock.release()
 
+    def _audit(self, event_type: str, details: dict) -> None:
+        """Best-effort audit persistence that must never interrupt an action."""
+        try:
+            self.session_manager.log_audit_event(self._session_id, event_type, details)
+        except Exception:
+            logger.exception("Failed to persist audit event: %s", event_type)
+
     def pending_approvals(self) -> list[dict]:
         """Return pending high-impact actions for this agent session only."""
         return self.approval_manager.list_requests()
 
     def decide_approval(self, request_id: str, approved: bool) -> dict:
         """Record one user decision for a high-impact action."""
-        return self.approval_manager.decide(request_id, approved).to_public_dict()
+        request = self.approval_manager.decide(request_id, approved)
+        self._audit(
+            "approval_decided",
+            {
+                "approval_id": request.id,
+                "tool_name": request.tool_name,
+                "approved": approved,
+                "status": request.status.value,
+            },
+        )
+        return request.to_public_dict()
 
     def execute_approved(self, request_id: str) -> ToolResult:
         """Consume an approved action and dispatch it exactly once."""
@@ -1141,7 +1172,15 @@ class Agent:
             approval_granted=True,
         )
         summary = result.output if result.success else result.error
-        self.approval_manager.complete_execution(request_id, result.success, summary)
+        completed = self.approval_manager.complete_execution(request_id, result.success, summary)
+        self._audit(
+            "approval_executed",
+            {
+                "approval_id": completed.id,
+                "tool_name": completed.tool_name,
+                "success": result.success,
+            },
+        )
         return result
 
     def clear_conversation(self) -> dict[str, int]:
@@ -1153,11 +1192,18 @@ class Agent:
         return {"cancelled_approvals": cancelled_approvals}
 
     def dispose_session(self) -> None:
-        """Permanently remove this agent session's persisted conversation."""
+        """Release this agent while retaining the audit trail for HTTP sessions."""
         self.history.clear()
         self._pending_tool_results = []
         self.approval_manager.cancel_pending()
+        if self._persistent_session:
+            self.session_manager.close()
+            return
         self.session_manager.delete_session(self._session_id)
+
+    def audit_events(self, limit: int = 100) -> list[dict]:
+        """Return the redacted persistent audit trail for this session."""
+        return self.session_manager.list_audit_events(self._session_id, limit=limit)
 
     def _approval_required_result(self, tool_name: str, tool_args: dict) -> Optional[ToolResult]:
         """Return an actionable blocked result for unapproved high-impact calls."""
@@ -1169,6 +1215,18 @@ class Agent:
             return ToolResult(success=False, output="", error=f"Approval queue unavailable: {exc}")
         if request is None:
             return None
+        if request.id not in self._audited_approval_ids:
+            self._audited_approval_ids.add(request.id)
+            self._audit(
+                "approval_requested",
+                {
+                    "approval_id": request.id,
+                    "tool_name": request.tool_name,
+                    "tool_args": redact_sensitive_data(request.tool_args),
+                    "reason": request.reason,
+                    "expires_at": request.expires_at,
+                },
+            )
         return ToolResult(
             success=False,
             output="",

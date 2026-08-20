@@ -121,7 +121,7 @@ class AgentRuntime:
             if self._config is None:
                 return self._agent
 
-            agent = self._new_agent(self._config)
+            agent = self._new_agent(self._config, session_key=session_id)
             self._session_agents[session_id] = agent
             if len(self._session_agents) > self._max_sessions:
                 evicted_session, evicted_agent = self._session_agents.popitem(last=False)
@@ -139,9 +139,13 @@ class AgentRuntime:
             except Exception as exc:
                 logger.warning("Failed to dispose an evicted agent session: %s", exc)
 
-    def _new_agent(self, config: dict) -> Agent:
-        """Construct an agent with the runtime's approval policy."""
-        return self._agent_factory(config, require_approval=self._require_approval)
+    def _new_agent(self, config: dict, session_key: str | None = None) -> Agent:
+        """Construct an agent with the runtime's approval policy and session identity."""
+        return self._agent_factory(
+            config,
+            require_approval=self._require_approval,
+            session_key=session_key,
+        )
 
     def provider_status(self) -> list[dict]:
         """Return provider status without failing a health endpoint."""

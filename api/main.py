@@ -365,6 +365,12 @@ def get_history(http_request: Request):
     return {"messages": _require_agent(http_request).history.get()}
 
 
+@app.get("/audit")
+def get_audit_events(http_request: Request, limit: int = 100):
+    """Return redacted approval events recorded for the requesting session."""
+    return {"events": _require_agent(http_request).audit_events(limit=limit)}
+
+
 def start(host: str = "127.0.0.1", port: int = 8080):
     """Start the API server."""
     logger.info("Starting HelloChusquis API on %s:%s", host, port)

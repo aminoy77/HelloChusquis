@@ -21,6 +21,7 @@
 - **Isolated HTTP Sessions** — each client session receives separate agent context and history, with bounded LRU retention
 - **Human Approval Gate** — HTTP agents stop high-impact actions such as shell execution, file mutation, external writes, MCP calls, and browser submissions until the session owner confirms them
 - **Serialized Session Turns** — a session processes one chat request at a time, preventing concurrent requests from interleaving context or tool state; retry a `409` response after the active turn ends
+- **Persistent Approval Audit** — requested, decided, and executed high-impact actions are retained per HTTP session with redacted arguments and can be inspected after a runtime reload
 - **Offline Integration Contracts** — `doctor --contracts` verifies the import and local entry-point contract of every bundled external integration without calling third-party services
 
 ## Quick Start
@@ -74,6 +75,11 @@ curl -X POST http://localhost:8080/runtime/reload \
 
 # Inspect high-impact actions pending for your current session
 curl http://localhost:8080/approvals \
+  -H "Authorization: Bearer $HC_TOKEN" \
+  -H "X-HelloChusquis-Session: my-session"
+
+# Inspect the redacted, persistent approval audit for the same session
+curl 'http://localhost:8080/audit?limit=50' \
   -H "Authorization: Bearer $HC_TOKEN" \
   -H "X-HelloChusquis-Session: my-session"
 

@@ -388,6 +388,12 @@ def list_approvals(http_request: Request):
     return {"approvals": _require_agent(http_request).pending_approvals()}
 
 
+@app.get("/audit")
+def get_audit_events(http_request: Request, limit: int = 100):
+    """Return redacted approval events for the requesting session only."""
+    return {"events": _require_agent(http_request).audit_events(limit=limit)}
+
+
 @app.post("/approvals/{request_id}")
 def decide_approval(
     request_id: str,

@@ -1,0 +1,97 @@
+"""Persistent approval audit trail regression tests."""
+
+from pathlib import Path
+import tempfile
+import unittest
+
+from api import main as api_main
+from core.agent import Agent
+from core.approvals import ApprovalManager
+from core.session import SessionManager
+from tools.base import ToolResult
+from types import SimpleNamespace
+from unittest.mock import patch
+from web import server as web_server
+
+
+class _AuditSessionManager:
+    def __init__(self):
+        self.events = []
+
+    def log_audit_event(self, session_id, event_type, details):
+        self.events.append((session_id, event_type, details))
+
+
+class TestSessionAuditPersistence(unittest.TestCase):
+    def test_events_survive_reopening_a_stable_session_and_are_deleted_with_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "sessions.db"
+            first = SessionManager(db_path)
+            session_id = first.create_session("http", session_id="stable-session")
+            first.log_audit_event(session_id, "approval_requested", {"approval_id": "apr_1"})
+            first.close()
+
+            reopened = SessionManager(db_path)
+            reopened.create_session("http", session_id="stable-session")
+            events = reopened.list_audit_events("stable-session")
+            self.assertEqual(events[0]["event_type"], "approval_requested")
+            self.assertEqual(events[0]["details"]["approval_id"], "apr_1")
+
+            self.assertTrue(reopened.delete_session("stable-session"))
+            self.assertEqual(reopened.list_audit_events("stable-session"), [])
+            reopened.close()
+
+
+class _AuditAgent:
+    def __init__(self):
+        self.limits = []
+
+    def audit_events(self, limit=100):
+        self.limits.append(limit)
+        return [{"event_type": "approval_requested"}]
+
+
+class TestAuditEndpoints(unittest.TestCase):
+    def test_api_and_web_query_the_request_session_audit(self):
+        request = SimpleNamespace(headers={"x-hellochusquis-session": "audit-session"})
+        agent = _AuditAgent()
+        with patch.object(api_main, "_require_agent", return_value=agent) as api_get:
+            api_response = api_main.get_audit_events(request, limit=7)
+        with patch.object(web_server, "_require_agent", return_value=agent) as web_get:
+            web_response = web_server.get_audit_events(request, limit=9)
+
+        api_get.assert_called_once_with(request)
+        web_get.assert_called_once_with(request)
+        self.assertEqual(api_response["events"][0]["event_type"], "approval_requested")
+        self.assertEqual(web_response["events"][0]["event_type"], "approval_requested")
+        self.assertEqual(agent.limits, [7, 9])
+
+
+class TestApprovalAuditEvents(unittest.TestCase):
+    def test_audit_records_redacted_request_decision_and_result(self):
+        agent = Agent.__new__(Agent)
+        agent.require_approval = True
+        agent.approval_manager = ApprovalManager()
+        agent._audited_approval_ids = set()
+        agent._session_id = "audit-session"
+        agent.session_manager = _AuditSessionManager()
+        agent._dispatch_tool = lambda *args, **kwargs: ToolResult(success=True, output="done")
+
+        pending = agent._approval_required_result(
+            "files",
+            {"action": "write", "path": "/tmp/a", "api_key": "top-secret"},
+        )
+        request_id = pending.error.split("Approval required: ", 1)[1].split(".", 1)[0]
+        agent.decide_approval(request_id, approved=True)
+        agent.execute_approved(request_id)
+
+        event_types = [event[1] for event in agent.session_manager.events]
+        self.assertEqual(event_types, ["approval_requested", "approval_decided", "approval_executed"])
+        request_details = agent.session_manager.events[0][2]
+        self.assertEqual(request_details["tool_args"]["api_key"], "[REDACTED]")
+        self.assertNotIn("top-secret", str(request_details))
+        self.assertTrue(agent.session_manager.events[-1][2]["success"])
+
+
+if __name__ == "__main__":
+    unittest.main()

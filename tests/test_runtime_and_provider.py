@@ -77,9 +77,10 @@ class _FakePool:
 
 
 class _FakeAgent:
-    def __init__(self, config, require_approval=False):
+    def __init__(self, config, require_approval=False, session_key=None):
         self.config = config
         self.require_approval = require_approval
+        self.session_key = session_key
         self.pool = _FakePool()
         self.dispose_calls = 0
 
@@ -124,7 +125,9 @@ class TestAgentRuntime(unittest.TestCase):
         beta = runtime.get("beta")
 
         self.assertIsNot(alpha, beta)
-        self.assertIs(alpha, runtime.get("alpha"))
+        self.assertEqual(alpha.session_key, "alpha")
+        self.assertEqual(beta.session_key, "beta")
+        self.assertTrue(alpha.require_approval)
         self.assertEqual(runtime.session_count, 2)
 
     def test_session_cache_evicts_least_recently_used_agent(self):

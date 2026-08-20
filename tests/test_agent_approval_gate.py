@@ -9,11 +9,19 @@ from core.approvals import ApprovalManager
 from tools.base import ToolResult
 
 
+class _AuditSink:
+    def log_audit_event(self, session_id, event_type, details):
+        return 1
+
+
 class TestAgentApprovalGate(unittest.TestCase):
     def _agent(self, require_approval=True):
         agent = Agent.__new__(Agent)
         agent.require_approval = require_approval
         agent.approval_manager = ApprovalManager()
+        agent._audited_approval_ids = set()
+        agent._session_id = "test-session"
+        agent.session_manager = _AuditSink()
         return agent
 
     def test_high_impact_call_is_blocked_before_dispatch(self):

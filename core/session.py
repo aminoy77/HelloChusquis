@@ -8,7 +8,6 @@ Optional: tiktoken for accurate token counts (falls back to char/4 estimation).
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import sqlite3
@@ -19,7 +18,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Sequence
 
 # ---------------------------------------------------------------------------
 # Optional tiktoken import
@@ -171,6 +170,16 @@ CREATE TABLE IF NOT EXISTS compaction_log (
     strategy      TEXT NOT NULL,
     summary       TEXT
 );
+
+CREATE TABLE IF NOT EXISTS audit_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id    TEXT NOT NULL REFERENCES sessions(session_id),
+    timestamp     REAL NOT NULL,
+    event_type    TEXT NOT NULL,
+    details       TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_events_session ON audit_events(session_id, timestamp DESC);
 """
 
 
@@ -228,14 +237,15 @@ class SessionManager:
         context_window: int = DEFAULT_CONTEXT_WINDOW,
         title: str = "",
         extra: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> str:
-        """Create a new session and return its ID."""
-        session_id = _generate_session_id(agent_id)
+        """Create a new session, optionally with a stable caller-supplied ID."""
+        session_id = session_id or _generate_session_id(agent_id)
         now = time.time()
         with self._lock:
             conn = self._ensure_connection()
-            conn.execute(
-                """INSERT INTO sessions
+            cur = conn.execute(
+                """INSERT OR IGNORE INTO sessions
                    (session_id, agent_id, title, created_at, updated_at, status,
                     model, context_window, extra)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -251,6 +261,13 @@ class SessionManager:
                     json.dumps(extra or {}),
                 ),
             )
+            if cur.rowcount == 0:
+                conn.execute(
+                    """UPDATE sessions
+                       SET updated_at = ?, status = ?, model = ?, context_window = ?
+                       WHERE session_id = ?""",
+                    (now, SessionStatus.ACTIVE.value, model, context_window, session_id),
+                )
             conn.commit()
         return session_id
 
@@ -357,6 +374,8 @@ class SessionManager:
         with self._lock:
             conn = self._ensure_connection()
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM compaction_log WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM audit_events WHERE session_id = ?", (session_id,))
             cur = conn.execute(
                 "DELETE FROM sessions WHERE session_id = ?", (session_id,)
             )
@@ -455,6 +474,51 @@ class SessionManager:
             conn = self._ensure_connection()
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
             conn.commit()
+
+    # -- audit log -----------------------------------------------------------
+
+    def log_audit_event(
+        self,
+        session_id: str,
+        event_type: str,
+        details: dict[str, Any] | None = None,
+    ) -> int:
+        """Persist a structured, session-scoped audit event."""
+        now = time.time()
+        with self._lock:
+            conn = self._ensure_connection()
+            cur = conn.execute(
+                """INSERT INTO audit_events (session_id, timestamp, event_type, details)
+                   VALUES (?, ?, ?, ?)""",
+                (session_id, now, event_type, json.dumps(details or {})),
+            )
+            conn.execute(
+                "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
+                (now, session_id),
+            )
+            conn.commit()
+            return cur.lastrowid or 0  # type: ignore[return-value]
+
+    def list_audit_events(self, session_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        """Return recent audit events for one session, newest first."""
+        limit = max(1, min(int(limit), 200))
+        with self._lock:
+            conn = self._ensure_connection()
+            rows = conn.execute(
+                """SELECT id, timestamp, event_type, details
+                   FROM audit_events WHERE session_id = ?
+                   ORDER BY timestamp DESC, id DESC LIMIT ?""",
+                (session_id, limit),
+            ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "timestamp": row["timestamp"],
+                "event_type": row["event_type"],
+                "details": json.loads(row["details"]),
+            }
+            for row in rows
+        ]
 
     # -- compaction log ------------------------------------------------------
 
