@@ -5,6 +5,7 @@ import httpx
 
 
 TERRAFORM_TIMEOUT_SECONDS = 120
+INFRASTRUCTURE_HTTP_TIMEOUT_SECONDS = 30
 
 
 PLUGIN_NAME = "terraform"
@@ -83,7 +84,12 @@ def cloudflare(action: str = "", zone: str = "", record: str = "", value: str = 
     headers = {"Authorization": f"Bearer {token}"}
     
     if action == "list_zones":
-        resp = httpx.get("https://api.cloudflare.com/client/v4/zones", headers=headers)
+        resp = httpx.get(
+            "https://api.cloudflare.com/client/v4/zones",
+            headers=headers,
+            timeout=INFRASTRUCTURE_HTTP_TIMEOUT_SECONDS,
+            follow_redirects=False,
+        )
         if resp.status_code == 200:
             zones = resp.json().get("result", [])
             return "\n".join([f"• {z['name']} ({z['id']})" for z in zones[:10]])
@@ -110,7 +116,12 @@ def vercel(action: str = "", project: str = "", env: str = "") -> str:
     headers = {"Authorization": f"Bearer {token}"}
     
     if action == "list":
-        resp = httpx.get("https://api.vercel.com/v6/deployments", headers=headers)
+        resp = httpx.get(
+            "https://api.vercel.com/v6/deployments",
+            headers=headers,
+            timeout=INFRASTRUCTURE_HTTP_TIMEOUT_SECONDS,
+            follow_redirects=False,
+        )
         if resp.status_code == 200:
             deps = resp.json().get("deployments", [])
             return "\n".join([f"• {d['name']} - {d['state']}" for d in deps[:10]])
