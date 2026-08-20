@@ -98,6 +98,8 @@ def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
 
     if normalized in {"shell", "code"}:
         return "Puede ejecutar código o comandos con efectos fuera del agente."
+    if normalized == "terraform" and action in {"init", "apply", "destroy"}:
+        return f"La operación Terraform '{action}' puede descargar proveedores o modificar infraestructura."
     if normalized == "files" and action in _MUTATING_FILE_ACTIONS:
         return f"La acción de archivos '{action}' modifica el sistema de archivos."
     if normalized == "browser" and action in _MUTATING_BROWSER_ACTIONS:
