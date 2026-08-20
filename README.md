@@ -25,6 +25,7 @@
 - **Bounded Rate Limiting** — per-client request windows cap retained client state at 10,000 entries, reject invalid settings, and clean up without allocating state for read-only limit checks
 - **Protected Administrative Operations** — runtime reloads allow at most 3 requests per minute per client, session-scoped provider updates allow 15, and model discovery allows 30 requests with only 5 forced remote refreshes; excess requests receive a `429` response with a `Retry-After` header
 - **Safe Learning Persistence** — feedback is capped at 10 submissions per minute per client with a 500-character request bound; local learning writes are serialized, atomic, and retained with owner-only file permissions
+- **Safe HTTP Error Contracts** — unavailable runtimes, failed reloads, approval conflicts, and execution failures return stable public messages while detailed diagnostics remain confined to server logs
 - **Offline Integration Contracts** — `doctor --contracts` verifies the import and local entry-point contract of every bundled external integration without calling third-party services
 
 ## Quick Start

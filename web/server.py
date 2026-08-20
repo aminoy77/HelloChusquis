@@ -161,7 +161,8 @@ def _require_agent(http_request: Request | None = None):
         session_id = _session_id(http_request) if http_request is not None else None
         return runtime.get(session_id=session_id)
     except AgentNotReadyError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        logger.warning("Agent runtime requested before ready: %s", exc)
+        raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
 
 
 # Rate limiters: /chat and /models = 30/min, /feedback = 10/min, forced model refresh = 5/min,
@@ -256,7 +257,8 @@ def health_check():
 def readiness_probe():
     readiness = runtime.readiness()
     if not readiness["ready"]:
-        raise HTTPException(status_code=503, detail=readiness.get("error", "No providers ready"))
+        logger.warning("Readiness probe failed: %s", readiness.get("error", "unknown error"))
+        raise HTTPException(status_code=503, detail="No providers are ready")
     providers = readiness["providers"]
     ready = sum(1 for provider in providers if provider["status"] == "ready")
     return {"status": "ok", "ready_providers": ready}
@@ -323,7 +325,7 @@ def chat(req: MessageRequest, http_request: Request):
         )
     except RuntimeError as e:
         logger.error("Chat error: %s", e)
-        response = f"Error: {e}"
+        response = "The request could not be completed. Check server logs."
     finally:
         agent.release_turn()
     return {"response": response, "tool_calls": tool_calls_log}
@@ -444,9 +446,11 @@ def decide_approval(
             },
         }
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        logger.warning("Approval request not found: %s", exc)
+        raise HTTPException(status_code=404, detail="Approval request not found") from exc
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        logger.warning("Approval request cannot be completed: %s", exc)
+        raise HTTPException(status_code=409, detail="Approval request cannot be completed") from exc
 
 
 @app.post("/runtime/reload")
@@ -455,7 +459,8 @@ def reload_runtime(http_request: Request):
     _require_rate_limit(_reload_limiter, http_request, "/runtime/reload")
     cleared_sessions = runtime.session_count
     if not runtime.refresh():
-        raise HTTPException(status_code=503, detail=runtime.error or "Runtime reload failed")
+        logger.error("Runtime reload failed: %s", runtime.error or "unknown error")
+        raise HTTPException(status_code=503, detail="Runtime reload failed")
     return {
         "status": "ok",
         "agent_ready": runtime.is_ready,
