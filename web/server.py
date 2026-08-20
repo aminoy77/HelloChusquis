@@ -275,6 +275,9 @@ def chat(req: MessageRequest, http_request: Request):
         lines = [f"{'✓' if p['status'] == 'ready' else '✗'} {p['name']} — {p['model']}" for p in status]
         return {"response": "\n".join(lines), "tool_calls": []}
 
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
+
     tool_calls_log = []
 
     def record_tool_call(name, args, result):
@@ -295,8 +298,10 @@ def chat(req: MessageRequest, http_request: Request):
     except RuntimeError as e:
         logger.error("Chat error: %s", e)
         response = f"Error: {e}"
-
+    finally:
+        agent.release_turn()
     return {"response": response, "tool_calls": tool_calls_log}
+
 
 
 @app.post("/chat/stream")
@@ -339,6 +344,9 @@ def chat_stream(req: MessageRequest, http_request: Request):
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
+
     def event_gen():
         try:
             for ev in agent.stream_run(user_input, provider=req.provider, model=req.model):
@@ -350,6 +358,8 @@ def chat_stream(req: MessageRequest, http_request: Request):
         except Exception:
             logger.exception("Stream failed")
             yield f"data: {json.dumps({'type': 'error', 'content': 'Stream failed. Check server logs.'})}\n\n"
+        finally:
+            agent.release_turn()
 
     return StreamingResponse(
         event_gen(),

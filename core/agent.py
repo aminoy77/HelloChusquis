@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import threading
 from pathlib import Path
 from typing import Optional
 import core.db_memory as memory
@@ -1016,6 +1017,7 @@ class Agent:
         self.pool = ProviderPool(config=config)
         self.require_approval = require_approval
         self.approval_manager = ApprovalManager()
+        self._turn_lock = threading.Lock()
         self.history = History()
         self._pending_tool_results = []
         self.workspace = WorkspaceManager(config["settings"]["workspace_dirs"])
@@ -1112,6 +1114,15 @@ class Agent:
             "bitbucket": bitbucket_module, "n8n": n8n_module, "pipedream": pipedream_module,
             "retool": retool_module, "workato": workato_module, "make": make_module
         }
+
+    def try_acquire_turn(self) -> bool:
+        """Acquire exclusive ownership of this conversation without waiting."""
+        return self._turn_lock.acquire(blocking=False)
+
+    def release_turn(self) -> None:
+        """Release conversation ownership after a completed or cancelled HTTP turn."""
+        if self._turn_lock.locked():
+            self._turn_lock.release()
 
     def pending_approvals(self) -> list[dict]:
         """Return pending high-impact actions for this agent session only."""

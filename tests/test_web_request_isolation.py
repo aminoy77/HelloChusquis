@@ -19,6 +19,13 @@ class _FakeAgent:
     def __init__(self):
         self.history = _FakeHistory()
         self._dispatch_tool = object()
+        self.turn_releases = 0
+
+    def try_acquire_turn(self):
+        return True
+
+    def release_turn(self):
+        self.turn_releases += 1
 
     def run(self, user_input, provider=None, model=None, tool_result_callback=None):
         if callable(tool_result_callback):
@@ -53,6 +60,7 @@ class TestWebRequestIsolation(unittest.TestCase):
             "output": "workspace contents",
         }])
         self.assertIs(fake_agent._dispatch_tool, original_dispatcher)
+        self.assertEqual(fake_agent.turn_releases, 1)
 
     def test_web_auth_is_enabled_by_default(self):
         self.assertTrue(web_server.AUTH_ENABLED)

@@ -20,6 +20,7 @@
 - **Recoverable HTTP Startup** — API and web servers remain live before setup and expose readiness instead of blocking on prompts
 - **Isolated HTTP Sessions** — each client session receives separate agent context and history, with bounded LRU retention
 - **Human Approval Gate** — HTTP agents stop high-impact actions such as shell execution, file mutation, external writes, MCP calls, and browser submissions until the session owner confirms them
+- **Serialized Session Turns** — a session processes one chat request at a time, preventing concurrent requests from interleaving context or tool state; retry a `409` response after the active turn ends
 - **Offline Integration Contracts** — `doctor --contracts` verifies the import and local entry-point contract of every bundled external integration without calling third-party services
 
 ## Quick Start

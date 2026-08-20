@@ -272,10 +272,12 @@ def chat(request: ChatRequest, http_request: Request):
 
     logger.info("Chat request from %s (stream=%s)", ip, request.stream)
     agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
 
     if request.stream:
         return StreamingResponse(
-            _sse_generator(agent, request.message),
+            _sse_generator(agent, request.message, release_turn=True),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
@@ -288,6 +290,8 @@ def chat(request: ChatRequest, http_request: Request):
     except Exception as e:
         logger.error("Chat error: %s", e)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        agent.release_turn()
 
     return {
         "response": response,
@@ -307,15 +311,17 @@ def chat_stream(request: ChatRequest, http_request: Request):
         )
 
     agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
     return StreamingResponse(
-        _sse_generator(agent, request.message),
+        _sse_generator(agent, request.message, release_turn=True),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
-def _sse_generator(agent, message: str):
-    """Yield one well-formed terminal SSE event for each chat stream."""
+def _sse_generator(agent, message: str, release_turn: bool = False):
+    """Yield one terminal SSE event and optionally release the session turn."""
     terminal_emitted = False
     try:
         for event in agent.stream_run(message):
@@ -328,6 +334,8 @@ def _sse_generator(agent, message: str):
     finally:
         if not terminal_emitted:
             yield f'data: {json.dumps({"type": "done"})}\n\n'
+        if release_turn:
+            agent.release_turn()
 
 
 @app.post("/feedback")
