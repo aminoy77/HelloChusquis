@@ -117,6 +117,8 @@ def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
         return "La carga a Cloudinary puede transferir archivos o datos fuera del agente."
     if normalized == "postgresql" and action == "execute":
         return "La ejecución SQL puede modificar o destruir datos de PostgreSQL."
+    if normalized == "supabase" and action == "run_sql":
+        return "La ejecución SQL de Supabase puede modificar o destruir datos externos."
     if normalized == "postgresql" and action == "query" and _SQL_MUTATING_KEYWORDS.search(str(tool_args.get("sql", ""))):
         return "La consulta SQL contiene una operación que puede modificar datos de PostgreSQL."
     if action.startswith(_MUTATING_PREFIXES):
