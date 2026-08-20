@@ -574,6 +574,14 @@ def run_quick_setup() -> dict:
     return config
 
 
+def _repair_config_permissions(path: Path) -> None:
+    """Repair permissions on a loaded configuration that may contain API keys."""
+    managed_directory = Path.home() / ".hellochusquis"
+    if path.parent == managed_directory:
+        os.chmod(managed_directory, 0o700)
+    os.chmod(path, 0o600)
+
+
 def ensure_config(
     quick: bool = False, full: bool = False, interactive: bool = True
 ) -> dict:
@@ -593,7 +601,8 @@ def ensure_config(
 
     for path in possible_paths:
         if path.exists():
-            with open(path) as f:
+            _repair_config_permissions(path)
+            with open(path, encoding="utf-8") as f:
                 config = yaml.safe_load(f) or {}
             # Actualiza system prompt si es viejo
             if "agent" not in config:

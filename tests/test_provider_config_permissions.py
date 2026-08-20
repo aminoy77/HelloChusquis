@@ -55,6 +55,20 @@ class TestProviderConfigPermissions(unittest.TestCase):
         self.assertFalse((config_dir / "config.yaml").exists())
         self.assertEqual(list(config_dir.glob(".config.*.tmp")), [])
 
+    def test_loading_existing_config_repairs_owner_only_permissions(self):
+        config_dir = self.home / ".hellochusquis"
+        config_dir.mkdir()
+        config_path = config_dir / "config.yaml"
+        config_path.write_text(yaml.dump(self._config()), encoding="utf-8")
+        config_dir.chmod(0o755)
+        config_path.chmod(0o644)
+
+        loaded = setup.ensure_config(interactive=False)
+
+        self.assertEqual(loaded["providers"][0]["api_key"], "top-secret")
+        self.assertEqual(stat.S_IMODE(config_dir.stat().st_mode), 0o700)
+        self.assertEqual(stat.S_IMODE(config_path.stat().st_mode), 0o600)
+
 
 if __name__ == "__main__":
     unittest.main()
