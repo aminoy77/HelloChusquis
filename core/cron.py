@@ -1038,13 +1038,24 @@ class CronDelivery:
         result: CronRunResult,
         message: str,
     ) -> bool:
-        """Deliver to a webhook endpoint via HTTP POST."""
-        import urllib.request
-        import urllib.error
+        """Deliver to a public webhook endpoint without bypassing SSRF controls."""
+        from urllib.parse import urlsplit
+
+        import httpx
+
+        from tools.web_fetch import SsrFBlockedError, validate_url_safety
 
         url = target.webhook_url
         if not url:
             logger.warning("Webhook delivery requested but no URL for job %s", job.id)
+            return False
+        try:
+            parsed = urlsplit(url.strip())
+            if parsed.username is not None or parsed.password is not None:
+                raise ValueError("Webhook URL must not include credentials")
+            url = validate_url_safety(url.strip())
+        except (SsrFBlockedError, ValueError):
+            logger.warning("Blocked unsafe webhook destination for job %s", job.id)
             return False
 
         payload = json.dumps({
@@ -1057,19 +1068,21 @@ class CronDelivery:
             "timestamp": result.timestamp_s,
             "tags": job.tags,
         }).encode("utf-8")
-
-        req = urllib.request.Request(
-            url,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+        if len(payload) > 1_048_576:
+            logger.warning("Webhook payload too large for job %s", job.id)
+            return False
 
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return 200 <= resp.status < 300
-        except (urllib.error.URLError, OSError) as exc:
-            logger.warning("Webhook delivery failed for job %s: %s", job.id, exc)
+            response = httpx.post(
+                url,
+                content=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=10,
+                follow_redirects=False,
+            )
+            return 200 <= response.status_code < 300
+        except httpx.HTTPError:
+            logger.warning("Webhook delivery failed for job %s", job.id)
             return False
 
 
