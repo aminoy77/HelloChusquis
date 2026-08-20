@@ -26,6 +26,14 @@ class TestApprovalClassification(unittest.TestCase):
         self.assertIsNotNone(approval_reason("shell", {"command": "echo hello"}))
         self.assertIsNotNone(approval_reason("github", {"action": "create_issue"}))
 
+    def test_browser_script_injection_needs_approval(self):
+        self.assertIsNotNone(
+            approval_reason("browser", {"action": "execute_script", "script": "return document.cookie"})
+        )
+        self.assertIsNotNone(
+            approval_reason("browser", {"action": "inject_js", "script": "window.example = true"})
+        )
+
 
 class TestApprovalManager(unittest.TestCase):
     def setUp(self):

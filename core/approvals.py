@@ -71,7 +71,13 @@ def redact_sensitive_data(value: Any) -> Any:
 
 
 _MUTATING_FILE_ACTIONS = frozenset({"write", "delete", "create_dir"})
-_MUTATING_BROWSER_ACTIONS = frozenset({"submit_form", "upload_file"})
+_MUTATING_BROWSER_ACTIONS = frozenset({
+    "submit_form",
+    "upload_file",
+    "execute_script",
+    "inject_js",
+    "clear_cookies",
+})
 _MUTATING_PREFIXES = (
     "create", "update", "delete", "remove", "send", "post", "publish",
     "invite", "transfer", "charge", "refund", "purchase", "checkout",
