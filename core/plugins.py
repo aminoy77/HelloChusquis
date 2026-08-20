@@ -16,7 +16,9 @@ import importlib.util
 import json
 import logging
 import os
+import re
 import sys
+import tempfile
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
@@ -33,6 +35,47 @@ PLUGINS_DIR = Path.home() / ".hellochusquis" / "plugins"
 REGISTRY_URL = "https://raw.githubusercontent.com/aminoy77/HelloChusquis-plugins/main/registry.json"
 PLUGIN_MANIFEST_FILENAME = "plugin.json"
 MAX_PLUGIN_MANIFEST_BYTES = 256 * 1024
+_PLUGIN_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
+
+
+def validate_plugin_name(name: str) -> str:
+    """Return a safe Python-module identifier for a plugin file name."""
+    if not isinstance(name, str) or not _PLUGIN_NAME_RE.fullmatch(name):
+        raise ValueError("Plugin name must be 1-64 letters, digits, or underscores and start with a letter")
+    return name
+
+
+def _secure_plugins_dir() -> None:
+    PLUGINS_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(PLUGINS_DIR, 0o700)
+
+
+def write_plugin_code(name: str, plugin_code: str) -> Path:
+    """Atomically install trusted plugin code with owner-only permissions."""
+    safe_name = validate_plugin_name(name)
+    if not isinstance(plugin_code, str):
+        raise ValueError("Plugin code must be text")
+    _secure_plugins_dir()
+    destination = PLUGINS_DIR / f"{safe_name}.py"
+    descriptor, temporary_path = tempfile.mkstemp(
+        prefix=f".{safe_name}.", suffix=".tmp", dir=PLUGINS_DIR
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(plugin_code)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary_path, 0o600)
+        os.replace(temporary_path, destination)
+        os.chmod(destination, 0o600)
+        return destination
+    except Exception:
+        try:
+            os.unlink(temporary_path)
+        except FileNotFoundError:
+            pass
+        raise
+
 
 # Directories to skip during discovery
 _SCANNED_IGNORE = frozenset({
@@ -851,8 +894,8 @@ def _ensure_init() -> tuple[PluginLoader, PluginRegistry, PluginHookSystem, Plug
 # ---------------------------------------------------------------------------
 
 def init() -> None:
-    """Ensure plugin directory exists."""
-    PLUGINS_DIR.mkdir(parents=True, exist_ok=True)
+    """Ensure plugin directory exists with owner-only permissions."""
+    _secure_plugins_dir()
 
 
 def load_plugins() -> list[dict]:
@@ -910,6 +953,11 @@ def load_plugins() -> list[dict]:
 def install_plugin(name: str) -> None:
     """Download and install a plugin from the remote registry."""
     import httpx  # noqa: F811 – lazy import
+    try:
+        name = validate_plugin_name(name)
+    except ValueError as exc:
+        logger.error("Invalid plugin name: %s", exc)
+        return
     init()
 
     try:
@@ -935,8 +983,11 @@ def install_plugin(name: str) -> None:
         logger.error("could not download plugin: %s", exc)
         return
 
-    dest = PLUGINS_DIR / f"{name}.py"
-    dest.write_text(plugin_code)
+    try:
+        dest = write_plugin_code(name, plugin_code)
+    except (OSError, ValueError) as exc:
+        logger.error("could not install plugin '%s': %s", name, exc)
+        return
     logger.info("plugin '%s' installed to %s", name, dest)
 
 
@@ -958,6 +1009,11 @@ def list_plugins() -> None:
 
 def uninstall_plugin(name: str) -> None:
     """Remove a plugin file."""
+    try:
+        name = validate_plugin_name(name)
+    except ValueError:
+        print("✗ Invalid plugin name.")
+        return
     init()
     path = PLUGINS_DIR / f"{name}.py"
     if path.exists():

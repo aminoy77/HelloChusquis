@@ -1,11 +1,10 @@
-import json
 import subprocess
 import sys
 from pathlib import Path
 from rich.console import Console
-from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
-from rich.syntax import Syntax
+
+from core.plugins import validate_plugin_name, write_plugin_code
 
 console = Console()
 PLUGINS_DIR = Path.home() / ".hellochusquis" / "plugins"
@@ -89,7 +88,30 @@ def research_api(topic: str, pool) -> str:
         code = choices[0].get("message", {}).get("content", "") or ""
         code = code.replace("```python", "").replace("```", "").strip()
         return code
-    except Exception as e:
+    except Exception:
+        return ""
+
+
+def generate_plugin_code(topic: str, api_research: str, plugin_name: str, pool) -> str:
+    """Generate a complete plugin implementation when an LLM provider is available."""
+    if pool is None:
+        return ""
+    try:
+        response = pool.chat_with_retry([
+            {"role": "system", "content": BUILDER_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    f"Build a plugin named {plugin_name!r} for: {topic}.\n\n"
+                    f"Research notes:\n{api_research}\n\n"
+                    "Return only complete Python source code."
+                ),
+            },
+        ])
+        choices = response.get("choices", [])
+        code = choices[0].get("message", {}).get("content", "") if choices else ""
+        return code.replace("```python", "").replace("```", "").strip()
+    except Exception:
         return ""
 
 
@@ -122,7 +144,7 @@ else:
 
 def fix_plugin_code(code: str, error: str, pool) -> str:
     """Intenta arreglar el código del plugin con la ayuda del LLM."""
-    console.print(f"  [dim]Attempting to fix plugin code...[/dim]")
+    console.print("  [dim]Attempting to fix plugin code...[/dim]")
     try:
         response = pool.chat_with_retry([
             {"role": "system", "content": BUILDER_SYSTEM_PROMPT},
@@ -141,13 +163,13 @@ def fix_plugin_code(code: str, error: str, pool) -> str:
         fixed_code = choices[0].get("message", {}).get("content", "") if choices else ""
         fixed_code = fixed_code.replace("```python", "").replace("```", "").strip()
         return fixed_code
-    except Exception as e:
+    except Exception:
         return ""
 
 
 def build_plugin(topic: str, plugin_name: str, pool) -> str:
-    """Flujo completo para construir un plugin."""
-    PLUGINS_DIR.mkdir(parents=True, exist_ok=True)
+    """Build a plugin through a validated, owner-only plugin path."""
+    plugin_name = validate_plugin_name(plugin_name)
     plugin_path = PLUGINS_DIR / f"{plugin_name}.py"
 
     console.print(Panel(f"[bold green]Building new plugin: {plugin_name}[/bold green]", expand=False))
@@ -163,7 +185,7 @@ Key endpoints:
 - GET /items - List items
 - POST /items - Create item
 """
-    console.print(f"  [dim]API Research complete.[/dim]")
+    console.print("  [dim]API Research complete.[/dim]")
 
     # 2. Generación de código
     plugin_code = generate_plugin_code(topic, api_research, plugin_name, pool)
@@ -175,7 +197,7 @@ Key endpoints:
     attempts = 0
     max_attempts = 3
     while attempts < max_attempts:
-        plugin_path.write_text(plugin_code)
+        plugin_path = write_plugin_code(plugin_name, plugin_code)
         console.print(f"  [dim]Plugin code saved to {plugin_path}. Testing...[/dim]")
         is_valid, test_output = test_plugin(plugin_path)
 

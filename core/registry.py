@@ -1,8 +1,9 @@
-import json
 import asyncio
-import httpx
 from pathlib import Path
-from typing import Any
+
+import httpx
+
+from core.plugins import validate_plugin_name, write_plugin_code
 
 
 class PluginRegistry:
@@ -34,7 +35,11 @@ class PluginRegistry:
             return {}
 
     def install(self, name: str) -> str:
-        """Install plugin from registry."""
+        """Install a plugin from the registry through a validated local path."""
+        try:
+            name = validate_plugin_name(name)
+        except ValueError:
+            return "Invalid plugin name"
         if name in self.local:
             return f"{name} already installed"
 
@@ -47,9 +52,7 @@ class PluginRegistry:
                 async with httpx.AsyncClient() as client:
                     r = await client.get(url, timeout=30)
                     code = r.text
-                    path = self.PLUGINS_DIR / f"{name}.py"
-                    path.write_text(code)
-                    return path
+                    return write_plugin_code(name, code)
 
             path = asyncio.run(install_async())
             self.local[name] = str(path)
@@ -58,7 +61,11 @@ class PluginRegistry:
             return f"Failed to install: {e}"
 
     def uninstall(self, name: str) -> str:
-        """Uninstall plugin."""
+        """Uninstall a plugin identified by a safe local module name."""
+        try:
+            name = validate_plugin_name(name)
+        except ValueError:
+            return "Invalid plugin name"
         if name not in self.local:
             return f"{name} not installed"
 
