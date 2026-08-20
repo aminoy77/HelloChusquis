@@ -31,7 +31,7 @@ class SmartCache:
 
     def _make_key(self, *args, **kwargs) -> str:
         data = str(args) + str(sorted(kwargs.items()))
-        return hashlib.md5(data.encode()).hexdigest()
+        return hashlib.sha256(data.encode()).hexdigest()
 
     def get(self, key: str) -> Any | None:
         entry = self._cache.get(key)
