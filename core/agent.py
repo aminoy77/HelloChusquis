@@ -1088,6 +1088,8 @@ class Agent:
             model=config.get("model", "default"),
             session_id=storage_session_id,
         )
+        if self._persistent_session:
+            self._restore_persisted_history()
 
         # Voice/TTS
         try:
@@ -1128,6 +1130,14 @@ class Agent:
             "bitbucket": bitbucket_module, "n8n": n8n_module, "pipedream": pipedream_module,
             "retool": retool_module, "workato": workato_module, "make": make_module
         }
+
+    def _restore_persisted_history(self) -> None:
+        """Restore a bounded recent context for a stable HTTP session."""
+        for message in self.session_manager.get_recent_history(self._session_id, limit=100):
+            role = message.get("role", "")
+            content = message.get("content", "")
+            if role in {"user", "assistant", "tool", "system"} and isinstance(content, str):
+                self.history.add(role, content)
 
     def try_acquire_turn(self) -> bool:
         """Acquire exclusive ownership of this conversation without waiting."""

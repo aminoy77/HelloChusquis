@@ -7,6 +7,7 @@ import unittest
 from api import main as api_main
 from core.agent import Agent
 from core.approvals import ApprovalManager
+from core.history import History
 from core.session import SessionManager
 from tools.base import ToolResult
 from types import SimpleNamespace
@@ -65,6 +66,42 @@ class TestAuditEndpoints(unittest.TestCase):
         self.assertEqual(api_response["events"][0]["event_type"], "approval_requested")
         self.assertEqual(web_response["events"][0]["event_type"], "approval_requested")
         self.assertEqual(agent.limits, [7, 9])
+
+
+class TestHistoryRecovery(unittest.TestCase):
+    def test_session_manager_returns_recent_messages_in_chronological_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = SessionManager(Path(directory) / "sessions.db")
+            session_id = manager.create_session("http", session_id="history-session")
+            for index in range(5):
+                manager.append_message(session_id, "user", f"message-{index}")
+
+            recent = manager.get_recent_history(session_id, limit=2)
+            self.assertEqual([item["content"] for item in recent], ["message-3", "message-4"])
+            manager.close()
+
+    def test_agent_restores_only_valid_persisted_message_roles(self):
+        class _HistorySource:
+            def get_recent_history(self, session_id, limit=100):
+                return [
+                    {"role": "user", "content": "remember this"},
+                    {"role": "assistant", "content": "restored"},
+                    {"role": "invalid", "content": "skip"},
+                ]
+
+        agent = Agent.__new__(Agent)
+        agent.history = History()
+        agent.session_manager = _HistorySource()
+        agent._session_id = "history-session"
+        agent._restore_persisted_history()
+
+        self.assertEqual(
+            agent.history.get(),
+            [
+                {"role": "user", "content": "remember this"},
+                {"role": "assistant", "content": "restored"},
+            ],
+        )
 
 
 class TestApprovalAuditEvents(unittest.TestCase):

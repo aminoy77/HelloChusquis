@@ -450,6 +450,31 @@ class SessionManager:
             for r in rows
         ]
 
+    def get_recent_history(self, session_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        """Return the most recent messages in chronological order."""
+        limit = max(1, min(int(limit), 500))
+        with self._lock:
+            conn = self._ensure_connection()
+            rows = conn.execute(
+                """SELECT * FROM (
+                       SELECT * FROM messages WHERE session_id = ?
+                       ORDER BY timestamp DESC, id DESC LIMIT ?
+                   ) ORDER BY timestamp ASC, id ASC""",
+                (session_id, limit),
+            ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "role": row["role"],
+                "content": row["content"],
+                "timestamp": row["timestamp"],
+                "token_count": row["token_count"],
+                "priority": row["priority"],
+                "metadata": json.loads(row["metadata"]),
+            }
+            for row in rows
+        ]
+
     def get_history_tokens(self, session_id: str) -> int:
         """Return total token count across all messages in *session_id*."""
         with self._lock:
