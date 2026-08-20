@@ -115,6 +115,8 @@ def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
         return "Una llamada MCP puede ejecutar una acción externa no reversible."
     if normalized == "cloudinary" and action == "upload":
         return "La carga a Cloudinary puede transferir archivos o datos fuera del agente."
+    if normalized == "algolia" and action == "add_object":
+        return "La creación de un objeto Algolia puede modificar un índice externo."
     if normalized == "postgresql" and action == "execute":
         return "La ejecución SQL puede modificar o destruir datos de PostgreSQL."
     if normalized == "supabase" and action == "run_sql":
