@@ -1265,8 +1265,8 @@ class Agent:
                 safety_check = evaluate_command_safety(cmd, self.pool)
                 if not safety_check.get("safe", True):
                     risk_msg = safety_check.get("reason", "Potentially unsafe command detected.")
-                    logger.warning("Blocked unsafe command: %s — %s", cmd, risk_msg)
-                    console.print(f"[bold red]⛔ Blocked unsafe command:[/bold red] {cmd}")
+                    logger.warning("Blocked unsafe command: %s", risk_msg)
+                    console.print("[bold red]⛔ Blocked unsafe command.[/bold red]")
                     console.print(f"[dim]{risk_msg}[/dim]")
                     return ToolResult(success=False, output="", error=f"Safety check failed: {risk_msg}")
             return self.shell.run(**args)
@@ -1606,8 +1606,13 @@ class Agent:
                 except json.JSONDecodeError:
                     tool_args = {}
 
-                print_tool_call(tool_name, tool_args)
-                logger.info("Tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
+                safe_tool_args = redact_sensitive_data(tool_args)
+                print_tool_call(tool_name, safe_tool_args)
+                logger.info(
+                    "Tool call: %s(%s)",
+                    tool_name,
+                    json.dumps(safe_tool_args, default=str)[:200],
+                )
 
                 # --- ToolPolicy enforcement ---
                 if not self.tool_policy.is_tool_allowed(tool_name):
@@ -1728,14 +1733,19 @@ class Agent:
                     tool_args = {}
 
                 # Yield tool call status event
+                safe_tool_args = redact_sensitive_data(tool_args)
                 yield {
                     "type": "tool_call",
                     "tool": tool_name,
-                    "args": tool_args,
+                    "args": safe_tool_args,
                 }
+                print_tool_call(tool_name, safe_tool_args)
+                logger.info(
+                    "Stream tool call: %s(%s)",
+                    tool_name,
+                    json.dumps(safe_tool_args, default=str)[:200],
+                )
 
-                print_tool_call(tool_name, tool_args)
-                logger.info("Stream tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
 
                 # --- ToolPolicy enforcement ---
                 if not self.tool_policy.is_tool_allowed(tool_name):

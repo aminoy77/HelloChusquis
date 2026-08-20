@@ -19,32 +19,24 @@ import json
 import logging
 import os
 import re
-import secrets
 import shlex
-import signal
 import subprocess
 import sys
 import tempfile
 import time
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from pathlib import Path
 from typing import (
     Any,
-    Callable,
     Dict,
     FrozenSet,
     Iterable,
     List,
     Mapping,
     Optional,
-    Protocol,
     Sequence,
     Set,
     Tuple,
-    TypeVar,
-    Union,
-    runtime_checkable,
 )
 
 logger = logging.getLogger(__name__)
@@ -931,8 +923,6 @@ class ToolLoopDetector:
 
         # Check if all have the same result hash (identical outcomes = no progress)
         result_hashes = [r.result_hash for r in matching if r.result_hash is not None]
-        no_progress_flags = [r.no_progress for r in matching]
-
         # If any call made progress (different result hash), streak breaks
         if result_hashes:
             unique_hashes = set(result_hashes)
@@ -1299,7 +1289,7 @@ class DangerousToolDetector:
             findings.append(SecurityAuditFinding(
                 check_id=f"dangerous.combo.{sorted(matched_tools)}",
                 severity=severity,
-                title=f"Dangerous tool combination detected",
+                title="Dangerous tool combination detected",
                 detail=f"Tools {sorted(matched_tools)} together: {reason}",
                 remediation="Remove one or more tools from the combination, or ensure "
                             "strict approval workflows and sandbox isolation.",
@@ -1361,7 +1351,7 @@ class ToolSandbox:
             return SandboxResult(
                 exit_code=126,
                 stdout="",
-                stderr=f"Command denied by sandbox policy: {command}",
+                stderr="Command denied by sandbox policy.",
             )
 
         # Build environment
@@ -1387,9 +1377,6 @@ class ToolSandbox:
         if effective_cwd:
             kwargs["cwd"] = effective_cwd
 
-        timed_out = False
-        killed = False
-
         try:
             proc = subprocess.run(**kwargs)
             stdout = proc.stdout.decode("utf-8", errors="replace") if proc.stdout else ""
@@ -1408,10 +1395,9 @@ class ToolSandbox:
             )
 
         except subprocess.TimeoutExpired as exc:
-            timed_out = True
             stdout = exc.stdout.decode("utf-8", errors="replace") if exc.stdout else ""
             stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else ""
-            logger.warning("Sandbox command timed out after %.1fs: %s", effective_timeout, command)
+            logger.warning("Sandbox command timed out after %.1fs", effective_timeout)
             return SandboxResult(
                 exit_code=-1,
                 stdout=stdout,
