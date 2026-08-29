@@ -8,8 +8,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-import boto3
-from botocore.config import Config
+from tools.optional_deps import require
 
 
 _REGION_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?")
@@ -52,6 +51,8 @@ def _client(api_key: str, secret_key: str, region: str):
     if not access_key or not secret:
         raise ValueError("DigitalOcean Spaces access key ID and secret access key are required.")
     clean_region = _region(region)
+    boto3 = require("boto3")
+    Config = require("botocore.config").Config
     return boto3.client(
         "s3",
         endpoint_url=f"https://{clean_region}.digitaloceanspaces.com",

@@ -7,8 +7,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-import boto3
-from botocore.config import Config
+from tools.optional_deps import require
 
 
 _ACCOUNT_ID_RE = re.compile(r"[a-f0-9]{32}")
@@ -59,6 +58,8 @@ def _client(account_id: str, access_key: str, secret_key: str):
     clean_account_id = _account_id(account_id)
     if not access_key or not secret_key:
         raise ValueError("R2 access key ID and secret access key are required.")
+    boto3 = require("boto3")
+    Config = require("botocore.config").Config
     return boto3.client(
         "s3",
         endpoint_url=f"https://{clean_account_id}.r2.cloudflarestorage.com",
