@@ -7,6 +7,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from core.identity import legacy_owner
 from core.provider import ProviderPool
 from web import server as web_server
 
@@ -54,7 +55,10 @@ class _Agent:
 
 class TestProviderSessionScope(unittest.TestCase):
     def setUp(self):
-        self.request = SimpleNamespace(headers={"x-hellochusquis-session": "session-a"})
+        self.request = SimpleNamespace(
+            headers={"x-hellochusquis-session": "session-a"},
+            state=SimpleNamespace(principal=legacy_owner()),
+        )
         self.agent = _Agent()
 
     def test_models_resolve_the_request_session_agent(self):

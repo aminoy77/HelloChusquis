@@ -8,7 +8,7 @@ import socket
 # Add project to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "version", "help"}
+KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "users", "version", "help"}
 
 
 def pick_free_port(host="127.0.0.1"):
@@ -37,6 +37,50 @@ def _print_contract_summary() -> int:
     return 0 if summary["failed"] == 0 else 1
 
 
+def _run_users_command(subcommand: str, arguments: list[str], role: str) -> int:
+    """Manage the principals that may authenticate against the HTTP surfaces."""
+    from core.identity import IdentityError, default_store, parse_role
+
+    store = default_store()
+    if subcommand in ("", "list"):
+        principals = store.list_principals()
+        if not principals:
+            print("No users yet. Create one with: hellochusquis users add <name> --role operator")
+            return 0
+        for principal in principals:
+            state = "active" if principal.is_active else f"revoked {principal.revoked_at}"
+            print(f"{principal.name:<24} {principal.role.value:<9} {principal.id}  {state}")
+        return 0
+
+    if subcommand == "add":
+        if not arguments:
+            print("Usage: hellochusquis users add <name> [--role viewer|operator|owner]")
+            return 1
+        try:
+            principal, token = store.create(arguments[0], parse_role(role))
+        except IdentityError as exc:
+            print(f"Error: {exc}")
+            return 1
+        print(f"Created {principal.name} ({principal.role.value}).")
+        print(f"Token (shown once, store it now): {token}")
+        return 0
+
+    if subcommand == "revoke":
+        if not arguments:
+            print("Usage: hellochusquis users revoke <name>")
+            return 1
+        try:
+            principal = store.revoke(arguments[0])
+        except IdentityError as exc:
+            print(f"Error: {exc}")
+            return 1
+        print(f"Revoked {principal.name}.")
+        return 0
+
+    print(f"Unknown users subcommand '{subcommand}'. Try: list, add, revoke.")
+    return 1
+
+
 def _print_help():
     """Print CLI usage summary."""
     print("""HelloChusquis — autonomous terminal AI agent
@@ -49,6 +93,9 @@ Usage:
   hellochusquis setup            Run setup wizard
   hellochusquis status           Show local readiness summary
   hellochusquis doctor           Check providers & dependencies
+  hellochusquis users list       List HTTP users and their roles
+  hellochusquis users add NAME   Create a user and print its token once
+  hellochusquis users revoke NAME  Revoke a user's token
   hellochusquis version          Show version
   hellochusquis help             Show this help
 
@@ -61,6 +108,7 @@ Flags:
   --port PORT        Port for web/api (default: 8080 api / 7272 web)
   --host HOST        Host for web/api (default: 127.0.0.1)
   --contracts        Verify bundled integration contracts offline (with doctor)
+  --role ROLE        Role for 'users add': viewer, operator or owner (default: operator)
 
 Examples:
   hellochusquis setup --quick       Quick first-time setup
@@ -83,6 +131,7 @@ def main():
     parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 7272 web)")
     parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 127.0.0.1)")
     parser.add_argument("--contracts", action="store_true", help="Verify integration contracts offline (with doctor)")
+    parser.add_argument("--role", type=str, default="operator", help="Role for 'users add' (viewer, operator, owner)")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
     args = parser.parse_args()
 
@@ -181,6 +230,10 @@ def main():
         if args.contracts:
             _print_contract_summary()
         return
+
+    if args.command == "users":
+        subcommand = args.args[0] if args.args else "list"
+        sys.exit(_run_users_command(subcommand, args.args[1:], args.role))
 
     if args.command == "web":
         from web.server import start

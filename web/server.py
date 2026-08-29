@@ -11,12 +11,12 @@ from starlette.responses import JSONResponse
 from starlette.responses import StreamingResponse
 import uvicorn
 import json
-import hmac
 import re
 import secrets
 from pathlib import Path
 from typing import Literal
 
+from core.identity import Permission, Principal, authenticate_bearer, legacy_owner
 from core.provider import validate_provider_base_url
 from core.runtime import AgentNotReadyError, AgentRuntime
 from core.version import __version__
@@ -83,9 +83,37 @@ def _public_auth_hint() -> str:
     return "Configured in local HelloChusquis settings."
 
 
-def _verify_token(token: str) -> bool:
-    """Constant-time token comparison to prevent timing attacks."""
-    return hmac.compare_digest(token, REQUIRED_API_KEY)
+def authenticate(token: str) -> Principal | None:
+    """Resolve a bearer token to a principal, or ``None`` when unknown."""
+    return authenticate_bearer(token, REQUIRED_API_KEY)
+
+
+def current_principal(request: Request) -> Principal:
+    """Return the principal attached by the auth middleware.
+
+    With authentication explicitly disabled for local development every caller
+    is the owner, matching the pre-identity behaviour of that override.
+    """
+    principal = getattr(getattr(request, "state", None), "principal", None)
+    if principal is None:
+        if not AUTH_ENABLED:
+            return legacy_owner()
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return principal
+
+
+def require_permission(request: Request, permission: Permission) -> Principal:
+    """Authorize the caller for one operation, or fail with 403."""
+    principal = current_principal(request)
+    if not principal.has(permission):
+        logger.warning(
+            "Denied %s for %s (role=%s)", permission.value, principal.name, principal.role.value
+        )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Role '{principal.role.value}' is not allowed to perform this operation",
+        )
+    return principal
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -120,11 +148,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Missing or invalid Authorization header"},
             )
         token = auth_header[7:]  # strip "Bearer "
-        if not _verify_token(token):
+        principal = authenticate(token)
+        if principal is None:
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid API key"},
             )
+        request.state.principal = principal
         return await call_next(request)
 
 
@@ -172,9 +202,13 @@ def _session_id(request: Request) -> str:
 
 def _require_agent(http_request: Request | None = None):
     try:
-        session_id = _session_id(http_request) if http_request is not None else None
-        scoped_session_id = f"web:{session_id}" if session_id is not None else None
-        return runtime.get(session_id=scoped_session_id)
+        if http_request is None:
+            return runtime.get()
+        principal = current_principal(http_request)
+        # Namespacing the session by principal makes another identity's session
+        # id resolve to a new empty session instead of somebody else's context.
+        scoped_session_id = f"web:{principal.id}:{_session_id(http_request)}"
+        return runtime.get(session_id=scoped_session_id, role=principal.role)
     except AgentNotReadyError as exc:
         logger.warning("Agent runtime requested before ready: %s", exc)
         raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
@@ -287,8 +321,9 @@ def auth_verify(req: MessageRequest, http_request: Request):
             detail="Too many verification attempts",
             headers={"Retry-After": str(retry_after)},
         )
-    if _verify_token(req.message):
-        return {"status": "ok"}
+    principal = authenticate(req.message)
+    if principal is not None:
+        return {"status": "ok", "role": principal.role.value, "name": principal.name}
     raise HTTPException(status_code=401, detail="Invalid API key")
 
 
@@ -323,6 +358,7 @@ def liveness_probe():
 
 @app.post("/chat")
 def chat(req: MessageRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     ip = http_request.client.host if http_request.client else "unknown"
     if not _chat_limiter.is_allowed(ip):
         retry = _chat_limiter.get_retry_after(ip)
@@ -392,6 +428,7 @@ def chat(req: MessageRequest, http_request: Request):
 @app.post("/chat/stream")
 def chat_stream(req: MessageRequest, http_request: Request):
     """SSE streaming endpoint. Same contract as /chat but yields chunks."""
+    require_permission(http_request, Permission.CHAT)
     ip = http_request.client.host if http_request.client else "unknown"
     if not _chat_limiter.is_allowed(ip):
         retry = _chat_limiter.get_retry_after(ip)
@@ -461,6 +498,7 @@ def chat_stream(req: MessageRequest, http_request: Request):
 @app.post("/feedback")
 def feedback(req: FeedbackRequest, http_request: Request):
     """Accept bounded feedback from authenticated frontend clients."""
+    require_permission(http_request, Permission.CHAT)
     _require_rate_limit(_feedback_limiter, http_request, "/feedback")
     add_feedback(req.type, req.context)
     return {"status": "ok"}
@@ -469,6 +507,7 @@ def feedback(req: FeedbackRequest, http_request: Request):
 @app.post("/clear")
 def clear_history(http_request: Request):
     """Clear the requesting session's in-memory and persistent history."""
+    require_permission(http_request, Permission.CHAT)
     agent = _require_agent(http_request)
     if not agent.try_acquire_turn():
         raise HTTPException(status_code=409, detail="This conversation is already processing another request")
@@ -482,12 +521,14 @@ def clear_history(http_request: Request):
 @app.get("/approvals")
 def list_approvals(http_request: Request):
     """List pending high-impact actions for the authenticated client session."""
+    require_permission(http_request, Permission.READ_STATE)
     return {"approvals": _require_agent(http_request).pending_approvals()}
 
 
 @app.get("/audit")
 def get_audit_events(http_request: Request, limit: int = 100):
     """Return redacted approval events for the requesting session only."""
+    require_permission(http_request, Permission.READ_STATE)
     return {"events": _require_agent(http_request).audit_events(limit=limit)}
 
 
@@ -498,6 +539,7 @@ def decide_approval(
     http_request: Request,
 ):
     """Approve or reject one pending action and execute only after approval."""
+    require_permission(http_request, Permission.APPROVE)
     agent = _require_agent(http_request)
     if not agent.try_acquire_turn():
         raise HTTPException(status_code=409, detail="This conversation is already processing another request")
@@ -528,6 +570,7 @@ def decide_approval(
 @app.post("/runtime/reload")
 def reload_runtime(http_request: Request):
     """Reload provider configuration and clear cached HTTP sessions."""
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
     _require_rate_limit(_reload_limiter, http_request, "/runtime/reload")
     cleared_sessions = runtime.session_count
     if not runtime.refresh():
@@ -623,6 +666,7 @@ class ProviderUpdate(BaseModel):
 @app.post("/update-provider")
 def update_provider(data: ProviderUpdate, http_request: Request):
     """Update provider configuration for the requesting in-memory session only."""
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
     _require_rate_limit(_provider_update_limiter, http_request, "/update-provider")
     agent = _require_agent(http_request)
     # Validate provider name exists
