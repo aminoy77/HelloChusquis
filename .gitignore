@@ -21,3 +21,6 @@ analysis_options.yaml
 study_flow.iml
 .idea/
 .cli.py
+# Local virtualenvs
+.venv/
+venv/

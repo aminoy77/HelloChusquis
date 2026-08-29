@@ -2,7 +2,7 @@
 
 **HelloChusquis** is an AI terminal agent with a full-screen TUI, web search, file management, code execution, and multiple AI integrations. 
 
-![HelloChusquis Demo](demo.gif)
+![HelloChusquis](hc.png)
 
 ## What's New in v5.0
 
@@ -37,6 +37,15 @@
 ```bash
 pip install hellochusquis
 hellochusquis
+```
+
+Optional extras install the SDKs that only some integrations need:
+
+```bash
+pip install 'hellochusquis[aws]'    # S3, Cloudflare R2, DigitalOcean Spaces, Wasabi
+pip install 'hellochusquis[voice]'  # speech-to-text tool
+pip install 'hellochusquis[watch]'  # filesystem watching
+pip install 'hellochusquis[dev]'    # pytest + ruff
 ```
 
 ## Web Interface
@@ -176,9 +185,13 @@ python -m unittest discover tests/
 python -m pytest tests/
 ```
 
+The suite runs on a bare install: no optional extra is required to collect or pass it. CI runs
+ruff plus the suite on Python 3.10, 3.11 and 3.12, and verifies the offline integration contracts.
+
 ## Documentation
 
 - [README](README.md) - This file
+- [CHANGELOG](CHANGELOG.md) - Release history
 - [docs/index.html](docs/index.html) - Web interface
 
 ## License
