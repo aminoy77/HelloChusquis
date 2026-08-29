@@ -18,6 +18,15 @@ All notable changes to HelloChusquis. Older per-release notes previously lived i
   "install `hellochusquis[aws]`" style error.
 
 ### Added
+- Multi-user identity: named principals with `viewer`/`operator`/`owner` roles, tokens stored
+  only as hashes in `~/.hellochusquis/identity.db`, revocation, and `hellochusquis users
+  add|list|revoke`. The deployment-wide `HELLOCHUSQUIS_API_KEY` keeps working as an owner token.
+- Owner-only `/users` endpoints on the REST API, and role checks on every authenticated
+  API and web route.
+- Authorization at tool dispatch: a viewer cannot reach a mutating tool even via the model, and
+  approved actions are re-checked against the caller's current role before execution.
+- HTTP conversation sessions are scoped to their principal, so the same session header from two
+  users no longer shares agent state.
 - Optional install extras: `aws`, `voice`, `watch`, `dev`.
 - GitHub Actions CI: ruff lint, unit tests on Python 3.10/3.11/3.12, an import smoke check of
   every bundled module, and the offline `doctor --contracts` diagnostic.

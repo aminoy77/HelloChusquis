@@ -8,6 +8,7 @@ from api import main as api_main
 from core.agent import Agent
 from core.approvals import ApprovalManager
 from core.history import History
+from core.identity import legacy_owner
 from core.session import SessionManager
 from tools.base import ToolResult
 from types import SimpleNamespace
@@ -54,7 +55,10 @@ class _AuditAgent:
 
 class TestAuditEndpoints(unittest.TestCase):
     def test_api_and_web_query_the_request_session_audit(self):
-        request = SimpleNamespace(headers={"x-hellochusquis-session": "audit-session"})
+        request = SimpleNamespace(
+            headers={"x-hellochusquis-session": "audit-session"},
+            state=SimpleNamespace(principal=legacy_owner()),
+        )
         agent = _AuditAgent()
         with patch.object(api_main, "_require_agent", return_value=agent) as api_get:
             api_response = api_main.get_audit_events(request, limit=7)

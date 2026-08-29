@@ -6,12 +6,19 @@ from pydantic import BaseModel, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 import uvicorn
-import hmac
 import secrets
 import os
 import json
 import re
 from pathlib import Path
+from core.identity import (
+    IdentityError,
+    Permission,
+    Principal,
+    authenticate_bearer,
+    default_store,
+    parse_role,
+)
 from core.runtime import AgentNotReadyError, AgentRuntime
 from core.http_limits import RequestBodyLimitMiddleware
 from core.rate_limiter import RateLimiter
@@ -48,9 +55,31 @@ REQUIRED_API_KEY = _load_or_generate_api_key()
 AUTH_ENABLED = True  # Always enabled
 
 
-def _verify_token(token: str) -> bool:
-    """Constant-time token comparison to prevent timing attacks."""
-    return hmac.compare_digest(token, REQUIRED_API_KEY)
+def authenticate(token: str) -> Principal | None:
+    """Resolve a bearer token to a principal, or ``None`` when unknown."""
+    return authenticate_bearer(token, REQUIRED_API_KEY)
+
+
+def current_principal(request: Request) -> Principal:
+    """Return the principal attached by the auth middleware."""
+    principal = getattr(getattr(request, "state", None), "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return principal
+
+
+def require_permission(request: Request, permission: Permission) -> Principal:
+    """Authorize the caller for one operation, or fail with 403."""
+    principal = current_principal(request)
+    if not principal.has(permission):
+        logger.warning(
+            "Denied %s for %s (role=%s)", permission.value, principal.name, principal.role.value
+        )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Role '{principal.role.value}' is not allowed to perform this operation",
+        )
+    return principal
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -73,11 +102,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Missing or invalid Authorization header"},
             )
         token = auth_header[7:]  # strip "Bearer "
-        if not _verify_token(token):
+        principal = authenticate(token)
+        if principal is None:
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid API key"},
             )
+        request.state.principal = principal
         return await call_next(request)
 
 
@@ -102,6 +133,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 _chat_limiter = RateLimiter(requests_per_minute=30)
 _feedback_limiter = RateLimiter(requests_per_minute=10)
 _reload_limiter = RateLimiter(requests_per_minute=3)
+_users_limiter = RateLimiter(requests_per_minute=10)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -145,9 +177,13 @@ def _session_id(request: Request) -> str:
 
 def _require_agent(http_request: Request | None = None):
     try:
-        session_id = _session_id(http_request) if http_request is not None else None
-        scoped_session_id = f"api:{session_id}" if session_id is not None else None
-        return runtime.get(session_id=scoped_session_id)
+        if http_request is None:
+            return runtime.get()
+        principal = current_principal(http_request)
+        # Namespacing the session by principal makes another identity's session
+        # id resolve to a new empty session instead of somebody else's context.
+        scoped_session_id = f"api:{principal.id}:{_session_id(http_request)}"
+        return runtime.get(session_id=scoped_session_id, role=principal.role)
     except AgentNotReadyError as exc:
         logger.warning("Agent runtime requested before ready: %s", exc)
         raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
@@ -183,6 +219,11 @@ class FeedbackRequest(BaseModel):
 
 class ApprovalDecisionRequest(BaseModel):
     approve: bool
+
+
+class CreateUserRequest(BaseModel):
+    name: str
+    role: str = "operator"
 
 
 @app.get("/")
@@ -242,6 +283,7 @@ def get_status():
 @app.get("/approvals")
 def list_approvals(http_request: Request):
     """List pending high-impact actions for the authenticated client session."""
+    require_permission(http_request, Permission.READ_STATE)
     return {"approvals": _require_agent(http_request).pending_approvals()}
 
 
@@ -252,6 +294,7 @@ def decide_approval(
     http_request: Request,
 ):
     """Approve or reject one pending action and execute only after approval."""
+    require_permission(http_request, Permission.APPROVE)
     agent = _require_agent(http_request)
     if not agent.try_acquire_turn():
         raise HTTPException(status_code=409, detail="This conversation is already processing another request")
@@ -282,6 +325,7 @@ def decide_approval(
 @app.post("/runtime/reload")
 def reload_runtime(http_request: Request):
     """Reload provider configuration and clear cached HTTP sessions."""
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
     _require_administrative_rate_limit(_reload_limiter, http_request, "/runtime/reload")
     cleared_sessions = runtime.session_count
     if not runtime.refresh():
@@ -297,6 +341,7 @@ def reload_runtime(http_request: Request):
 
 @app.post("/chat")
 def chat(request: ChatRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     ip = _get_client_ip(http_request)
     if not _chat_limiter.is_allowed(ip):
         retry = _chat_limiter.get_retry_after(ip)
@@ -338,6 +383,7 @@ def chat(request: ChatRequest, http_request: Request):
 
 @app.post("/chat/stream")
 def chat_stream(request: ChatRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     ip = _get_client_ip(http_request)
     if not _chat_limiter.is_allowed(ip):
         retry = _chat_limiter.get_retry_after(ip)
@@ -377,6 +423,7 @@ def _sse_generator(agent, message: str, release_turn: bool = False):
 
 @app.post("/feedback")
 def feedback(request: FeedbackRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     ip = _get_client_ip(http_request)
     if not _feedback_limiter.is_allowed(ip):
         retry = _feedback_limiter.get_retry_after(ip)
@@ -393,6 +440,7 @@ def feedback(request: FeedbackRequest, http_request: Request):
 
 @app.post("/clear")
 def clear_history(http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     agent = _require_agent(http_request)
     if not agent.try_acquire_turn():
         raise HTTPException(status_code=409, detail="This conversation is already processing another request")
@@ -405,13 +453,47 @@ def clear_history(http_request: Request):
 
 @app.get("/history")
 def get_history(http_request: Request):
+    require_permission(http_request, Permission.READ_STATE)
     return {"messages": _require_agent(http_request).history.get()}
 
 
 @app.get("/audit")
 def get_audit_events(http_request: Request, limit: int = 100):
     """Return redacted approval events recorded for the requesting session."""
+    require_permission(http_request, Permission.READ_STATE)
     return {"events": _require_agent(http_request).audit_events(limit=limit)}
+
+
+@app.get("/users")
+def list_users(http_request: Request):
+    """List principals without exposing any secret material."""
+    require_permission(http_request, Permission.MANAGE_USERS)
+    return {"users": [principal.public_view() for principal in default_store().list_principals()]}
+
+
+@app.post("/users")
+def create_user(request: CreateUserRequest, http_request: Request):
+    """Create a principal and return its token exactly once."""
+    require_permission(http_request, Permission.MANAGE_USERS)
+    _require_administrative_rate_limit(_users_limiter, http_request, "/users")
+    try:
+        principal, token = default_store().create(request.name, parse_role(request.role))
+    except IdentityError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    logger.info("Created principal %s with role %s", principal.name, principal.role.value)
+    return {"user": principal.public_view(), "token": token}
+
+
+@app.delete("/users/{name}")
+def revoke_user(name: str, http_request: Request):
+    """Revoke a principal's token; existing sessions can no longer authenticate."""
+    require_permission(http_request, Permission.MANAGE_USERS)
+    try:
+        principal = default_store().revoke(name)
+    except IdentityError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    logger.info("Revoked principal %s", principal.name)
+    return {"user": principal.public_view()}
 
 
 def start(host: str = "127.0.0.1", port: int = 8080):
