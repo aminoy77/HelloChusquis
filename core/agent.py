@@ -25,7 +25,8 @@ from core.tool_policy import (
 from core.session import SessionManager
 from core.voice import VoiceManager
 from core.mcp import get_client as get_mcp_client
-from core.approvals import ApprovalManager, redact_sensitive_data
+from core.approvals import ApprovalManager, approval_reason, redact_sensitive_data
+from core.identity import ROLE_PERMISSIONS, Permission, Role
 from ui.terminal import print_tool_call, print_tool_result, console
 from core.logger import get_logger
 
@@ -1020,9 +1021,11 @@ class Agent:
         config: dict,
         require_approval: bool = False,
         session_key: str | None = None,
+        role: Role | str | None = None,
     ):
         self.pool = ProviderPool(config=config)
         self.require_approval = require_approval
+        self.role = Role(role) if role is not None else None
         self.approval_manager = ApprovalManager()
         self._turn_lock = threading.Lock()
         self._audited_approval_ids: set[str] = set()
@@ -1177,6 +1180,10 @@ class Agent:
     def execute_approved(self, request_id: str) -> ToolResult:
         """Consume an approved action and dispatch it exactly once."""
         request = self.approval_manager.claim_execution(request_id)
+        denied = self._authorization_denied_result(request.tool_name, request.tool_args)
+        if denied is not None:
+            self.approval_manager.complete_execution(request_id, False, "Not authorized")
+            return denied
         tool_policy = getattr(self, "tool_policy", None)
         if tool_policy is not None and not tool_policy.is_tool_allowed(request.tool_name):
             logger.warning("Approved tool denied by current policy: %s", request.tool_name)
@@ -1242,6 +1249,35 @@ class Agent:
     def audit_events(self, limit: int = 100) -> list[dict]:
         """Return the redacted persistent audit trail for this session."""
         return self.session_manager.list_audit_events(self._session_id, limit=limit)
+
+    def role_has(self, permission: Permission) -> bool:
+        """Whether the acting role grants a permission (unrestricted when unset)."""
+        role = getattr(self, "role", None)
+        if role is None:
+            return True
+        return permission in ROLE_PERMISSIONS[role]
+
+    def _authorization_denied_result(self, tool_name: str, tool_args: dict) -> Optional[ToolResult]:
+        """Deny high-impact calls the acting role may never perform.
+
+        Routes already reject unauthorized requests, but tool calls are chosen
+        by the model, so the decision is repeated here: a role that cannot run
+        mutating tools cannot obtain one through prompting either.
+        """
+        role = getattr(self, "role", None)
+        if role is None or self.role_has(Permission.MUTATING_TOOLS):
+            return None
+        if approval_reason(tool_name, tool_args) is None:
+            return None
+        self._audit("authorization_denied", {"tool_name": tool_name, "role": role.value})
+        return ToolResult(
+            success=False,
+            output="",
+            error=(
+                f"Not authorized: role '{role.value}' cannot run '{tool_name}'. "
+                "Ask an operator or owner to perform this action."
+            ),
+        )
 
     def _approval_required_result(self, tool_name: str, tool_args: dict) -> Optional[ToolResult]:
         """Return an actionable blocked result for unapproved high-impact calls."""
@@ -1668,7 +1704,9 @@ class Agent:
                             logger.warning("Loop detected for %s: %s", tool_name, loop_result.message)
                             result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
                         else:
-                            approval_result = self._approval_required_result(tool_name, tool_args)
+                            approval_result = self._authorization_denied_result(
+                                tool_name, tool_args
+                            ) or self._approval_required_result(tool_name, tool_args)
                             if approval_result is not None:
                                 result = approval_result
                             else:
@@ -1799,7 +1837,9 @@ class Agent:
                         if loop_result.stuck:
                             result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
                         else:
-                            approval_result = self._approval_required_result(tool_name, tool_args)
+                            approval_result = self._authorization_denied_result(
+                                tool_name, tool_args
+                            ) or self._approval_required_result(tool_name, tool_args)
                             if approval_result is not None:
                                 result = approval_result
                                 approval_match = re.search(r"Approval required: (apr_[A-Za-z0-9_-]+)\.", result.error)

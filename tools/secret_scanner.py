@@ -30,7 +30,7 @@ SECRET_SCANNER_SCHEMA = {
 
 SECRET_PATTERNS = {
     "AWS_ACCESS_KEY": (r"(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ASIA)[A-Z0-9]{16}", "critical"),
-    "AWS_SECRET": (r"(?i)aws(.{0,20})?(?-i)secret(.{0,20})?['\"=:\s]+['\"][A-Za-z0-9/+=]{40}['\"]", "critical"),
+    "AWS_SECRET": (r"(?i)aws(.{0,20})?secret(.{0,20})?['\"=:\s]+['\"][A-Za-z0-9/+=]{40}['\"]", "critical"),
     "GITHUB_TOKEN": (r"gh[pousr]_[A-Za-z0-9]{36,255}", "critical"),
     "SLACK_TOKEN": (r"xox[baprs]-([0-9a-zA-Z]{10,48})", "critical"),
     "GOOGLE_API": (r"AIza[0-9A-Za-z_-]{35}", "high"),
@@ -104,7 +104,6 @@ def run(action: str, path: str = "", severity: str = "") -> str:
     
     elif action == "check_env":
         # Check environment variables
-        import os
         for key, value in os.environ.items():
             for pattern_name, (pattern, sev) in SECRET_PATTERNS.items():
                 if re.search(pattern, value, re.IGNORECASE):

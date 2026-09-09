@@ -1,6 +1,5 @@
 from tools.base import BaseTool, ToolResult
-import speech_recognition as sr
-import io
+from tools.optional_deps import MissingDependencyError, require
 
 
 PLUGIN_NAME = "voice"
@@ -32,6 +31,7 @@ VOICE_SCHEMA = {
 def run(action: str, language: str = "en", duration: int = 5, audio_file: str = "") -> str:
     """Voice input and speech recognition."""
     try:
+        sr = require("speech_recognition")
         if action == "listen":
             recognizer = sr.Recognizer()
             with sr.Microphone() as source:
@@ -65,8 +65,8 @@ def run(action: str, language: str = "en", duration: int = 5, audio_file: str = 
         else:
             return f"Error: Unknown action {action}"
     
-    except ImportError:
-        return "Error: speech_recognition not installed. Run: pip install SpeechRecognition"
+    except MissingDependencyError as e:
+        return f"Error: {e}"
     except Exception as e:
         return f"Error: {str(e)}"
 

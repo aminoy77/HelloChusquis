@@ -8,7 +8,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-import boto3
+from tools.optional_deps import require
 
 
 _BUCKET_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?")
@@ -50,6 +50,7 @@ def _credentials(api_key: str, secret_key: str | None = None):
 def _client(api_key: str, secret_key: str | None = None):
     """Create an AWS SDK client that signs requests with Signature Version 4."""
     access_key, secret = _credentials(api_key, secret_key)
+    boto3 = require("boto3")
     return boto3.client(
         "s3",
         aws_access_key_id=access_key,
