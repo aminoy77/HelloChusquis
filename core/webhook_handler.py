@@ -59,11 +59,15 @@ class WebhookHandler:
         return event
 
     def get_events(self, event_type: str = None, limit: int = 50) -> list[WebhookEvent]:
-        """Get recent events."""
+        """Get recent events with a bounded, predictable result size."""
+        try:
+            bounded_limit = max(0, min(int(limit), 50))
+        except (TypeError, ValueError):
+            bounded_limit = 50
         events = self._events
         if event_type:
             events = [e for e in events if e.event_type == event_type]
-        return events[-limit:]
+        return events[-bounded_limit:] if bounded_limit else []
 
     def clear_events(self):
         """Clear event history."""

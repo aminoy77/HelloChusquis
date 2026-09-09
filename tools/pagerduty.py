@@ -1,7 +1,17 @@
 from httpx import AsyncClient
-from typing import Any
 import os
+import re
 import httpx
+
+
+_INCIDENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _incident_id(value: object) -> str:
+    identifier = str(value or "")
+    if not _INCIDENT_ID_RE.fullmatch(identifier):
+        raise ValueError("Invalid PagerDuty incident ID.")
+    return identifier
 
 
 def run(action: str, **kwargs) -> str:
@@ -13,7 +23,6 @@ def run(action: str, **kwargs) -> str:
     import asyncio
     try:
         loop = asyncio.get_running_loop()
-        import concurrent.futures
         fut = asyncio.run_coroutine_threadsafe(_run_async(action, api_key, kwargs), loop)
         return fut.result(timeout=30)
     except RuntimeError:
@@ -56,10 +65,10 @@ def _run_sync(action: str, api_key: str, kwargs: dict) -> str:
             r = client.get(f"{base_url}/incidents?statuses[]={status}", headers=headers)
             return str(r.json())[:2000]
         elif action == "get_incident":
-            r = client.get(f"{base_url}/incidents/{kwargs.get('incident_id', '')}", headers=headers)
+            r = client.get(f"{base_url}/incidents/{_incident_id(kwargs.get('incident_id', ''))}", headers=headers)
             return str(r.json())[:2000]
         elif action == "resolve_incident":
-            r = client.put(f"{base_url}/incidents/{kwargs.get('incident_id', '')}",
+            r = client.put(f"{base_url}/incidents/{_incident_id(kwargs.get('incident_id', ''))}",
                           json={"incident": {"type": "incident_reference", "status": "resolved"}}, headers=headers)
             return str(r.json())[:2000]
         elif action == "create_maintenance_window":
@@ -110,7 +119,7 @@ async def list_incidents(api_key: str, status: str = "triggered") -> dict:
 
 async def get_incident(api_key: str, incident_id: str) -> dict:
     """Get pagerduty incident."""
-    url = f"https://api.pagerduty.com/incidents/{incident_id}"
+    url = f"https://api.pagerduty.com/incidents/{_incident_id(incident_id)}"
     async with AsyncClient() as client:
         r = await client.get(url, headers={"Authorization": f"Token token={api_key}"})
         return r.json()
@@ -118,7 +127,7 @@ async def get_incident(api_key: str, incident_id: str) -> dict:
 
 async def resolve_incident(api_key: str, incident_id: str) -> dict:
     """Resolve pagerduty incident."""
-    url = f"https://api.pagerduty.com/incidents/{incident_id}"
+    url = f"https://api.pagerduty.com/incidents/{_incident_id(incident_id)}"
     async with AsyncClient() as client:
         r = await client.put(url, json={"incident": {"type": "incident_reference", "status": "resolved"}}, headers={"Authorization": f"Token token={api_key}"})
         return r.json()

@@ -11,17 +11,22 @@ Declarative plugin system:
 
 from __future__ import annotations
 
-import copy
 import importlib
 import importlib.util
 import json
 import logging
+import os
+import re
 import sys
+import tempfile
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Optional
+from urllib.parse import urlsplit
+
+from tools.web_fetch import SsrFBlockedError, validate_url_safety
 
 logger = logging.getLogger("hellochusquis.plugins")
 
@@ -33,6 +38,63 @@ PLUGINS_DIR = Path.home() / ".hellochusquis" / "plugins"
 REGISTRY_URL = "https://raw.githubusercontent.com/aminoy77/HelloChusquis-plugins/main/registry.json"
 PLUGIN_MANIFEST_FILENAME = "plugin.json"
 MAX_PLUGIN_MANIFEST_BYTES = 256 * 1024
+MAX_PLUGIN_DOWNLOAD_BYTES = 1_048_576
+_PLUGIN_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
+
+
+def validate_plugin_name(name: str) -> str:
+    """Return a safe Python-module identifier for a plugin file name."""
+    if not isinstance(name, str) or not _PLUGIN_NAME_RE.fullmatch(name):
+        raise ValueError("Plugin name must be 1-64 letters, digits, or underscores and start with a letter")
+    return name
+
+
+def validate_plugin_download_url(url: str) -> str:
+    """Validate a public HTTPS plugin download URL before connecting."""
+    if not isinstance(url, str) or not url.strip():
+        raise ValueError("Plugin download URL is required")
+    parsed = urlsplit(url.strip())
+    if parsed.scheme != "https":
+        raise ValueError("Plugin download URL must use HTTPS")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("Plugin download URL must not include credentials")
+    try:
+        return validate_url_safety(url.strip())
+    except (SsrFBlockedError, ValueError) as exc:
+        raise ValueError("Plugin download URL is unsafe") from exc
+
+
+def _secure_plugins_dir() -> None:
+    PLUGINS_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(PLUGINS_DIR, 0o700)
+
+
+def write_plugin_code(name: str, plugin_code: str) -> Path:
+    """Atomically install trusted plugin code with owner-only permissions."""
+    safe_name = validate_plugin_name(name)
+    if not isinstance(plugin_code, str):
+        raise ValueError("Plugin code must be text")
+    _secure_plugins_dir()
+    destination = PLUGINS_DIR / f"{safe_name}.py"
+    descriptor, temporary_path = tempfile.mkstemp(
+        prefix=f".{safe_name}.", suffix=".tmp", dir=PLUGINS_DIR
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(plugin_code)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary_path, 0o600)
+        os.replace(temporary_path, destination)
+        os.chmod(destination, 0o600)
+        return destination
+    except Exception:
+        try:
+            os.unlink(temporary_path)
+        except FileNotFoundError:
+            pass
+        raise
+
 
 # Directories to skip during discovery
 _SCANNED_IGNORE = frozenset({
@@ -251,14 +313,17 @@ class PluginLoader:
     # -- discovery --
 
     def discover(self) -> list[PluginCandidate]:
-        """Scan plugins_dir for plugin directories and single-file plugins."""
+        """Scan trusted local plugin code without following unsafe filesystem links."""
         self.plugins_dir.mkdir(parents=True, exist_ok=True)
+        os.chmod(self.plugins_dir, 0o700)
         candidates: list[PluginCandidate] = []
         seen: set[str] = set()
 
         # scan subdirectories
         for entry in sorted(self.plugins_dir.iterdir()):
             if entry.name.startswith(".") or entry.name in _SCANNED_IGNORE:
+                continue
+            if not self._is_trusted_entry(entry):
                 continue
             if entry.is_dir():
                 self._discover_directory(entry, candidates, seen)
@@ -275,6 +340,21 @@ class PluginLoader:
         logger.debug("discovered %d plugin candidate(s)", len(candidates))
         return candidates
 
+    def _is_trusted_entry(self, entry: Path) -> bool:
+        """Reject plugin paths that can escape or be modified by another local user."""
+        if entry.is_symlink():
+            logger.warning("Skipping symlinked plugin entry: %s", entry.name)
+            return False
+        try:
+            mode = entry.stat().st_mode
+        except OSError as exc:
+            logger.warning("Skipping inaccessible plugin entry %s (%s)", entry.name, type(exc).__name__)
+            return False
+        if mode & 0o022:
+            logger.warning("Skipping group/world-writable plugin entry: %s", entry.name)
+            return False
+        return True
+
     def _discover_directory(
         self,
         dir_path: Path,
@@ -282,8 +362,9 @@ class PluginLoader:
         seen: set[str],
     ) -> None:
         manifest_path = dir_path / PLUGIN_MANIFEST_FILENAME
-        has_manifest = manifest_path.exists()
-        has_init = (dir_path / "__init__.py").exists()
+        init_path = dir_path / "__init__.py"
+        has_manifest = manifest_path.exists() and self._is_trusted_entry(manifest_path)
+        has_init = init_path.exists() and self._is_trusted_entry(init_path)
 
         if has_manifest:
             key = str(dir_path.resolve())
@@ -300,15 +381,20 @@ class PluginLoader:
 
         # recurse one level deeper for nested structures
         for sub in sorted(dir_path.iterdir()):
+            if not self._is_trusted_entry(sub):
+                continue
             if sub.is_dir() and sub.name not in _SCANNED_IGNORE and not sub.name.startswith("."):
                 sub_manifest = sub / PLUGIN_MANIFEST_FILENAME
-                if sub_manifest.exists():
+                sub_init = sub / "__init__.py"
+                trusted_manifest = sub_manifest.exists() and self._is_trusted_entry(sub_manifest)
+                trusted_init = not sub_init.exists() or self._is_trusted_entry(sub_init)
+                if trusted_manifest and trusted_init:
                     key = str(sub.resolve())
                     if key not in seen:
                         seen.add(key)
                         candidates.append(PluginCandidate(
                             id_hint=sub.name,
-                            source=str(sub / "__init__.py") if (sub / "__init__.py").exists() else str(sub),
+                            source=str(sub_init) if sub_init.exists() else str(sub),
                             root_dir=str(sub),
                             manifest_path=str(sub_manifest),
                         ))
@@ -827,8 +913,8 @@ def _ensure_init() -> tuple[PluginLoader, PluginRegistry, PluginHookSystem, Plug
 # ---------------------------------------------------------------------------
 
 def init() -> None:
-    """Ensure plugin directory exists."""
-    PLUGINS_DIR.mkdir(parents=True, exist_ok=True)
+    """Ensure plugin directory exists with owner-only permissions."""
+    _secure_plugins_dir()
 
 
 def load_plugins() -> list[dict]:
@@ -886,12 +972,19 @@ def load_plugins() -> list[dict]:
 def install_plugin(name: str) -> None:
     """Download and install a plugin from the remote registry."""
     import httpx  # noqa: F811 – lazy import
+    try:
+        name = validate_plugin_name(name)
+    except ValueError as exc:
+        logger.error("Invalid plugin name: %s", exc)
+        return
     init()
 
     try:
         with httpx.Client(timeout=30, verify=True) as client:
-            r = client.get(REGISTRY_URL)
+            r = client.get(validate_plugin_download_url(REGISTRY_URL), follow_redirects=False)
             r.raise_for_status()
+            if len(r.content) > MAX_PLUGIN_DOWNLOAD_BYTES:
+                raise ValueError("plugin registry response is too large")
             registry = r.json()
     except Exception as exc:
         logger.error("could not fetch plugin registry: %s", exc)
@@ -901,18 +994,27 @@ def install_plugin(name: str) -> None:
         logger.error("plugin '%s' not found in registry. available: %s", name, ", ".join(registry.keys()))
         return
 
-    url = registry[name]["url"]
+    try:
+        url = validate_plugin_download_url(registry[name]["url"])
+    except (KeyError, ValueError) as exc:
+        logger.error("invalid plugin download URL for '%s': %s", name, exc)
+        return
     try:
         with httpx.Client(timeout=30, verify=True) as client:
-            r = client.get(url)
+            r = client.get(url, follow_redirects=False)
             r.raise_for_status()
+            if len(r.content) > MAX_PLUGIN_DOWNLOAD_BYTES:
+                raise ValueError("plugin download is too large")
             plugin_code = r.text
     except Exception as exc:
         logger.error("could not download plugin: %s", exc)
         return
 
-    dest = PLUGINS_DIR / f"{name}.py"
-    dest.write_text(plugin_code)
+    try:
+        dest = write_plugin_code(name, plugin_code)
+    except (OSError, ValueError) as exc:
+        logger.error("could not install plugin '%s': %s", name, exc)
+        return
     logger.info("plugin '%s' installed to %s", name, dest)
 
 
@@ -934,6 +1036,11 @@ def list_plugins() -> None:
 
 def uninstall_plugin(name: str) -> None:
     """Remove a plugin file."""
+    try:
+        name = validate_plugin_name(name)
+    except ValueError:
+        print("✗ Invalid plugin name.")
+        return
     init()
     path = PLUGINS_DIR / f"{name}.py"
     if path.exists():

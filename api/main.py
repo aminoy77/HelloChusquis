@@ -6,13 +6,23 @@ from pydantic import BaseModel, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 import uvicorn
-import hmac
 import secrets
 import os
 import json
+import re
 from pathlib import Path
-from core.setup import ensure_config
+from core.identity import (
+    IdentityError,
+    Permission,
+    Principal,
+    authenticate_bearer,
+    default_store,
+    parse_role,
+)
+from core.runtime import AgentNotReadyError, AgentRuntime
+from core.http_limits import RequestBodyLimitMiddleware
 from core.rate_limiter import RateLimiter
+from core.version import __version__
 from core.logger import get_logger
 
 logger = get_logger("api")
@@ -21,25 +31,55 @@ logger = get_logger("api")
 API_KEY_DIR = Path.home() / ".hellochusquis"
 API_KEY_FILE = API_KEY_DIR / "api_key.txt"
 
+def _secure_api_key_storage() -> None:
+    """Restrict local credential storage to the current operating-system user."""
+    API_KEY_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(API_KEY_DIR, 0o700)
+    if API_KEY_FILE.exists():
+        os.chmod(API_KEY_FILE, 0o600)
+
+
 def _load_or_generate_api_key() -> str:
-    """Load existing API key or generate + persist a new one."""
+    """Load or generate a key with owner-only filesystem permissions."""
     if key := os.environ.get("HELLOCHUSQUIS_API_KEY", ""):
         return key
+    _secure_api_key_storage()
     if API_KEY_FILE.exists():
         return API_KEY_FILE.read_text().strip()
-    # Generate new key
-    API_KEY_DIR.mkdir(parents=True, exist_ok=True)
     key = secrets.token_urlsafe(32)
     API_KEY_FILE.write_text(key + "\n")
+    os.chmod(API_KEY_FILE, 0o600)
     return key
 
 REQUIRED_API_KEY = _load_or_generate_api_key()
 AUTH_ENABLED = True  # Always enabled
 
 
-def _verify_token(token: str) -> bool:
-    """Constant-time token comparison to prevent timing attacks."""
-    return hmac.compare_digest(token, REQUIRED_API_KEY)
+def authenticate(token: str) -> Principal | None:
+    """Resolve a bearer token to a principal, or ``None`` when unknown."""
+    return authenticate_bearer(token, REQUIRED_API_KEY)
+
+
+def current_principal(request: Request) -> Principal:
+    """Return the principal attached by the auth middleware."""
+    principal = getattr(getattr(request, "state", None), "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return principal
+
+
+def require_permission(request: Request, permission: Permission) -> Principal:
+    """Authorize the caller for one operation, or fail with 403."""
+    principal = current_principal(request)
+    if not principal.has(permission):
+        logger.warning(
+            "Denied %s for %s (role=%s)", permission.value, principal.name, principal.role.value
+        )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Role '{principal.role.value}' is not allowed to perform this operation",
+        )
+    return principal
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -62,30 +102,91 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Missing or invalid Authorization header"},
             )
         token = auth_header[7:]  # strip "Bearer "
-        if not _verify_token(token):
+        principal = authenticate(token)
+        if principal is None:
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid API key"},
             )
+        request.state.principal = principal
         return await call_next(request)
 
 
-app = FastAPI(title="HelloChusquis API", version="5.0")
-app.add_middleware(AuthMiddleware)
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add defensive headers to every HTTP response, including auth failures."""
 
-# Rate limiters: /chat = 30/min, /feedback = 10/min
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("Cache-Control", "no-store")
+        return response
+
+
+app = FastAPI(title="HelloChusquis API", version=__version__)
+app.add_middleware(RequestBodyLimitMiddleware)
+app.add_middleware(AuthMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Rate limiters: /chat = 30/min, /feedback = 10/min, /runtime/reload = 3/min.
 _chat_limiter = RateLimiter(requests_per_minute=30)
 _feedback_limiter = RateLimiter(requests_per_minute=10)
+_reload_limiter = RateLimiter(requests_per_minute=3)
+_users_limiter = RateLimiter(requests_per_minute=10)
 
 
 def _get_client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    client = getattr(request, "client", None)
+    return client.host if client else "unknown"
 
-# Ensure config and create shared agent (singleton pattern)
-config = ensure_config()
 
-from core.agent import Agent
-_agent = Agent(config)
+def _require_administrative_rate_limit(limiter: RateLimiter, request: Request, route: str) -> None:
+    """Reject excessive costly administrative operations from one client."""
+    ip = _get_client_ip(request)
+    if limiter.is_allowed(ip):
+        return
+    retry_after = max(1, int(limiter.get_retry_after(ip) + 0.999))
+    logger.warning("Rate limit exceeded on %s from %s", route, ip)
+    raise HTTPException(
+        status_code=429,
+        detail="Too many administrative requests",
+        headers={"Retry-After": str(retry_after)},
+    )
+
+# The API stays live even before first-time setup. Endpoints that need an
+# agent return a clear 503 until the user runs `hellochusquis setup`.
+runtime = AgentRuntime()
+
+
+_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+
+
+def _session_id(request: Request) -> str:
+    """Return the explicit session required by stateful HTTP operations."""
+    supplied = request.headers.get("x-hellochusquis-session", "").strip()
+    if not supplied:
+        raise HTTPException(
+            status_code=400,
+            detail="X-HelloChusquis-Session header is required for stateful operations",
+        )
+    if not _SESSION_ID_RE.fullmatch(supplied):
+        raise HTTPException(status_code=400, detail="Invalid X-HelloChusquis-Session header")
+    return supplied
+
+
+def _require_agent(http_request: Request | None = None):
+    try:
+        if http_request is None:
+            return runtime.get()
+        principal = current_principal(http_request)
+        # Namespacing the session by principal makes another identity's session
+        # id resolve to a new empty session instead of somebody else's context.
+        scoped_session_id = f"api:{principal.id}:{_session_id(http_request)}"
+        return runtime.get(session_id=scoped_session_id, role=principal.role)
+    except AgentNotReadyError as exc:
+        logger.warning("Agent runtime requested before ready: %s", exc)
+        raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
 
 
 class ChatRequest(BaseModel):
@@ -107,31 +208,50 @@ class FeedbackRequest(BaseModel):
     type: Literal["positive", "negative"]
     context: str = ""
 
+    @field_validator("context")
+    @classmethod
+    def validate_context(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) > 500:
+            raise ValueError("Feedback context exceeds maximum length of 500 characters")
+        return value
+
+
+class ApprovalDecisionRequest(BaseModel):
+    approve: bool
+
+
+class CreateUserRequest(BaseModel):
+    name: str
+    role: str = "operator"
+
 
 @app.get("/")
 def root():
-    return {"name": "HelloChusquis", "version": "5.0", "status": "running"}
+    return {"name": "HelloChusquis", "version": __version__, "status": "running"}
 
 
 @app.get("/health")
 def health_check():
-    providers = _agent.pool.status()
-    total = len(providers)
-    ready = sum(1 for p in providers if p["status"] == "ready")
+    providers = runtime.provider_status()
+    ready = sum(1 for provider in providers if provider["status"] == "ready")
     return {
         "status": "ok",
-        "version": "5.0",
+        "version": __version__,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "providers": {"total": total, "ready": ready},
+        "providers": {"total": len(providers), "ready": ready},
+        "agent_ready": runtime.is_ready,
     }
 
 
 @app.get("/health/ready")
 def readiness_probe():
-    providers = _agent.pool.status()
-    ready = sum(1 for p in providers if p["status"] == "ready")
-    if ready == 0:
-        raise HTTPException(status_code=503, detail="No providers ready")
+    readiness = runtime.readiness()
+    if not readiness["ready"]:
+        logger.warning("Readiness probe failed: %s", readiness.get("error", "unknown error"))
+        raise HTTPException(status_code=503, detail="No providers are ready")
+    providers = readiness["providers"]
+    ready = sum(1 for provider in providers if provider["status"] == "ready")
     return {"status": "ok", "ready_providers": ready}
 
 
@@ -142,16 +262,86 @@ def liveness_probe():
 
 @app.get("/status")
 def get_status():
-    providers = _agent.pool.status()
+    if not runtime.is_ready:
+        return {
+            "agent_ready": False,
+            "active_sessions": 0,
+            "providers": [],
+            "plugins": [],
+            "error": "Runtime unavailable",
+        }
+    agent = _require_agent()
     return {
-        "providers": providers,
-        "plugins": [p["name"] for p in _agent.plugins],
-        "memory": {"sessions": "N/A", "summary": "Available"}
+        "agent_ready": True,
+        "active_sessions": runtime.session_count,
+        "providers": agent.pool.status(),
+        "plugins": [plugin["name"] for plugin in agent.plugins],
+        "memory": {"sessions": "N/A", "summary": "Available"},
+    }
+
+
+@app.get("/approvals")
+def list_approvals(http_request: Request):
+    """List pending high-impact actions for the authenticated client session."""
+    require_permission(http_request, Permission.READ_STATE)
+    return {"approvals": _require_agent(http_request).pending_approvals()}
+
+
+@app.post("/approvals/{request_id}")
+def decide_approval(
+    request_id: str,
+    decision: ApprovalDecisionRequest,
+    http_request: Request,
+):
+    """Approve or reject one pending action and execute only after approval."""
+    require_permission(http_request, Permission.APPROVE)
+    agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
+    try:
+        approval = agent.decide_approval(request_id, decision.approve)
+        if not decision.approve:
+            return {"approval": approval, "executed": False}
+        result = agent.execute_approved(request_id)
+        return {
+            "approval": {**approval, "status": "executed"},
+            "executed": True,
+            "result": {
+                "success": result.success,
+                "output": result.output,
+                "error": result.error,
+            },
+        }
+    except KeyError as exc:
+        logger.warning("Approval request not found: %s", exc)
+        raise HTTPException(status_code=404, detail="Approval request not found") from exc
+    except ValueError as exc:
+        logger.warning("Approval request cannot be completed: %s", exc)
+        raise HTTPException(status_code=409, detail="Approval request cannot be completed") from exc
+    finally:
+        agent.release_turn()
+
+
+@app.post("/runtime/reload")
+def reload_runtime(http_request: Request):
+    """Reload provider configuration and clear cached HTTP sessions."""
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    _require_administrative_rate_limit(_reload_limiter, http_request, "/runtime/reload")
+    cleared_sessions = runtime.session_count
+    if not runtime.refresh():
+        logger.error("Runtime reload failed: %s", runtime.error or "unknown error")
+        raise HTTPException(status_code=503, detail="Runtime reload failed")
+    return {
+        "status": "ok",
+        "agent_ready": runtime.is_ready,
+        "sessions_cleared": cleared_sessions,
+        "version": __version__,
     }
 
 
 @app.post("/chat")
 def chat(request: ChatRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     ip = _get_client_ip(http_request)
     if not _chat_limiter.is_allowed(ip):
         retry = _chat_limiter.get_retry_after(ip)
@@ -163,22 +353,27 @@ def chat(request: ChatRequest, http_request: Request):
         )
 
     logger.info("Chat request from %s (stream=%s)", ip, request.stream)
+    agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
 
     if request.stream:
         return StreamingResponse(
-            _sse_generator(request.message),
+            _sse_generator(agent, request.message, release_turn=True),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
     try:
-        response = _agent.run(request.message)
+        response = agent.run(request.message)
     except ValueError as e:
         logger.warning("Chat validation error: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid chat request")
     except Exception as e:
         logger.error("Chat error: %s", e)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        agent.release_turn()
 
     return {
         "response": response,
@@ -188,6 +383,7 @@ def chat(request: ChatRequest, http_request: Request):
 
 @app.post("/chat/stream")
 def chat_stream(request: ChatRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     ip = _get_client_ip(http_request)
     if not _chat_limiter.is_allowed(ip):
         retry = _chat_limiter.get_retry_after(ip)
@@ -197,27 +393,38 @@ def chat_stream(request: ChatRequest, http_request: Request):
             headers={"Retry-After": str(int(retry) + 1)},
         )
 
+    agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
     return StreamingResponse(
-        _sse_generator(request.message),
+        _sse_generator(agent, request.message, release_turn=True),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
-def _sse_generator(message: str):
-    """Generator that yields SSE-formatted events from agent stream_run."""
+def _sse_generator(agent, message: str, release_turn: bool = False):
+    """Yield one terminal SSE event and optionally release the session turn."""
+    terminal_emitted = False
     try:
-        for event in _agent.stream_run(message):
+        for event in agent.stream_run(message):
+            if event.get("type") == "done":
+                terminal_emitted = True
             yield f"data: {json.dumps(event)}\n\n"
-    except Exception as e:
-        logger.error("SSE stream error: %s", e)
-        yield f'data: {json.dumps({"type": "error", "message": "Stream failed: " + str(e)})}\n\n'
+    except Exception:
+        logger.exception("SSE stream error")
+        if not terminal_emitted:
+            yield f'data: {json.dumps({"type": "error", "content": "Stream failed. Check server logs."})}\n\n'
     finally:
-        yield f'data: {json.dumps({"type": "done"})}\n\n'
+        if not terminal_emitted:
+            yield f'data: {json.dumps({"type": "done"})}\n\n'
+        if release_turn:
+            agent.release_turn()
 
 
 @app.post("/feedback")
 def feedback(request: FeedbackRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
     ip = _get_client_ip(http_request)
     if not _feedback_limiter.is_allowed(ip):
         retry = _feedback_limiter.get_retry_after(ip)
@@ -233,20 +440,66 @@ def feedback(request: FeedbackRequest, http_request: Request):
 
 
 @app.post("/clear")
-def clear_history():
-    _agent.history.clear()
-    return {"status": "ok", "message": "History cleared"}
+def clear_history(http_request: Request):
+    require_permission(http_request, Permission.CHAT)
+    agent = _require_agent(http_request)
+    if not agent.try_acquire_turn():
+        raise HTTPException(status_code=409, detail="This conversation is already processing another request")
+    try:
+        result = agent.clear_conversation()
+        return {"status": "ok", "message": "History cleared", **result}
+    finally:
+        agent.release_turn()
 
 
 @app.get("/history")
-def get_history():
-    return {"messages": _agent.history.get()}
+def get_history(http_request: Request):
+    require_permission(http_request, Permission.READ_STATE)
+    return {"messages": _require_agent(http_request).history.get()}
+
+
+@app.get("/audit")
+def get_audit_events(http_request: Request, limit: int = 100):
+    """Return redacted approval events recorded for the requesting session."""
+    require_permission(http_request, Permission.READ_STATE)
+    return {"events": _require_agent(http_request).audit_events(limit=limit)}
+
+
+@app.get("/users")
+def list_users(http_request: Request):
+    """List principals without exposing any secret material."""
+    require_permission(http_request, Permission.MANAGE_USERS)
+    return {"users": [principal.public_view() for principal in default_store().list_principals()]}
+
+
+@app.post("/users")
+def create_user(request: CreateUserRequest, http_request: Request):
+    """Create a principal and return its token exactly once."""
+    require_permission(http_request, Permission.MANAGE_USERS)
+    _require_administrative_rate_limit(_users_limiter, http_request, "/users")
+    try:
+        principal, token = default_store().create(request.name, parse_role(request.role))
+    except IdentityError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    logger.info("Created principal %s with role %s", principal.name, principal.role.value)
+    return {"user": principal.public_view(), "token": token}
+
+
+@app.delete("/users/{name}")
+def revoke_user(name: str, http_request: Request):
+    """Revoke a principal's token; existing sessions can no longer authenticate."""
+    require_permission(http_request, Permission.MANAGE_USERS)
+    try:
+        principal = default_store().revoke(name)
+    except IdentityError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    logger.info("Revoked principal %s", principal.name)
+    return {"user": principal.public_view()}
 
 
 def start(host: str = "127.0.0.1", port: int = 8080):
-    """Start the API server."""
-    logger.info("Starting HelloChusquis API on %s:%s", host, port)
-    print(f"API key stored in {API_KEY_FILE} (or HELLOCHUSQUIS_API_KEY). Not shown for security.")
+    """Start the API server without revealing authentication credentials."""
+    logger.info("Starting authenticated HelloChusquis API on %s:%s", host, port)
     uvicorn.run(app, host=host, port=port)
 
 

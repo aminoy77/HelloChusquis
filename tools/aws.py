@@ -1,12 +1,20 @@
-from tools.base import BaseTool, ToolResult
-import httpx
-import os
+"""AWS integration with bounded CLI execution and private Lambda payloads."""
+
 import json
-import base64
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+from types import SimpleNamespace
+
+import httpx
 
 
 PLUGIN_NAME = "aws"
 PLUGIN_DESCRIPTION = "Interact with AWS services - EC2, S3, Lambda, IAM"
+AWSCLI_TIMEOUT_SECONDS = 60
+AWSCLI_OUTPUT_MAX_CHARS = 4_096
+LAMBDA_PAYLOAD_MAX_CHARS = 65_536
 
 AWS_SCHEMA = {
     "type": "function",
@@ -19,195 +27,186 @@ AWS_SCHEMA = {
                 "action": {
                     "type": "string",
                     "enum": ["list_ec2", "list_s3", "list_lambda", "invoke_lambda", "list_iam", "describe_regions", "sts_caller"],
-                    "description": "The AWS action to perform"
+                    "description": "The AWS action to perform",
                 },
                 "resource": {"type": "string", "description": "Resource ID or name"},
                 "region": {"type": "string", "description": "AWS region (default: us-east-1)"},
                 "payload": {"type": "string", "description": "JSON payload for Lambda invocation"},
             },
-            "required": ["action"]
-        }
-    }
+            "required": ["action"],
+        },
+    },
 }
 
 
-def get_aws_credentials() -> dict:
+def get_aws_credentials() -> dict[str, str | None]:
     """Get AWS credentials from environment."""
     return {
         "access_key": os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_ACCESS_KEY"),
         "secret_key": os.getenv("AWS_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET_KEY"),
-        "region": os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        "region": os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
     }
 
 
-def aws_request(method: str, url: str, creds: dict, data: dict = None) -> str:
-    """Make AWS API request using IAM auth (or proxy)."""
-    # This is a simplified version - in production you'd use boto3
-    # Check for proxy endpoint
+def aws_request(method: str, url: str, creds: dict[str, str | None], data: dict | None = None) -> str:
+    """Make an AWS API request through a configured proxy."""
     proxy_url = os.getenv("AWS_API_PROXY") or os.getenv("AWS_PROXY_URL")
-    
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {creds['access_key']}:{creds['secret_key']}"
+        "Authorization": f"Bearer {creds['access_key']}:{creds['secret_key']}",
     }
-    
+    if not proxy_url:
+        return "Error: Direct AWS API not supported. Configure AWS_API_PROXY or use boto3 locally."
+
     try:
-        client = httpx.Client(timeout=30)
-        
-        if proxy_url:
-            # Use proxy (e.g., localstack, AWS API Gateway)
+        with httpx.Client(timeout=30, follow_redirects=False) as client:
             full_url = f"{proxy_url}{url}"
-            if method == "GET":
-                resp = client.get(full_url, headers=headers)
-            else:
-                resp = client.post(full_url, headers=headers, json=data)
-        else:
-            # Direct AWS API (needs proper signing - simplified here)
-            # Use AWS CLI if available
-            return "Error: Direct AWS API not supported. Configure AWS_API_PROXY or use boto3 locally."
-        
-        if resp.status_code in [200, 201]:
+            response = client.get(full_url, headers=headers) if method == "GET" else client.post(full_url, headers=headers, json=data)
+        if response.status_code in (200, 201):
             try:
-                return json.dumps(resp.json(), indent=2)[:1000]
-            except Exception:
-                return resp.text[:500]
-        return f"Error: {resp.status_code} - {resp.text[:200]}"
-    
-    except Exception as e:
-        return f"Error: {str(e)}"
+                return _limit_output(json.dumps(response.json(), indent=2))
+            except ValueError:
+                return _limit_output(response.text)
+        return f"Error: {response.status_code} - {_limit_output(response.text, 500)}"
+    except httpx.HTTPError as exc:
+        return f"Error: {exc}"
+
+
+def _limit_output(value: str, maximum: int = AWSCLI_OUTPUT_MAX_CHARS) -> str:
+    """Bound untrusted command or remote output retained by the agent."""
+    return value[:maximum]
+
+
+def _run_aws_cli(command: list[str]) -> SimpleNamespace:
+    """Execute AWS CLI with bounded time and retained output."""
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=AWSCLI_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return SimpleNamespace(
+            returncode=124,
+            stdout="",
+            stderr=f"AWS CLI timed out after {AWSCLI_TIMEOUT_SECONDS} seconds",
+        )
+    return SimpleNamespace(
+        returncode=result.returncode,
+        stdout=_limit_output(result.stdout),
+        stderr=_limit_output(result.stderr),
+    )
+
+
+def _cli_error(result: SimpleNamespace) -> str:
+    return f"Error: {result.stderr or 'AWS CLI command failed'}"
+
+
+def _parse_json(stdout: str) -> dict:
+    try:
+        parsed = json.loads(stdout)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _invoke_lambda(resource: str, region: str, payload: str) -> str:
+    if not resource:
+        return "Error: resource (function name) required for invoke_lambda"
+    if len(payload) > LAMBDA_PAYLOAD_MAX_CHARS:
+        return f"Error: payload exceeds {LAMBDA_PAYLOAD_MAX_CHARS} characters"
+    try:
+        payload_value = json.loads(payload) if payload else {}
+    except json.JSONDecodeError:
+        return "Error: payload must be valid JSON"
+
+    descriptor, temporary_path = tempfile.mkstemp(prefix="hellochusquis-aws-", suffix=".json")
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as payload_file:
+            json.dump(payload_value, payload_file)
+            payload_file.flush()
+        result = _run_aws_cli([
+            "aws", "lambda", "invoke",
+            "--function-name", resource,
+            "--payload", f"fileb://{temporary_path}",
+            "--cli-binary-format", "raw-in-base64-out",
+            "--region", region,
+            "--log-type", "Tail",
+            "--output", "json",
+        ])
+        if result.returncode == 0:
+            return f"Lambda invoked!\n{_limit_output(result.stdout, 300)}"
+        return _cli_error(result)
+    finally:
+        try:
+            Path(temporary_path).unlink()
+        except FileNotFoundError:
+            pass
 
 
 def run(action: str, resource: str = "", region: str = "us-east-1", payload: str = "") -> str:
-    """Execute AWS operations."""
-    creds = get_aws_credentials()
-    if not creds["access_key"]:
+    """Execute bounded AWS operations through the AWS CLI."""
+    credentials = get_aws_credentials()
+    if not credentials["access_key"]:
         return "Error: AWS credentials not found. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY."
-    
-    # Build URL based on action
-    base_url = f"https://{region}.amazonaws.com"
-    
+
     try:
-        client = httpx.Client(timeout=30)
-        
         if action == "list_ec2":
-            # Try AWS CLI first (most reliable)
-            import subprocess
-            result = subprocess.run(
-                ["aws", "ec2", "describe-instances", "--region", region, "--output", "json"],
-                capture_output=True, text=True, timeout=15
-            )
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                instances = data.get("Reservations", [])
-                result_text = []
-                for r in instances:
-                    for i in r.get("Instances", []):
-                        name = next((t.get("Value", "N/A") for t in i.get("Tags", []) if t.get("Key") == "Name"), i.get("InstanceId"))
-                        result_text.append(f"• {name} [{i.get('State', {}).get('Name', 'N/A')}] {i.get('InstanceType', 'N/A')}")
-                return "\n".join(result_text)[:500] if result_text else "No instances found."
-            return f"Error: {result.stderr}"
-        
-        elif action == "list_s3":
-            import subprocess
-            result = subprocess.run(
-                ["aws", "s3", "ls", "--region", region],
-                capture_output=True, text=True, timeout=15
-            )
-            if result.returncode == 0:
-                return result.stdout[:500] or "No buckets found."
-            return f"Error: {result.stderr}"
-        
-        elif action == "list_lambda":
-            import subprocess
-            result = subprocess.run(
-                ["aws", "lambda", "list-functions", "--region", region, "--output", "json"],
-                capture_output=True, text=True, timeout=15
-            )
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                funcs = data.get("Functions", [])
-                result_text = []
-                for f in funcs[:10]:
-                    result_text.append(f"• {f.get('FunctionName')} ({f.get('Runtime', 'N/A')})")
-                return "\n".join(result_text) if result_text else "No functions found."
-            return f"Error: {result.stderr}"
-        
-        elif action == "invoke_lambda":
-            if not resource:
-                return "Error: resource (function name) required for invoke_lambda"
-            
-            import subprocess
-            
-            invoke_data = {}
-            if payload:
-                try:
-                    invoke_data = json.loads(payload)
-                except Exception:
-                    pass
-            
-            # Convert to JSON string for CLI
-            payload_arg = json.dumps(invoke_data) if invoke_data else '{}'
-            
-            result = subprocess.run(
-                ["aws", "lambda", "invoke", 
-                 "--function-name", resource,
-                 "--payload", payload_arg,
-                 "--region", region,
-                 "--log-type", "Tail",
-                 "--output", "json"],
-                capture_output=True, text=True, timeout=30
-            )
-            if result.returncode == 0:
-                # Parse response
-                return f"Lambda invoked! :white_check_mark:\n{result.stdout[:300]}"
-            return f"Error: {result.stderr}"
-        
-        elif action == "list_iam":
-            import subprocess
-            result = subprocess.run(
-                ["aws", "iam", "list-users", "--max-items", "10", "--output", "json"],
-                capture_output=True, text=True, timeout=15
-            )
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                users = data.get("Users", [])
-                result_text = []
-                for u in users:
-                    result_text.append(f"• {u.get('UserName')} (created: {u.get('CreateDate', 'N/A')})")
-                return "\n".join(result_text) if result_text else "No users found."
-            return f"Error: {result.stderr}"
-        
-        elif action == "describe_regions":
-            import subprocess
-            result = subprocess.run(
-                ["aws", "ec2", "describe-regions", "--output", "json"],
-                capture_output=True, text=True, timeout=15
-            )
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                regions = data.get("Regions", [])
-                result_text = [f"• {r.get('RegionName')} ({r.get('Endpoint', 'N/A')})" for r in regions[:10]]
-                return "\n".join(result_text)
-            return f"Error: {result.stderr}"
-        
-        elif action == "sts_caller":
-            import subprocess
-            result = subprocess.run(
-                ["aws", "sts", "get-caller-identity", "--output", "json"],
-                capture_output=True, text=True, timeout=15
-            )
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                return f"Account: {data.get('Account')}\nUser: {data.get('UserId')}\nARN: {data.get('Arn')}"
-            return f"Error: {result.stderr}"
-        
-        else:
-            return f"Error: Unknown action '{action}'. Available: list_ec2, list_s3, list_lambda, invoke_lambda, list_iam, describe_regions, sts_caller"
-    
+            result = _run_aws_cli(["aws", "ec2", "describe-instances", "--region", region, "--output", "json"])
+            if result.returncode != 0:
+                return _cli_error(result)
+            instances = _parse_json(result.stdout).get("Reservations", [])
+            labels = []
+            for reservation in instances:
+                for instance in reservation.get("Instances", []):
+                    name = next((tag.get("Value", "N/A") for tag in instance.get("Tags", []) if tag.get("Key") == "Name"), instance.get("InstanceId"))
+                    labels.append(f"• {name} [{instance.get('State', {}).get('Name', 'N/A')}] {instance.get('InstanceType', 'N/A')}")
+            return _limit_output("\n".join(labels), 500) if labels else "No instances found."
+
+        if action == "list_s3":
+            result = _run_aws_cli(["aws", "s3", "ls", "--region", region])
+            return _limit_output(result.stdout, 500) or "No buckets found." if result.returncode == 0 else _cli_error(result)
+
+        if action == "list_lambda":
+            result = _run_aws_cli(["aws", "lambda", "list-functions", "--region", region, "--output", "json"])
+            if result.returncode != 0:
+                return _cli_error(result)
+            functions = _parse_json(result.stdout).get("Functions", [])
+            labels = [f"• {function.get('FunctionName')} ({function.get('Runtime', 'N/A')})" for function in functions[:10]]
+            return "\n".join(labels) if labels else "No functions found."
+
+        if action == "invoke_lambda":
+            return _invoke_lambda(resource, region, payload)
+
+        if action == "list_iam":
+            result = _run_aws_cli(["aws", "iam", "list-users", "--max-items", "10", "--output", "json"])
+            if result.returncode != 0:
+                return _cli_error(result)
+            users = _parse_json(result.stdout).get("Users", [])
+            labels = [f"• {user.get('UserName')} (created: {user.get('CreateDate', 'N/A')})" for user in users]
+            return "\n".join(labels) if labels else "No users found."
+
+        if action == "describe_regions":
+            result = _run_aws_cli(["aws", "ec2", "describe-regions", "--output", "json"])
+            if result.returncode != 0:
+                return _cli_error(result)
+            regions = _parse_json(result.stdout).get("Regions", [])
+            return "\n".join(f"• {item.get('RegionName')} ({item.get('Endpoint', 'N/A')})" for item in regions[:10])
+
+        if action == "sts_caller":
+            result = _run_aws_cli(["aws", "sts", "get-caller-identity", "--output", "json"])
+            if result.returncode != 0:
+                return _cli_error(result)
+            identity = _parse_json(result.stdout)
+            return f"Account: {identity.get('Account')}\nUser: {identity.get('UserId')}\nARN: {identity.get('Arn')}"
+
+        return f"Error: Unknown action '{action}'. Available: list_ec2, list_s3, list_lambda, invoke_lambda, list_iam, describe_regions, sts_caller"
     except FileNotFoundError:
         return "Error: AWS CLI not installed. Install: brew install awscli"
-    except Exception as e:
-        return f"Error: {str(e)}"
+    except OSError as exc:
+        return f"Error: AWS CLI execution failed: {exc}"
 
 
 if __name__ == "__main__":

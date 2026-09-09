@@ -1,6 +1,16 @@
 from httpx import AsyncClient
 import os
+import re
 import httpx
+
+_MEETING_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _meeting_id(value: object) -> str:
+    identifier = str(value or "")
+    if not _MEETING_ID_RE.fullmatch(identifier):
+        raise ValueError("Invalid Zoom meeting ID.")
+    return identifier
 
 
 def run(action: str, **kwargs) -> str:
@@ -49,13 +59,13 @@ def _run_sync(action: str, api_key: str, kwargs: dict) -> str:
             r = client.get(f"{base_url}/users/me/meetings", headers=headers)
             return str(r.json())[:2000]
         elif action == "get_meeting":
-            r = client.get(f"{base_url}/meetings/{kwargs.get('meeting_id', '')}", headers=headers)
+            r = client.get(f"{base_url}/meetings/{_meeting_id(kwargs.get('meeting_id', ''))}", headers=headers)
             return str(r.json())[:2000]
         elif action == "delete_meeting":
-            r = client.delete(f"{base_url}/meetings/{kwargs.get('meeting_id', '')}", headers=headers)
+            r = client.delete(f"{base_url}/meetings/{_meeting_id(kwargs.get('meeting_id', ''))}", headers=headers)
             return str(r.json())[:2000]
         elif action == "get_recordings":
-            r = client.get(f"{base_url}/meetings/{kwargs.get('meeting_id', '')}/recordings", headers=headers)
+            r = client.get(f"{base_url}/meetings/{_meeting_id(kwargs.get('meeting_id', ''))}/recordings", headers=headers)
             return str(r.json())[:2000]
         else:
             return f"Error: Unknown action '{action}'. Available: create_meeting, list_meetings, get_meeting, delete_meeting, get_recordings"
@@ -87,7 +97,7 @@ async def list_meetings(api_key: str, secret: str) -> dict:
 
 async def get_meeting(api_key: str, meeting_id: str) -> dict:
     """Get Zoom meeting details."""
-    url = f"https://api.zoom.us/v2/meetings/{meeting_id}"
+    url = f"https://api.zoom.us/v2/meetings/{_meeting_id(meeting_id)}"
     async with AsyncClient() as client:
         r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
         return r.json()
@@ -95,15 +105,15 @@ async def get_meeting(api_key: str, meeting_id: str) -> dict:
 
 async def delete_meeting(api_key: str, meeting_id: str) -> dict:
     """Delete Zoom meeting."""
-    url = f"https://api.zoom.us/v2/meetings/{meeting_id}"
+    url = f"https://api.zoom.us/v2/meetings/{_meeting_id(meeting_id)}"
     async with AsyncClient() as client:
-        r = await client.delete(url, headers={"Authorization": f"Bearer {api_key}"})
+        await client.delete(url, headers={"Authorization": f"Bearer {api_key}"})
         return {"status": "deleted"}
 
 
 async def get_recordings(api_key: str, meeting_id: str) -> dict:
     """Get Zoom meeting recordings."""
-    url = f"https://api.zoom.us/v2/meetings/{meeting_id}/recordings"
+    url = f"https://api.zoom.us/v2/meetings/{_meeting_id(meeting_id)}/recordings"
     async with AsyncClient() as client:
         r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
         return r.json()

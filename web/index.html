@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelloChusquis — AI Terminal Agent</title>
-    <meta name="description" content="AI terminal agent with chat interface, web search, file management, code execution, and multiple AI integrations. Install with pip and start in seconds.">
+    <title>HelloChusquis — Your terminal, upgraded</title>
+    <meta name="description" content="HelloChusquis is a local-first AI agent for the terminal, browser, web, memory, code, and integrations. Install it with pip and start working.">
     <link rel="canonical" href="https://hellochusquis.dev">
     <meta property="og:title" content="HelloChusquis — AI Terminal Agent">
     <meta property="og:description" content="AI terminal agent with chat, web search, file management, and code execution. pip install hellochusquis">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="theme-color" content="#090a0c">
+    <meta property="og:image" content="https://hellochusquis.dev/og.jpg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -575,6 +577,13 @@
         .tool-call.success .ic { color: var(--green); }
         .tool-call.error .ic { color: var(--red); }
         .tool-call.error { border-left: 2px solid var(--red); }
+        .approval-card { margin-top: 10px; padding: 12px; border: 1px solid var(--accent-border); background: var(--accent-soft); border-radius: var(--radius); }
+        .approval-title { font-size: 0.72rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+        .approval-detail { margin-top: 6px; font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; }
+        .approval-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .approval-actions button { font: inherit; font-size: 0.72rem; font-weight: 700; border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+        .approval-approve { background: var(--accent); color: var(--bg); border: 1px solid var(--accent); }
+        .approval-deny { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
 
         .thinking { align-self: flex-start; display: flex; gap: 5px; align-items: center; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; border-radius: 14px; animation: fadeUp 0.24s var(--ease); }
         .thinking span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: bounce 1.2s infinite; opacity: 0.35; }
@@ -710,7 +719,61 @@
             .model-bar { padding: 0 4px 6px; }
             .app-header-left .conn-pill { display: none; }
         }
-    </style>
+
+        /* HelloChusquis landing redesign: terminal editorial system */
+        .landing { display: block; background: #090a0c; color: #f2eee6; font-family: var(--font-ui); }
+        .landing.hidden { display: none; }
+        .landing * { box-sizing: border-box; }
+        .landing a { color: inherit; }
+        .landing-skip { position: absolute; left: 16px; top: -100px; z-index: 1000; padding: 10px 14px; border-radius: 8px; background: #f5a623; color: #090a0c !important; font-weight: 800; text-decoration: none; }
+        .landing-skip:focus { top: 16px; }
+        .landing-header { position: sticky; top: 0; z-index: 20; height: 72px; padding: 0 max(24px, calc((100vw - 1160px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: 24px; background: rgba(9,10,12,.86); border-bottom: 1px solid #22262d; backdrop-filter: blur(18px); }
+        .landing-brand { display: inline-flex; align-items: center; gap: 10px; color: #f2eee6 !important; text-decoration: none; font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; }
+        .landing-brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(245,166,35,.5); border-radius: 9px; color: #f5a623; background: rgba(245,166,35,.09); font: 700 .65rem var(--font-mono); }
+        .landing-nav { display: flex; align-items: center; gap: 4px; }
+        .landing-nav a, .landing-text-link { padding: 8px 10px; color: #9fa3ac !important; text-decoration: none; font-size: .67rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; transition: color .2s ease; }
+        .landing-nav a:hover, .landing-text-link:hover { color: #f2eee6 !important; }
+        .landing-header-actions { display: flex; align-items: center; gap: 10px; }
+        .landing-button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 44px; padding: 0 17px; border: 1px solid #f5a623; border-radius: 9px; background: #f5a623; color: #090a0c !important; font: 800 .72rem var(--font-ui); letter-spacing: .01em; text-decoration: none; cursor: pointer; transition: transform .2s ease, background .2s ease, border-color .2s ease; }
+        .landing-button:hover { transform: translateY(-2px); background: #ffba4a; border-color: #ffba4a; }
+        .landing-button-small { min-height: 36px; padding: 0 13px; }
+        .landing-button-quiet { border-color: #2b3038; background: transparent; color: #b5b8c0 !important; }
+        .landing-button-quiet:hover { border-color: #5a606a; background: #15181d; }
+        .landing-hero, .landing-section, .landing-cta { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
+        .landing-hero { min-height: 690px; display: grid; grid-template-columns: minmax(0, .9fr) minmax(420px, 1.1fr); align-items: center; gap: clamp(48px, 8vw, 112px); padding: 92px 0 106px; }
+        .landing-kicker, .landing-eyebrow { color: #f5a623; font: 800 .66rem var(--font-mono); letter-spacing: .18em; text-transform: uppercase; }
+        .landing-kicker { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 26px; }
+        .landing-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #35d39a; box-shadow: 0 0 0 5px rgba(53,211,154,.12); }
+        .landing-hero h1 { max-width: 620px; margin: 0; font: 700 clamp(3.1rem, 6vw, 5.5rem)/.96 var(--font-display); letter-spacing: -.075em; }
+        .landing-hero h1 em, .landing-cta h2 em { color: #f5a623; font-style: normal; }
+        .landing-hero-lede { max-width: 500px; margin: 26px 0 30px; color: #a8abb3; font-size: 1rem; line-height: 1.75; }
+        .landing-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .landing-install-line { display: flex; align-items: center; gap: 10px; width: fit-content; max-width: 100%; margin-top: 26px; padding: 12px 14px; border: 1px solid #252a31; border-radius: 8px; background: #111419; color: #e2ddd3; font: .74rem var(--font-mono); overflow: auto; }
+        .landing-install-line > span { color: #35d39a; }
+        .landing-copy { border: 0; border-left: 1px solid #343a43; padding-left: 11px; background: none; color: #8e949e; font: .64rem var(--font-mono); cursor: pointer; }
+        .landing-copy:hover { color: #f5a623; }
+        .landing-microproof { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 20px; color: #727983; font: .62rem var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+        .landing-terminal { position: relative; overflow: hidden; border: 1px solid #30353e; border-radius: 16px; background: #111318; box-shadow: 20px 28px 80px rgba(0,0,0,.32); }
+        .landing-terminal::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 80% 10%, rgba(245,166,35,.13), transparent 38%), linear-gradient(135deg, rgba(255,255,255,.035), transparent 45%); pointer-events: none; }
+        .landing-terminal-top { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 17px; border-bottom: 1px solid #2a2f37; color: #707782; font: .62rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+        .landing-window-dots { display: flex; gap: 6px; }
+        .landing-window-dots i { width: 9px; height: 9px; border-radius: 50%; background: #f87171; }.landing-window-dots i:nth-child(2) { background: #f5a623; }.landing-window-dots i:nth-child(3) { background: #35d39a; }
+        .landing-terminal-signal { margin-left: auto; color: #35d39a; }
+        .landing-terminal-body { position: relative; min-height: 374px; padding: 28px 26px 30px; font: .76rem/2 var(--font-mono); }
+        .landing-terminal-body p { margin: 0; }.landing-green { color: #35d39a; }.landing-amber { color: #f5a623; }.landing-blue { color: #79b9f5; }.landing-muted { color: #707782; }.landing-spacer { height: 18px; }.landing-cursor { display: inline-block; width: 7px; height: 16px; vertical-align: -3px; background: #f5a623; animation: landing-blink 1.1s step-end infinite; }
+        @keyframes landing-blink { 50% { opacity: 0; } }
+        .landing-signal-row { display: grid; grid-template-columns: repeat(3, 1fr); width: min(1160px, calc(100% - 48px)); margin: 0 auto; border-top: 1px solid #252a31; border-bottom: 1px solid #252a31; }
+        .landing-signal-row div { min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 24px; border-right: 1px solid #252a31; }.landing-signal-row div:last-child { border-right: 0; }.landing-signal-row strong { color: #ede9e0; font: 700 .78rem var(--font-mono); }.landing-signal-row span { color: #777d87; font-size: .75rem; }
+        .landing-section { padding: 142px 0; }.landing-section-intro { max-width: 620px; margin-bottom: 54px; }.landing-section-intro-wide { max-width: 760px; }.landing-section h2, .landing-cta h2 { margin: 14px 0 16px; color: #f2eee6; font: 700 clamp(2.15rem, 4vw, 3.5rem)/1.02 var(--font-display); letter-spacing: -.06em; }.landing-section h2 span { color: #727983; }.landing-section-intro p, .landing-control-copy p, .landing-cta p { color: #9da1a9; line-height: 1.75; font-size: .92rem; }
+        .landing-step-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }.landing-step { display: flex; gap: 20px; padding: 26px 0; border-top: 1px solid #343941; }.landing-step > span { color: #f5a623; font: .7rem var(--font-mono); }.landing-step h3, .landing-capability h3 { margin-bottom: 10px; color: #ede9e0; font-size: 1rem; }.landing-step p, .landing-capability p { color: #858b95; font-size: .82rem; line-height: 1.7; }
+        .landing-capability-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 16px; }.landing-capability { min-height: 210px; padding: 26px; border: 1px solid #292e36; border-radius: 12px; background: #101216; transition: transform .2s ease, border-color .2s ease, background .2s ease; }.landing-capability:hover { transform: translateY(-4px); border-color: rgba(245,166,35,.55); background: #14171c; }.landing-capability-featured { grid-row: span 2; min-height: 436px; background: linear-gradient(145deg, #171a20, #101216 55%); }.landing-card-index { margin-bottom: 54px; color: #747b85; font: .62rem var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }.landing-code-line { margin-top: 48px; padding: 12px; border: 1px solid #2a3038; border-radius: 8px; color: #cfd0d4; font: .68rem var(--font-mono); }
+        .landing-control-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 70px; padding: 52px; border: 1px solid #30353d; border-radius: 16px; background: linear-gradient(120deg, #12161a, #0e1013); }.landing-control-copy { max-width: 520px; }.landing-inline-link { display: inline-flex; gap: 10px; margin-top: 22px; color: #f5a623 !important; font: 700 .76rem var(--font-mono); text-decoration: none; }.landing-inline-link:hover { color: #ffca67 !important; }.landing-control-list { display: grid; align-content: center; gap: 0; }.landing-control-list div { display: grid; grid-template-columns: 150px 1fr; gap: 18px; padding: 18px 0; border-bottom: 1px solid #292e35; }.landing-control-list div:first-child { border-top: 1px solid #292e35; }.landing-control-list b { color: #f5a623; font: .63rem var(--font-mono); text-transform: uppercase; letter-spacing: .06em; }.landing-control-list span { color: #9ba0a8; font-size: .78rem; line-height: 1.5; }
+        .landing-integration-cloud { display: flex; flex-wrap: wrap; gap: 10px; }.landing-integration-cloud span { padding: 12px 15px; border: 1px solid #292e36; border-radius: 8px; color: #aeb1b8; background: #101216; font: .73rem var(--font-mono); }.landing-integration-cloud span:hover { border-color: rgba(245,166,35,.5); color: #f5a623; }
+        .landing-cta { padding: 92px 0 112px; }.landing-cta-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 70px; align-items: end; padding: 48px 0 0; border-top: 1px solid #343941; }.landing-cta h2 { margin-bottom: 0; }.landing-cta .landing-hero-actions { margin-top: 26px; }.landing-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: min(1160px, calc(100% - 48px)); margin: 0 auto; padding: 24px 0 34px; border-top: 1px solid #252a31; color: #727983; font-size: .7rem; }.landing-footer > div { display: flex; gap: 16px; }.landing-footer a:not(.landing-brand) { color: #8e949e; text-decoration: none; }.landing-footer a:not(.landing-brand):hover { color: #f5a623; }
+        @media (max-width: 900px) { .landing-header { padding: 0 20px; }.landing-nav { display: none; }.landing-hero { grid-template-columns: 1fr; min-height: auto; padding: 74px 0 80px; }.landing-hero-copy { max-width: 680px; }.landing-terminal { max-width: 680px; }.landing-step-grid, .landing-capability-grid { grid-template-columns: repeat(2, 1fr); }.landing-capability-featured { grid-row: span 1; min-height: 260px; }.landing-control-panel, .landing-cta-grid { grid-template-columns: 1fr; gap: 34px; }.landing-signal-row { grid-template-columns: 1fr; }.landing-signal-row div { min-height: 68px; border-right: 0; border-bottom: 1px solid #252a31; }.landing-signal-row div:last-child { border-bottom: 0; } }
+        @media (max-width: 600px) { .landing-header { height: 62px; }.landing-text-link { display: none; }.landing-hero, .landing-section, .landing-cta { width: min(100% - 36px, 1160px); }.landing-signal-row, .landing-footer { width: calc(100% - 36px); }.landing-hero h1 { font-size: clamp(2.8rem, 14vw, 4rem); }.landing-hero-lede { font-size: .9rem; }.landing-terminal-body { min-height: 300px; padding: 22px 17px; font-size: .66rem; }.landing-install-line { width: 100%; font-size: .62rem; }.landing-section { padding: 92px 0; }.landing-step-grid, .landing-capability-grid { grid-template-columns: 1fr; }.landing-capability-featured { min-height: 260px; }.landing-control-panel { padding: 28px 22px; }.landing-control-list div { grid-template-columns: 1fr; gap: 6px; }.landing-footer { flex-wrap: wrap; }.landing-footer > span { order: 3; width: 100%; }.landing-footer > div { margin-left: auto; } }
+        @media (prefers-reduced-motion: reduce) { .landing *, .landing *::before, .landing *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+</style>
 </head>
 <body class="theme-dark accent-amber font-inter">
 
@@ -718,331 +781,92 @@
 
     <!-- ===================== LANDING ===================== -->
     <div class="landing" id="landing">
-        <header role="banner">
-            <div class="header-left">
-                <a href="#" class="header-logo" onclick="showApp(); return false;">
-                    <span class="logo-mark" aria-hidden="true">
-                        <svg class="ic" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                    </span>
-                    HelloChusquis
-                </a>
-                <nav aria-label="Main navigation">
-                    <a href="#howto">How To Use</a>
-                    <a href="#features">Features</a>
-                    <a href="#social-proof">Community</a>
-                    <a href="#providers">Providers</a>
-                    <a href="#integrations">Integrations</a>
-                </nav>
-            </div>
-            <div class="header-actions" role="group" aria-label="Header actions">
-                <button class="btn btn-primary" onclick="showApp()">Launch App</button>
-                <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener">GitHub</a>
+        <a class="landing-skip" href="#landing-main">Skip to content</a>
+        <header class="landing-header">
+            <a href="#top" class="landing-brand" aria-label="HelloChusquis home">
+                <span class="landing-brand-mark" aria-hidden="true"><span>&gt;_</span></span>
+                <span>HelloChusquis</span>
+            </a>
+            <nav class="landing-nav" aria-label="Main navigation">
+                <a href="#workflow">Workflow</a>
+                <a href="#capabilities">Capabilities</a>
+                <a href="#control">Control</a>
+                <a href="#integrations">Integrations</a>
+            </nav>
+            <div class="landing-header-actions">
+                <a class="landing-text-link" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+                <button class="landing-button landing-button-small" type="button" onclick="showApp()">Launch app <span aria-hidden="true">→</span></button>
             </div>
         </header>
 
-        <main id="main-content" role="main">
-
-        <section class="hero">
-            <div class="hero-text">
-                <div class="hero-badge">Stable Release v1.4.3</div>
-                <h1>AI in your terminal. <span class="grad">Actually useful.</span></h1>
-                <p class="hero-sub">
-                    Stop tab-switching between your AI and your work. Chat, search, code, and manage files — all from one terminal session.
-                    One pip install. Zero configuration. Full control.
-                </p>
-                <div class="hero-install">
-                    <div class="install-cmd">
-                        <span class="prompt">$</span>
-                        <code>pip install hellochusquis</code>
+        <main id="landing-main">
+            <section class="landing-hero" id="top" aria-labelledby="landing-title">
+                <div class="landing-hero-copy">
+                    <div class="landing-kicker"><span class="landing-status-dot" aria-hidden="true"></span> Local-first AI workspace</div>
+                    <h1 id="landing-title">Make the terminal<br><em>your command center.</em></h1>
+                    <p class="landing-hero-lede">HelloChusquis connects conversation, tools, memory, web access, and integrations in one developer-controlled agent.</p>
+                    <div class="landing-hero-actions">
+                        <button class="landing-button" type="button" onclick="copyInstall()">Copy install command <span aria-hidden="true">⌘</span></button>
+                        <a class="landing-button landing-button-quiet" href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Read the docs <span aria-hidden="true">↗</span></a>
                     </div>
-                    <button class="copy-btn" id="install-copy-btn" onclick="copyInstall()" aria-label="Copy pip install command to clipboard">
-                        <svg class="ic" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                    </button>
+                    <div class="landing-install-line" aria-label="Install command"><span>$</span> python -m pip install hellochusquis <button id="install-copy-btn" class="landing-copy" type="button" aria-label="Copy install command">copy</button></div>
+                    <div class="landing-microproof"><span>Python 3.10+</span><span>MIT licensed</span><span>54 providers</span></div>
                 </div>
-                <div class="hero-meta">
-                    <span>v1.4.3</span>
-                    <span>MIT License</span>
-                    <span>Python 3.10+</span>
-                    <span>35+ providers</span>
-                </div>
-            </div>
-            <div class="terminal-preview" role="img" aria-label="Interactive terminal demo showing HelloChusquis executing web search and code generation commands">
-                <div class="terminal-bar" aria-hidden="true">
-                    <div class="terminal-dot red"></div>
-                    <div class="terminal-dot yellow"></div>
-                    <div class="terminal-dot green"></div>
-                    <div class="terminal-title">hellochusquis — terminal</div>
-                </div>
-                <div class="terminal-body">
-                    <div class="term-line"><span class="term-prompt">$ </span><span class="term-cmd">hellochusquis</span></div>
-                    <div class="term-line"><span class="term-dim">Loading providers...</span></div>
-                    <div class="term-line"><span class="term-highlight">Providers:</span> <span class="term-output">Groq, OpenRouter, OpenAI, Ollama</span></div>
-                    <div class="term-line"><span class="term-highlight">Tools:</span> <span class="term-output">shell, code, files, web_search</span></div>
-                    <div class="term-line"><span class="term-dim">──────────────────────────────────</span></div>
-                    <div class="term-line"><span class="term-prompt">You: </span><span class="term-cmd">Search for latest Python releases</span></div>
-                    <div class="term-line"><span class="term-dim">→ web_search("latest Python releases 2026")</span></div>
-                    <div class="term-line"><span class="term-output">Found 5 results. Python 3.13 released Mar 2026.</span></div>
-                    <div class="term-line"><span class="term-dim">──────────────────────────────────</span></div>
-                    <div class="term-line"><span class="term-prompt">You: </span><span class="term-cmd">Create a REST API for todos</span></div>
-                    <div class="term-line"><span class="term-dim">→ code(python, "from flask import Flask...")</span></div>
-                    <div class="term-line"><span class="term-output">Created api.py with 4 endpoints</span></div>
-                    <div class="term-line"><span class="term-dim">──────────────────────────────────</span></div>
-                    <div class="term-line"><span class="term-prompt">You: </span><span class="term-cursor"></span></div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section" id="howto">
-            <div class="section-header">
-                <div class="section-label">How To Use</div>
-                <h2 class="section-title">Your first 5 minutes with HelloChusquis.</h2>
-                <p class="section-desc">Install, configure, and start working. Here's everything you need to get productive fast.</p>
-            </div>
-            <div class="howto-grid">
-                <div class="howto-step">
-                    <div class="howto-number">01</div>
-                    <h3>Install</h3>
-                    <p>One command. Works on macOS, Linux, and Windows.</p>
-                    <div class="howto-terminal">
-                        <div><span class="ht-p">$</span> <span class="ht-c">pip install hellochusquis</span></div>
-                        <div><span class="ht-o">Successfully installed hellochusquis-1.4.3</span></div>
+                <div class="landing-terminal" aria-label="HelloChusquis terminal preview">
+                    <div class="landing-terminal-top"><span class="landing-window-dots"><i></i><i></i><i></i></span><span>hellochusquis / local session</span><span class="landing-terminal-signal">● ready</span></div>
+                    <div class="landing-terminal-body">
+                        <p><span class="landing-green">$</span> hellochusquis</p>
+                        <p class="landing-muted">Loading local context...</p>
+                        <p><span class="landing-amber">agent</span> <span class="landing-muted">›</span> Ready when you are.</p>
+                        <p class="landing-spacer"></p>
+                        <p><span class="landing-blue">you</span> <span class="landing-muted">›</span> Inspect this repo and find the riskiest test gap.</p>
+                        <p class="landing-muted">→ planning a focused review</p>
+                        <p><span class="landing-green">✓</span> 6 files inspected <span class="landing-muted">·</span> 1 issue found</p>
+                        <p class="landing-spacer"></p>
+                        <p><span class="landing-blue">you</span> <span class="landing-muted">›</span> <span class="landing-cursor" aria-hidden="true"></span></p>
                     </div>
                 </div>
-                <div class="howto-step">
-                    <div class="howto-number">02</div>
-                    <h3>First run</h3>
-                    <p>Launch and follow the setup wizard to add your first API key.</p>
-                    <div class="howto-terminal">
-                        <div><span class="ht-p">$</span> <span class="ht-c">hellochusquis</span></div>
-                        <div><span class="ht-h">┌─ Setup Wizard ─────────────────┐</span></div>
-                        <div><span class="ht-h">│</span> <span class="ht-o">Choose a provider:</span></div>
-                        <div><span class="ht-h">│</span> <span class="ht-c">1. OpenRouter (recommended)</span></div>
-                        <div><span class="ht-h">│</span> <span class="ht-c">2. Groq (free)</span></div>
-                        <div><span class="ht-h">│</span> <span class="ht-c">3. Ollama (local)</span></div>
-                        <div><span class="ht-h">└────────────────────────────────┘</span></div>
-                    </div>
-                </div>
-                <div class="howto-step">
-                    <div class="howto-number">03</div>
-                    <h3>Start chatting</h3>
-                    <p>Type naturally. The agent picks the right tools automatically.</p>
-                    <div class="howto-terminal">
-                        <div><span class="ht-p">You:</span> <span class="ht-c">search for the latest Python releases</span></div>
-                        <div><span class="ht-d">→ web_search("latest Python releases 2026")</span></div>
-                        <div><span class="ht-o">Found 5 results. Python 3.13 released Mar 2026.</span></div>
-                        <div><span class="ht-p">You:</span> <span class="ht-c">create a REST API for todos</span></div>
-                        <div><span class="ht-d">→ code(python, "from flask import Flask...")</span></div>
-                        <div><span class="ht-o">Created api.py with 4 endpoints.</span></div>
-                    </div>
-                </div>
-            </div>
+            </section>
 
-            <h3 style="font-size:0.88rem; font-weight:700; color:var(--text); margin-bottom:16px; font-family:var(--font-display);">CLI Commands</h3>
-            <div class="commands-grid">
-                <div class="cmd-category">
-                    <h4>Terminal Commands</h4>
-                    <ul class="cmd-list">
-                        <li><span class="cmd-name">hellochusquis</span> <span class="cmd-desc">Start interactive chat</span></li>
-                        <li><span class="cmd-name">hellochusquis web</span> <span class="cmd-desc">Open web interface (localhost:8000)</span></li>
-                        <li><span class="cmd-name">hellochusquis api</span> <span class="cmd-desc">Start REST API server (port 8080)</span></li>
-                        <li><span class="cmd-name">hellochusquis config</span> <span class="cmd-desc">Open setup wizard</span></li>
-                        <li><span class="cmd-name">hellochusquis config --show</span> <span class="cmd-desc">Display current configuration</span></li>
-                        <li><span class="cmd-name">hellochusquis config --api-keys</span> <span class="cmd-desc">Edit API keys only</span></li>
-                        <li><span class="cmd-name">hellochusquis config --providers</span> <span class="cmd-desc">Edit providers only</span></li>
-                    </ul>
-                </div>
-                <div class="cmd-category">
-                    <h4>In-Chat Slash Commands</h4>
-                    <ul class="cmd-list">
-                        <li><span class="cmd-name">/help</span> <span class="cmd-desc">Show all available commands</span></li>
-                        <li><span class="cmd-name">/status</span> <span class="cmd-desc">Provider status and response times</span></li>
-                        <li><span class="cmd-name">/clear</span> <span class="cmd-desc">Clear conversation history</span></li>
-                        <li><span class="cmd-name">/plan &lt;task&gt;</span> <span class="cmd-desc">Force multi-step plan for complex tasks</span></li>
-                        <li><span class="cmd-name">exit</span> <span class="cmd-desc">Quit the session</span></li>
-                    </ul>
-                </div>
-            </div>
+            <section class="landing-signal-row" aria-label="Product summary">
+                <div><strong>One agent.</strong><span>Many ways to work.</span></div>
+                <div><strong>Visible tools.</strong><span>Safer execution.</span></div>
+                <div><strong>Local context.</strong><span>Less tab switching.</span></div>
+            </section>
 
-            <div class="commands-grid" style="margin-top:16px;">
-                <div class="cmd-category">
-                    <h4>Plugin Management</h4>
-                    <ul class="cmd-list">
-                        <li><span class="cmd-name">hellochusquis install &lt;plugin&gt;</span> <span class="cmd-desc">Install a community plugin</span></li>
-                        <li><span class="cmd-name">hellochusquis uninstall &lt;plugin&gt;</span> <span class="cmd-desc">Remove a plugin</span></li>
-                        <li><span class="cmd-name">hellochusquis plugins</span> <span class="cmd-desc">List installed plugins</span></li>
-                        <li><span class="cmd-name">hellochusquis build</span> <span class="cmd-desc">Build the project</span></li>
-                        <li><span class="cmd-name">hellochusquis learn</span> <span class="cmd-desc">Run learning pipeline</span></li>
-                    </ul>
+            <section class="landing-section landing-workflow" id="workflow" aria-labelledby="workflow-title">
+                <div class="landing-section-intro"><div class="landing-eyebrow">The workflow</div><h2 id="workflow-title">From intent to useful work.</h2><p>Ask naturally. Keep the work close to the code. Let the agent make the next step visible.</p></div>
+                <div class="landing-step-grid">
+                    <article class="landing-step"><span>01</span><div><h3>Describe the job</h3><p>Use plain language for research, code changes, files, data, or multi-step tasks.</p></div></article>
+                    <article class="landing-step"><span>02</span><div><h3>Watch the plan</h3><p>Tools, progress, approvals, and failures stay legible instead of disappearing behind a black box.</p></div></article>
+                    <article class="landing-step"><span>03</span><div><h3>Keep the result</h3><p>Memory, sessions, exports, and integrations keep the useful parts close for the next turn.</p></div></article>
                 </div>
-                <div class="cmd-category">
-                    <h4>Environment Variables</h4>
-                    <ul class="cmd-list">
-                        <li><span class="cmd-name">HELLOCHUSQUIS_API_KEY</span> <span class="cmd-desc">Sets the web UI auth key</span></li>
-                        <li><span class="cmd-name">HELLOCHUSQUIS_AUTH=1</span> <span class="cmd-desc">Enable web UI auth</span></li>
-                        <li><span class="cmd-name">DEBUG=1</span> <span class="cmd-desc">Verbose logs</span></li>
-                        <li><span class="cmd-name">HELLOCHUSQUIS_UNSAFE_MODE=1</span> <span class="cmd-desc">Skip security checks</span></li>
-                    </ul>
-                </div>
-            </div>
+            </section>
 
-            <h3 style="font-size:0.88rem; font-weight:700; color:var(--text); margin:32px 0 16px; font-family:var(--font-display);">Productivity Tips</h3>
-            <div class="tips-grid">
-                <div class="tip-card">
-                    <h4>Multi-step tasks with /plan</h4>
-                    <p>Complex tasks get auto-detected, but you can force a plan: <code>/plan deploy my app to AWS with monitoring</code>. Review steps before execution.</p>
+            <section class="landing-section" id="capabilities" aria-labelledby="capabilities-title">
+                <div class="landing-section-intro landing-section-intro-wide"><div class="landing-eyebrow">The toolkit</div><h2 id="capabilities-title">Enough surface area to ship.<br><span>Not enough to get lost.</span></h2><p>Core tools cover the everyday developer loop, while providers and integrations expand the edges when you need them.</p></div>
+                <div class="landing-capability-grid">
+                    <article class="landing-capability landing-capability-featured"><div class="landing-card-index">01 / terminal</div><h3>Build beside your shell</h3><p>Run commands, inspect files, execute bounded code, and iterate without leaving the conversation.</p><div class="landing-code-line"><span class="landing-green">$</span> hellochusquis <span class="landing-muted">--quick</span></div></article>
+                    <article class="landing-capability"><div class="landing-card-index">02 / context</div><h3>Remember the right things</h3><p>Bounded history, compression, sessions, summaries, and local memory keep context useful.</p></article>
+                    <article class="landing-capability"><div class="landing-card-index">03 / access</div><h3>Meet the web halfway</h3><p>Search, browser automation, an authenticated web UI, and a streaming REST API share one agent.</p></article>
+                    <article class="landing-capability"><div class="landing-card-index">04 / scale</div><h3>Switch providers freely</h3><p>Use hosted, local, enterprise, and specialized providers through one configuration flow.</p></article>
                 </div>
-                <div class="tip-card">
-                    <h4>Web interface</h4>
-                    <p>Run <code>hellochusquis web</code> to chat from your browser at <code>localhost:8000</code>. Supports voice input/output, themes, streaming, and chat export.</p>
-                </div>
-                <div class="tip-card">
-                    <h4>REST API with streaming</h4>
-                    <p>Expose your agent over HTTP: <code>hellochusquis api --port 8080</code>. Supports SSE streaming, rate limiting, and health checks at <code>/health</code>.</p>
-                </div>
-                <div class="tip-card">
-                    <h4>Provider failover</h4>
-                    <p>Add multiple providers. If one hits rate limits or goes down, the agent automatically switches to the next one. Zero downtime.</p>
-                </div>
-                <div class="tip-card">
-                    <h4>Persistent memory</h4>
-                    <p>The agent remembers past sessions. Feedback helps it learn your preferences. Memory persists across sessions in <code>~/.hellochusquis/</code>.</p>
-                </div>
-                <div class="tip-card">
-                    <h4>Pick your model</h4>
-                    <p>In the web UI, choose any provider and model from the input bar — right next to the composer. Your selection is remembered.</p>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <section class="section" id="features">
-            <div class="section-header">
-                <div class="section-label">Built-in Tools</div>
-                <h2 class="section-title">Everything you need. Nothing you don't.</h2>
-                <p class="section-desc">Four core tools that cover 90% of developer workflows. Stop installing plugins for basic tasks.</p>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon" aria-hidden="true"><svg class="ic ic-lg" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
-                    <h3>Shell Execution</h3>
-                    <p>Stop switching between terminal and chat. Run builds, tests, and deployments directly from your conversation.</p>
-                    <div class="feature-code">$ hellochusquis → shell("docker build -t app .")</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" aria-hidden="true"><svg class="ic ic-lg" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
-                    <h3>Code Interpreter</h3>
-                    <p>Prototype and debug without context switching. Run Python code instantly, analyze data, and test ideas live.</p>
-                    <div class="feature-code">$ hellochusquis → code("print(sum(range(100)))")</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" aria-hidden="true"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
-                    <h3>File Management</h3>
-                    <p>Build entire projects without leaving the conversation. Read, write, and organize files on the fly.</p>
-                    <div class="feature-code">$ hellochusquis → files(write, "app.py", content)</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon" aria-hidden="true"><svg class="ic ic-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-                    <h3>Web Search</h3>
-                    <p>Get current information without tab-switching. Search docs, find solutions, and pull live data into your workflow.</p>
-                    <div class="feature-code">$ hellochusquis → web_search("Python 3.13 features")</div>
-                </div>
-            </div>
-        </section>
+            <section class="landing-section landing-control" id="control" aria-labelledby="control-title">
+                <div class="landing-control-panel"><div class="landing-control-copy"><div class="landing-eyebrow">The control layer</div><h2 id="control-title">Automation with the lights on.</h2><p>HelloChusquis is built for useful autonomy, not invisible side effects. The web/API surfaces isolate sessions, bound requests, protect credentials, and pause high-impact actions for approval.</p><a href="https://github.com/aminoy77/HelloChusquis#approvals-roles-and-audit" target="_blank" rel="noopener" class="landing-inline-link">Explore the security model <span aria-hidden="true">↗</span></a></div><div class="landing-control-list"><div><b>approval gate</b><span>High-impact actions can wait for a human decision.</span></div><div><b>isolated sessions</b><span>Conversation state stays scoped to the caller.</span></div><div><b>local persistence</b><span>Memory, audit, and configuration remain on your machine.</span></div></div></div>
+            </section>
 
-        <section class="section" id="providers">
-            <div class="section-header">
-                <div class="section-label">AI Providers</div>
-                <h2 class="section-title">Use any model. Switch anytime.</h2>
-                <p class="section-desc">OpenAI, Anthropic, Google, Ollama, Groq, Mistral, and more. Never get locked into one vendor — automatic fallback keeps you online.</p>
-            </div>
-            <div class="providers-grid">
-                <div class="provider-tag">OpenAI</div>
-                <div class="provider-tag">Anthropic</div>
-                <div class="provider-tag">Google Gemini</div>
-                <div class="provider-tag">Ollama</div>
-                <div class="provider-tag">OpenRouter</div>
-                <div class="provider-tag">Groq</div>
-                <div class="provider-tag">Mistral</div>
-                <div class="provider-tag">DeepSeek</div>
-                <div class="provider-tag">Cohere</div>
-                <div class="provider-tag">xAI</div>
-                <div class="provider-tag">AWS Bedrock</div>
-                <div class="provider-tag">Azure OpenAI</div>
-            </div>
-        </section>
+            <section class="landing-section landing-integrations" id="integrations" aria-labelledby="integrations-title">
+                <div class="landing-section-intro"><div class="landing-eyebrow">The ecosystem</div><h2 id="integrations-title">Your tools, in the same room.</h2><p>Connect the services that already hold the context of your work.</p></div>
+                <div class="landing-integration-cloud"><span>GitHub</span><span>Slack</span><span>Discord</span><span>Docker</span><span>Notion</span><span>AWS</span><span>Gmail</span><span>Jira</span><span>PostgreSQL</span><span>MongoDB</span><span>Stripe</span><span>Supabase</span><span>Vercel</span><span>Shopify</span><span>Linear</span><span>Kubernetes</span></div>
+            </section>
 
-        <section class="section" id="social-proof">
-            <div class="section-header">
-                <div class="section-label">Trusted by Developers</div>
-                <h2 class="section-title">Join the community.</h2>
-                <p class="section-desc">Open source, MIT licensed, and growing every day. See what developers are building with HelloChusquis.</p>
-            </div>
-            <div class="social-proof-grid">
-                <div class="proof-card"><div class="proof-number">500+</div><div class="proof-label">GitHub Stars</div></div>
-                <div class="proof-card"><div class="proof-number">50+</div><div class="proof-label">Contributors</div></div>
-                <div class="proof-card"><div class="proof-number">10K+</div><div class="proof-label">Downloads</div></div>
-                <div class="proof-card"><div class="proof-number">35+</div><div class="proof-label">AI Providers</div></div>
-            </div>
-            <div class="testimonial-grid">
-                <div class="testimonial-card">
-                    <p class="testimonial-text">"Replaced my entire AI workflow. One pip install, and I have everything I need in the terminal."</p>
-                    <div class="testimonial-name">— Developer</div>
-                </div>
-                <div class="testimonial-card">
-                    <p class="testimonial-text">"The provider fallback system is brilliant. If one API goes down, it automatically switches to another."</p>
-                    <div class="testimonial-name">— DevOps Engineer</div>
-                </div>
-            </div>
-        </section>
-
-        <section class="section" id="integrations">
-            <div class="section-header">
-                <div class="section-label">Integrations</div>
-                <h2 class="section-title">Connect to everything.</h2>
-                <p class="section-desc">GitHub, Slack, Docker, Notion, AWS, and more. Build custom workflows with plugins or use the REST API.</p>
-            </div>
-            <div class="integrations-grid">
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></span>GitHub</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Slack</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>Twilio</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2l2.4 7.6H22l-6 4.4 2.3 7.6-6.3-4.6-6.3 4.6L8 14l-6-4.4h7.6z"/></svg></span>Docker</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Notion</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg></span>AWS</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22 6 12 13 2 6"/></svg></span>Gmail</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Jira</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>PostgreSQL</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v5.76l-4.1 4.1A2 2 0 0 0 6.24 19h11.52a2 2 0 0 0 1.34-3.14l-4.1-4.1V6a3 3 0 0 0-3-3z"/></svg></span>MongoDB</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>Stripe</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>Redis</div>
-                <div class="integration-card"><span class="integration-icon"><svg class="ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>Vercel</div>
-            </div>
-        </section>
-
-        <section class="cta-section">
-            <div class="cta-box">
-                <h2>Start in 10 seconds.</h2>
-                <p>Install. Run. Talk to your AI agent. No configuration needed — just start working.</p>
-                <div class="cta-actions">
-                    <button class="btn btn-primary" onclick="showApp()">Launch App</button>
-                    <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" class="btn" rel="noopener">View Docs</a>
-                </div>
-            </div>
-        </section>
-
+            <section class="landing-cta" aria-labelledby="cta-title"><div class="landing-cta-grid"><div><div class="landing-eyebrow">Start local</div><h2 id="cta-title">Give your next task<br><em>a better place to run.</em></h2></div><div><p>One install gets you from a blank terminal to a capable AI workspace.</p><div class="landing-hero-actions"><button class="landing-button" type="button" onclick="showApp()">Launch the app <span aria-hidden="true">→</span></button><a class="landing-button landing-button-quiet" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">View source <span aria-hidden="true">↗</span></a></div></div></div></section>
         </main>
 
-        <footer role="contentinfo">
-            <div class="footer-content">
-                <div class="footer-links">
-                    <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub</a>
-                    <a href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Documentation</a>
-                    <a href="https://github.com/aminoy77/HelloChusquis/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
-                    <a href="https://github.com/aminoy77/HelloChusquis/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
-                </div>
-                <p>Built with care by <a href="https://github.com/aminoy77" target="_blank" rel="noopener">aminoy77</a> and the HelloChusquis community.</p>
-            </div>
-        </footer>
+        <footer class="landing-footer" role="contentinfo"><a href="#top" class="landing-brand"><span class="landing-brand-mark" aria-hidden="true"><span>&gt;_</span></span><span>HelloChusquis</span></a><span>Open source, local-first, built for people who ship.</span><div><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub ↗</a><a href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Docs ↗</a></div></footer>
     </div>
-
     <!-- ===================== APP ===================== -->
     <div class="app-container" id="app" aria-label="HelloChusquis chat application">
 
@@ -1273,10 +1097,17 @@
         set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
         del(k) { try { localStorage.removeItem(k); } catch (e) {} },
     };
+    function createSessionId() {
+        if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+        return 'hc-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+    }
+    const sessionId = storage.get('hc_session') || createSessionId();
+    storage.set('hc_session', sessionId);
 
     // ---------- state ----------
     const state = {
         token: storage.get('hc_token') || '',
+        sessionId,
         authRequired: false,
         authHint: '',
         provider: '',
@@ -1335,7 +1166,10 @@
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
     }
     async function fetchJson(url, opts = {}) {
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-HelloChusquis-Session': state.sessionId,
+        };
         if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
         if (opts.headers) Object.assign(headers, opts.headers);
         const init = { ...opts, headers };
@@ -1605,9 +1439,17 @@
         bubble.innerHTML = renderMarkdown(text);
         el.querySelector('.copy').addEventListener('click', () => copyText(bubble.innerText));
         const like = el.querySelector('.like');
-        if (like) like.addEventListener('click', () => { sendFeedback('up', text); toast('Thanks for the feedback'); });
+        if (like) like.addEventListener('click', async () => {
+            like.disabled = true;
+            if (await sendFeedback('positive', text)) toast('Thanks for the feedback');
+            else { like.disabled = false; toast('Could not record feedback'); }
+        });
         const dislike = el.querySelector('.dislike');
-        if (dislike) dislike.addEventListener('click', () => { sendFeedback('down', text); toast('Feedback recorded'); });
+        if (dislike) dislike.addEventListener('click', async () => {
+            dislike.disabled = true;
+            if (await sendFeedback('negative', text)) toast('Feedback recorded');
+            else { dislike.disabled = false; toast('Could not record feedback'); }
+        });
         el.querySelector('.delete').addEventListener('click', () => el.remove());
         messages.appendChild(el);
         messages.scrollTop = messages.scrollHeight;
@@ -1641,12 +1483,67 @@
             '<div class="tool-calls"></div>';
         const bubble = el.querySelector('.message-bubble');
         el.querySelector('.copy').addEventListener('click', () => copyText(bubble.innerText));
-        el.querySelector('.like').addEventListener('click', () => { sendFeedback('up', bubble.innerText); toast('Thanks for the feedback'); });
-        el.querySelector('.dislike').addEventListener('click', () => { sendFeedback('down', bubble.innerText); toast('Feedback recorded'); });
+        const like = el.querySelector('.like');
+        const dislike = el.querySelector('.dislike');
+        like.addEventListener('click', async () => {
+            like.disabled = true;
+            if (await sendFeedback('positive', bubble.innerText)) toast('Thanks for the feedback');
+            else { like.disabled = false; toast('Could not record feedback'); }
+        });
+        dislike.addEventListener('click', async () => {
+            dislike.disabled = true;
+            if (await sendFeedback('negative', bubble.innerText)) toast('Feedback recorded');
+            else { dislike.disabled = false; toast('Could not record feedback'); }
+        });
         el.querySelector('.delete').addEventListener('click', () => el.remove());
         messages.appendChild(el);
         messages.scrollTop = messages.scrollHeight;
         return el;
+    }
+    function renderApprovalCard(container, requestId, detail) {
+        const card = document.createElement('section');
+        card.className = 'approval-card';
+        const title = document.createElement('div');
+        title.className = 'approval-title';
+        title.textContent = 'Approval required';
+        const text = document.createElement('div');
+        text.className = 'approval-detail';
+        text.textContent = detail || 'This action can modify data or execute code.';
+        const actions = document.createElement('div');
+        actions.className = 'approval-actions';
+        const approve = document.createElement('button');
+        approve.className = 'approval-approve';
+        approve.textContent = 'Approve and execute';
+        const deny = document.createElement('button');
+        deny.className = 'approval-deny';
+        deny.textContent = 'Reject';
+        const decide = async (approved) => {
+            approve.disabled = true;
+            deny.disabled = true;
+            try {
+                const result = await fetchJson('/approvals/' + encodeURIComponent(requestId), {
+                    method: 'POST', body: { approve: approved },
+                });
+                if (!approved) {
+                    text.textContent = 'Action rejected. No tool was executed.';
+                    return;
+                }
+                const toolResult = result.result || {};
+                text.textContent = toolResult.success
+                    ? 'Action executed: ' + (toolResult.output || 'completed')
+                    : 'Execution failed: ' + (toolResult.error || 'unknown error');
+            } catch (error) {
+                text.textContent = 'Could not record approval: ' + ((error && error.message) || 'request failed');
+            }
+        };
+        approve.addEventListener('click', () => decide(true));
+        deny.addEventListener('click', () => decide(false));
+        actions.appendChild(approve);
+        actions.appendChild(deny);
+        card.appendChild(title);
+        card.appendChild(text);
+        card.appendChild(actions);
+        container.appendChild(card);
     }
     function finalizeAssistant(el, cancelled) {
         if (!el) return;
@@ -1701,6 +1598,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-HelloChusquis-Session': state.sessionId,
                     ...(state.token ? { Authorization: 'Bearer ' + state.token } : {}),
                 },
                 body: JSON.stringify({ message: text, provider: state.provider || null, model: state.model || null }),
@@ -1747,10 +1645,24 @@
                         row.innerHTML = ICONS.tool + esc(ev.tool || 'tool') + (args ? ' <span style="opacity:.55">' + esc(args) + '</span>' : '');
                         tc.appendChild(row);
                         messages.scrollTop = messages.scrollHeight;
+                    } else if (ev.type === 'approval_required') {
+                        if (thinking) { thinking.remove(); thinking = null; }
+                        assistant = assistant || ensureAssistant();
+                        const approval = ev.approval || {};
+                        const bubble = assistant.querySelector('.message-bubble');
+                        bubble.textContent = '';
+                        renderApprovalCard(bubble, approval.id, approval.reason);
                     } else if (ev.type === 'error') {
                         if (thinking) { thinking.remove(); thinking = null; }
                         assistant = assistant || ensureAssistant();
-                        assistant.querySelector('.message-bubble').innerHTML = '<p><em>' + esc(ev.content || 'Error') + '</em></p>';
+                        const approvalMatch = /^Error:\s*Approval required:\s*(apr_[A-Za-z0-9_-]+)\.\s*(.*)$/i.exec(ev.content || '');
+                        const bubble = assistant.querySelector('.message-bubble');
+                        if (approvalMatch) {
+                            bubble.textContent = '';
+                            renderApprovalCard(bubble, approvalMatch[1], approvalMatch[2]);
+                        } else {
+                            bubble.innerHTML = '<p><em>' + esc(ev.content || 'Error') + '</em></p>';
+                        }
                     } else if (ev.type === 'done') {
                         break;
                     }
@@ -1793,8 +1705,15 @@
         catch (e) { toast('Copy failed'); }
     }
     async function sendFeedback(type, context) {
-        try { await fetchJson('/feedback', { method: 'POST', body: { type: type, context: (context || '').slice(0, 500) } }); }
-        catch (e) {}
+        try {
+            await fetchJson('/feedback', {
+                method: 'POST',
+                body: { type: type, context: (context || '').slice(0, 500) },
+            });
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
     async function clearHistory() {
         try { await fetchJson('/clear', { method: 'POST' }); clearChat(); }

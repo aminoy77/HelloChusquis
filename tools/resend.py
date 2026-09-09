@@ -1,7 +1,24 @@
 from typing import Optional
 from httpx import AsyncClient
 import os
+import re
 import httpx
+
+_MAX_RESEND_BATCH = 100
+_EMAIL_RE = re.compile(r"^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$")
+
+
+def _recipient(value: object) -> str:
+    recipient = str(value or "")
+    if "\r" in recipient or "\n" in recipient or not _EMAIL_RE.fullmatch(recipient):
+        raise ValueError("Invalid Resend recipient.")
+    return recipient
+
+
+def _bounded_batch(value: object) -> list:
+    if not isinstance(value, list) or not value or len(value) > _MAX_RESEND_BATCH:
+        raise ValueError(f"Resend batch must contain 1 to {_MAX_RESEND_BATCH} emails.")
+    return value
 
 
 def run(action: str, **kwargs) -> str:
@@ -44,10 +61,10 @@ def _run_sync(action: str, key: str, kwargs: dict) -> str:
     try:
         client = httpx.Client(timeout=30)
         if action == "send_email":
-            r = client.post(f"{base_url}/emails", json={"from": kwargs.get("from_", ""), "to": [kwargs.get("to", "")], "subject": kwargs.get("subject", ""), "html": kwargs.get("html", "")}, headers=headers)
+            r = client.post(f"{base_url}/emails", json={"from": kwargs.get("from_", ""), "to": [_recipient(kwargs.get("to", ""))], "subject": kwargs.get("subject", ""), "html": kwargs.get("html", "")}, headers=headers)
             return str(r.json())[:2000]
         elif action == "batch_send":
-            r = client.post(f"{base_url}/emails/batch", json=kwargs.get("emails", []), headers=headers)
+            r = client.post(f"{base_url}/emails/batch", json=_bounded_batch(kwargs.get("emails", [])), headers=headers)
             return str(r.json())[:2000]
         elif action == "create_template":
             r = client.post(f"{base_url}/templates", json={"name": kwargs.get("name", ""), "html": kwargs.get("html", "")}, headers=headers)
@@ -70,7 +87,7 @@ async def send_email(key: str, to: str, subject: str, html: str, from_: str) -> 
     async with AsyncClient() as client:
         r = await client.post(url, json={
             "from": from_,
-            "to": [to],
+            "to": [_recipient(to)],
             "subject": subject,
             "html": html
         }, headers={"Authorization": f"Bearer {key}"})
@@ -81,7 +98,7 @@ async def batch_send(key: str, emails: list) -> dict:
     """Batch send emails via Resend."""
     url = "https://api.resend.com/emails/batch"
     async with AsyncClient() as client:
-        r = await client.post(url, json=emails, headers={"Authorization": f"Bearer {key}"})
+        r = await client.post(url, json=_bounded_batch(emails), headers={"Authorization": f"Bearer {key}"})
         return r.json()
 
 
@@ -97,7 +114,7 @@ async def send_template(key: str, template_id: str, to: str, params: Optional[di
     """Send template via Resend."""
     if params is None:
         params = {}
-    url = f"https://api.resend.com/emails"
+    url = "https://api.resend.com/emails"
     async with AsyncClient() as client:
         r = await client.post(url, json={
             "from": "onboarding@resend.dev",

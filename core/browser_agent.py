@@ -227,6 +227,9 @@ class BrowserAgent:
             )
         except Exception as e:
             logger.error("BrowserAgent start failed: %s", e, exc_info=self.debug)
+            # Startup may have initialized Playwright or the browser before
+            # failing; release those resources before reporting failure.
+            await self.close()
             return False
 
     async def _create_context(self):

@@ -1,9 +1,15 @@
 from  httpx import AsyncClient
+import hashlib
 from  json import dumps
 from  typing import Any
 from typing_extensions import TypedDict
 import os
 import httpx
+
+
+def _subscriber_hash(email: str) -> str:
+    """Return Mailchimp's required lowercase-email MD5 identifier."""
+    return hashlib.md5(email.strip().lower().encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
 def run(action: str, **kwargs) -> str:
@@ -90,7 +96,7 @@ async def add_subscriber(api_key: str, server: str, list_id: str, email: str, **
 
 async def remove_subscriber(api_key: str, server: str, list_id: str, email: str) -> dict:
     """Remove subscriber from Mailchimp list."""
-    url = f"https://{server}.api.mailchimp.com/3.0/lists/{list_id}/members/{hash(email)}"
+    url = f"https://{server}.api.mailchimp.com/3.0/lists/{list_id}/members/{_subscriber_hash(email)}"
     async with AsyncClient() as client:
         r = await client.delete(url, headers={"Authorization": f"apikey {api_key}"})
         return {"status": "deleted"}

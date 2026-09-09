@@ -12,6 +12,7 @@ Implements TTS architecture for HelloChusquis:
 
 import abc
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -24,10 +25,8 @@ from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
-    BinaryIO,
     Callable,
     Dict,
-    Generator,
     List,
     Optional,
     Tuple,
@@ -46,6 +45,29 @@ SUPPORTED_AUDIO_FORMATS = {"mp3", "wav", "ogg", "flac", "m4a", "opus"}
 MAX_CHUNK_CHARS = 4000  # safe limit before splitting text for synthesis
 MAX_RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_BASE = 1.5
+MAX_TTS_AUDIO_BYTES = 10 * 1024 * 1024
+TTS_STREAM_CHUNK_BYTES = 64 * 1024
+
+
+def _read_bounded_tts_audio(response: Any) -> bytes:
+    """Read remote audio incrementally without retaining an unbounded response."""
+    try:
+        content_length = int(response.headers.get("Content-Length", "0"))
+    except (TypeError, ValueError):
+        content_length = 0
+    if content_length > MAX_TTS_AUDIO_BYTES:
+        raise ValueError(f"TTS audio exceeds {MAX_TTS_AUDIO_BYTES} bytes")
+
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in response.iter_content(chunk_size=TTS_STREAM_CHUNK_BYTES):
+        if not chunk:
+            continue
+        total += len(chunk)
+        if total > MAX_TTS_AUDIO_BYTES:
+            raise ValueError(f"TTS audio exceeds {MAX_TTS_AUDIO_BYTES} bytes")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 # ---------------------------------------------------------------------------
 # Enums & dataclasses
@@ -269,6 +291,8 @@ class PiperTTS(TTSProvider):
             )
 
         start = time.monotonic()
+        tmp_path: str | None = None
+        succeeded = False
         try:
             with tempfile.NamedTemporaryFile(
                 suffix=f".{output_format}", delete=False
@@ -292,13 +316,12 @@ class PiperTTS(TTSProvider):
                 timeout=60,
             )
             if proc.returncode != 0:
-                return TTSResult(
-                    success=False,
-                    error=f"Piper failed: {proc.stderr.decode('utf-8', errors='replace')}",
-                )
+                error = proc.stderr.decode("utf-8", errors="replace")[:500]
+                return TTSResult(success=False, error=f"Piper failed: {error}")
 
             audio_bytes = Path(tmp_path).read_bytes()
             latency = (time.monotonic() - start) * 1000
+            succeeded = True
             return TTSResult(
                 success=True,
                 audio_path=tmp_path,
@@ -312,6 +335,12 @@ class PiperTTS(TTSProvider):
             return TTSResult(success=False, error="Piper synthesis timed out")
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
+        finally:
+            if tmp_path and not succeeded:
+                try:
+                    Path(tmp_path).unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         voices = []
@@ -389,8 +418,11 @@ class OpenAITTS(TTSProvider):
         resp_format = output_format if output_format in {"mp3", "opus", "aac", "flac", "wav", "pcm"} else "mp3"
 
         start = time.monotonic()
+        response = None
+        tmp_path: str | None = None
+        succeeded = False
         try:
-            resp = self._retry_request(
+            response = self._retry_request(
                 requests.post,
                 f"{self.base_url}/audio/speech",
                 headers={
@@ -405,20 +437,20 @@ class OpenAITTS(TTSProvider):
                     "speed": max(0.25, min(4.0, speed)),
                 },
                 timeout=60,
+                stream=True,
             )
-            resp.raise_for_status()
-
+            response.raise_for_status()
+            audio_bytes = _read_bounded_tts_audio(response)
             latency = (time.monotonic() - start) * 1000
             ext = resp_format if resp_format != "pcm" else "wav"
-
             with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
-                tmp.write(resp.content)
+                tmp.write(audio_bytes)
                 tmp_path = tmp.name
-
+            succeeded = True
             return TTSResult(
                 success=True,
                 audio_path=tmp_path,
-                audio_bytes=resp.content,
+                audio_bytes=audio_bytes,
                 provider=self.provider_id,
                 voice_id=voice,
                 latency_ms=latency,
@@ -426,6 +458,11 @@ class OpenAITTS(TTSProvider):
             )
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
+        finally:
+            if response is not None:
+                response.close()
+            if tmp_path and not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         return [
@@ -488,8 +525,11 @@ class ElevenLabsTTS(TTSProvider):
         vid = voice_id or "21m00Tcm4TlvDq8ikWAM"
 
         start = time.monotonic()
+        response = None
+        tmp_path: str | None = None
+        succeeded = False
         try:
-            resp = self._retry_request(
+            response = self._retry_request(
                 requests.post,
                 f"{self.base_url}/text-to-speech/{vid}",
                 headers={
@@ -507,20 +547,21 @@ class ElevenLabsTTS(TTSProvider):
                     },
                 },
                 timeout=60,
+                stream=True,
             )
-            resp.raise_for_status()
-
+            response.raise_for_status()
+            audio_bytes = _read_bounded_tts_audio(response)
             latency = (time.monotonic() - start) * 1000
             with tempfile.NamedTemporaryFile(
                 suffix=f".{output_format}", delete=False
             ) as tmp:
-                tmp.write(resp.content)
+                tmp.write(audio_bytes)
                 tmp_path = tmp.name
-
+            succeeded = True
             return TTSResult(
                 success=True,
                 audio_path=tmp_path,
-                audio_bytes=resp.content,
+                audio_bytes=audio_bytes,
                 provider=self.provider_id,
                 voice_id=vid,
                 latency_ms=latency,
@@ -528,6 +569,11 @@ class ElevenLabsTTS(TTSProvider):
             )
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
+        finally:
+            if response is not None:
+                response.close()
+            if tmp_path and not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         if not self.api_key:
@@ -646,17 +692,14 @@ class EdgeTTS(TTSProvider):
 
         start = time.monotonic()
         try:
-            # Use edge-tts Python package if available, else CLI
-            try:
-                import edge_tts  # type: ignore
-
+            # Use edge-tts Python package if available, else CLI.
+            if importlib.util.find_spec("edge_tts") is not None:
                 return self._synth_with_lib(
                     text, voice, rate_str, pitch_str, output_format, start
                 )
-            except ImportError:
-                return self._synth_with_cli(
-                    text, voice, rate_str, pitch_str, output_format, start
-                )
+            return self._synth_with_cli(
+                text, voice, rate_str, pitch_str, output_format, start
+            )
         except Exception as exc:
             return TTSResult(success=False, error=str(exc))
 
@@ -682,32 +725,37 @@ class EdgeTTS(TTSProvider):
             await communicate.save(tmp_path)
 
         # Run async in sync context
-        loop: Optional[asyncio.AbstractEventLoop] = None
+        succeeded = False
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            pass
-        if loop and loop.is_running():
-            # We're inside an async context; run in new thread
-            import concurrent.futures
+            loop: Optional[asyncio.AbstractEventLoop] = None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass
+            if loop and loop.is_running():
+                # We're inside an async context; run in new thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(asyncio.run, _run())
+                    future.result(timeout=60)
+            else:
+                asyncio.run(_run())
+            audio_bytes = Path(tmp_path).read_bytes()
+            latency = (time.monotonic() - start) * 1000
+            succeeded = True
+            return TTSResult(
+                success=True,
+                audio_path=tmp_path,
+                audio_bytes=audio_bytes,
+                provider=self.provider_id,
+                voice_id=voice,
+                latency_ms=latency,
+                output_format=output_format,
+            )
+        finally:
+            if not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, _run())
-                future.result(timeout=60)
-        else:
-            asyncio.run(_run())
-
-        audio_bytes = Path(tmp_path).read_bytes()
-        latency = (time.monotonic() - start) * 1000
-        return TTSResult(
-            success=True,
-            audio_path=tmp_path,
-            audio_bytes=audio_bytes,
-            provider=self.provider_id,
-            voice_id=voice,
-            latency_ms=latency,
-            output_format=output_format,
-        )
 
     def _synth_with_cli(
         self,
@@ -743,24 +791,30 @@ class EdgeTTS(TTSProvider):
             "--write-media",
             tmp_path,
         ]
-        proc = subprocess.run(cmd, capture_output=True, timeout=60)
-        if proc.returncode != 0:
+        succeeded = False
+        try:
+            proc = subprocess.run(cmd, capture_output=True, timeout=60)
+            if proc.returncode != 0:
+                return TTSResult(
+                    success=False,
+                    error=f"edge-tts failed: {proc.stderr.decode('utf-8', errors='replace')}",
+                )
+            audio_bytes = Path(tmp_path).read_bytes()
+            latency = (time.monotonic() - start) * 1000
+            succeeded = True
             return TTSResult(
-                success=False,
-                error=f"edge-tts failed: {proc.stderr.decode('utf-8', errors='replace')}",
+                success=True,
+                audio_path=tmp_path,
+                audio_bytes=audio_bytes,
+                provider=self.provider_id,
+                voice_id=voice,
+                latency_ms=latency,
+                output_format=output_format,
             )
+        finally:
+            if not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
-        audio_bytes = Path(tmp_path).read_bytes()
-        latency = (time.monotonic() - start) * 1000
-        return TTSResult(
-            success=True,
-            audio_path=tmp_path,
-            audio_bytes=audio_bytes,
-            provider=self.provider_id,
-            voice_id=voice,
-            latency_ms=latency,
-            output_format=output_format,
-        )
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         voices = []

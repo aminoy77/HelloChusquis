@@ -1,6 +1,9 @@
+import hashlib
 import json
 import os
-import time
+import re
+import threading
+from pathlib import Path
 from typing import Optional
 import core.db_memory as memory
 import core.learning as learning
@@ -16,17 +19,19 @@ from workspace.manager import WorkspaceManager
 from core.plugins import load_plugins
 from core.security_evaluator import evaluate_command_safety
 from core.tool_policy import (
-    ToolPolicy, ToolLoopDetector, SecurityAuditor, DangerousToolDetector,
-    ToolPolicyConfig, LoopDetectionConfig, SessionState as PolicySessionState,
+    ToolPolicy, ToolLoopDetector, SecurityAuditor, ToolPolicyConfig, LoopDetectionConfig, SessionState as PolicySessionState,
     Severity,
 )
 from core.session import SessionManager
 from core.voice import VoiceManager
-from core.mcp import get_client as get_mcp_client, MCPTransport
+from core.mcp import get_client as get_mcp_client
+from core.approvals import ApprovalManager, approval_reason, redact_sensitive_data
+from core.identity import ROLE_PERMISSIONS, Permission, Role
 from ui.terminal import print_tool_call, print_tool_result, console
 from core.logger import get_logger
 
 logger = get_logger("agent")
+MAX_PERSISTED_HTTP_SESSIONS = 200
 
 # Import tool modules directly (they provide run functions)
 import tools.github as github_module
@@ -1011,8 +1016,19 @@ def _build_tools_schema(plugins: list) -> list:
 
 
 class Agent:
-    def __init__(self, config: dict):
-        self.pool = ProviderPool()
+    def __init__(
+        self,
+        config: dict,
+        require_approval: bool = False,
+        session_key: str | None = None,
+        role: Role | str | None = None,
+    ):
+        self.pool = ProviderPool(config=config)
+        self.require_approval = require_approval
+        self.role = Role(role) if role is not None else None
+        self.approval_manager = ApprovalManager()
+        self._turn_lock = threading.Lock()
+        self._audited_approval_ids: set[str] = set()
         self.history = History()
         self._pending_tool_results = []
         self.workspace = WorkspaceManager(config["settings"]["workspace_dirs"])
@@ -1065,10 +1081,19 @@ class Agent:
         )
         os.makedirs(os.path.dirname(sessions_db), exist_ok=True)
         self.session_manager = SessionManager(sessions_db)
-        self._session_id = self.session_manager.create_session(
-            agent_id="main",
-            model=config.get("model", "default"),
+        self._persistent_session = session_key is not None
+        storage_session_id = (
+            f"http_{hashlib.sha256(session_key.encode('utf-8')).hexdigest()}"
+            if session_key
+            else None
         )
+        self._session_id = self.session_manager.create_session(
+            agent_id="http" if storage_session_id else "main",
+            model=config.get("model", "default"),
+            session_id=storage_session_id,
+        )
+        if self._persistent_session:
+            self._restore_persisted_history()
 
         # Voice/TTS
         try:
@@ -1089,16 +1114,6 @@ class Agent:
             )
 
         # Available integrations list for proposing new tools
-        available_integrations = [
-            "stripe", "square", "plaid",  # Payments
-            "twilio", "sendgrid", "resend", "brevo",  # Communication
-            "vercel", "supabase", "sentry", "datadog", "pagerduty",  # DevOps
-            "shopify", "hubspot", "mailchimp", "airtable", "clerk",  # CRM/Marketing
-            "contentful", "sanity",  # CMS
-            "algolia", "cloudinary", "posthog", "launchdarkly", "upstash",  # Tools
-            "clickup", "raycast", "bitbucket", "n8n", "pipedream", "retool", "workato", "make",  # Automation
-            "calendly", "zoom"  # Meetings
-        ]
         
         self._external_tool_modules = {
             "github": github_module, "slack": slack_module, "discord": discord_module,
@@ -1120,7 +1135,199 @@ class Agent:
             "retool": retool_module, "workato": workato_module, "make": make_module
         }
 
-    def _dispatch_tool(self, name: str, args: dict) -> ToolResult:
+    def _restore_persisted_history(self) -> None:
+        """Restore a bounded recent context for a stable HTTP session."""
+        for message in self.session_manager.get_recent_history(self._session_id, limit=100):
+            role = message.get("role", "")
+            content = message.get("content", "")
+            if role in {"user", "assistant", "tool", "system"} and isinstance(content, str):
+                self.history.add(role, content)
+
+    def try_acquire_turn(self) -> bool:
+        """Acquire exclusive ownership of this conversation without waiting."""
+        return self._turn_lock.acquire(blocking=False)
+
+    def release_turn(self) -> None:
+        """Release conversation ownership after a completed or cancelled HTTP turn."""
+        if self._turn_lock.locked():
+            self._turn_lock.release()
+
+    def _audit(self, event_type: str, details: dict) -> None:
+        """Best-effort audit persistence that must never interrupt an action."""
+        try:
+            self.session_manager.log_audit_event(self._session_id, event_type, details)
+        except Exception:
+            logger.exception("Failed to persist audit event: %s", event_type)
+
+    def pending_approvals(self) -> list[dict]:
+        """Return pending high-impact actions for this agent session only."""
+        return self.approval_manager.list_requests()
+
+    def decide_approval(self, request_id: str, approved: bool) -> dict:
+        """Record one user decision for a high-impact action."""
+        request = self.approval_manager.decide(request_id, approved)
+        self._audit(
+            "approval_decided",
+            {
+                "approval_id": request.id,
+                "tool_name": request.tool_name,
+                "approved": approved,
+                "status": request.status.value,
+            },
+        )
+        return request.to_public_dict()
+
+    def execute_approved(self, request_id: str) -> ToolResult:
+        """Consume an approved action and dispatch it exactly once."""
+        request = self.approval_manager.claim_execution(request_id)
+        denied = self._authorization_denied_result(request.tool_name, request.tool_args)
+        if denied is not None:
+            self.approval_manager.complete_execution(request_id, False, "Not authorized")
+            return denied
+        tool_policy = getattr(self, "tool_policy", None)
+        if tool_policy is not None and not tool_policy.is_tool_allowed(request.tool_name):
+            logger.warning("Approved tool denied by current policy: %s", request.tool_name)
+            result = ToolResult(
+                success=False,
+                output="",
+                error="Tool execution denied by current policy.",
+            )
+        else:
+            result = self._dispatch_tool(
+                request.tool_name,
+                request.tool_args,
+                approval_granted=True,
+            )
+        summary = "Action completed successfully" if result.success else "Action execution failed"
+        completed = self.approval_manager.complete_execution(request_id, result.success, summary)
+        self._audit(
+            "approval_executed",
+            {
+                "approval_id": completed.id,
+                "tool_name": completed.tool_name,
+                "success": result.success,
+            },
+        )
+        return result
+
+    def _audit_cancelled_approvals(self, requests, reason: str) -> None:
+        """Persist cancellation outcomes without retaining tool arguments or results."""
+        for request in requests:
+            self._audit(
+                "approval_cancelled",
+                {
+                    "approval_id": request.id,
+                    "tool_name": request.tool_name,
+                    "reason": reason,
+                },
+            )
+
+    def clear_conversation(self) -> dict[str, int]:
+        """Remove session history and invalidate pending work for this agent."""
+        self.history.clear()
+        self._pending_tool_results = []
+        self.session_manager.clear_history(self._session_id)
+        cancelled_requests = self.approval_manager.cancel_pending_requests()
+        self._audit_cancelled_approvals(cancelled_requests, "conversation_cleared")
+        return {"cancelled_approvals": len(cancelled_requests)}
+
+    def dispose_session(self) -> None:
+        """Release this agent while retaining the audit trail for HTTP sessions."""
+        self.history.clear()
+        self._pending_tool_results = []
+        cancelled_requests = self.approval_manager.cancel_pending_requests()
+        self._audit_cancelled_approvals(cancelled_requests, "session_disposed")
+        if self._persistent_session:
+            self.session_manager.close_session(self._session_id)
+            self.session_manager.prune_closed_sessions(
+                "http", keep=MAX_PERSISTED_HTTP_SESSIONS
+            )
+            self.session_manager.close()
+            return
+        self.session_manager.delete_session(self._session_id)
+
+    def audit_events(self, limit: int = 100) -> list[dict]:
+        """Return the redacted persistent audit trail for this session."""
+        return self.session_manager.list_audit_events(self._session_id, limit=limit)
+
+    def role_has(self, permission: Permission) -> bool:
+        """Whether the acting role grants a permission (unrestricted when unset)."""
+        role = getattr(self, "role", None)
+        if role is None:
+            return True
+        return permission in ROLE_PERMISSIONS[role]
+
+    def _authorization_denied_result(self, tool_name: str, tool_args: dict) -> Optional[ToolResult]:
+        """Deny high-impact calls the acting role may never perform.
+
+        Routes already reject unauthorized requests, but tool calls are chosen
+        by the model, so the decision is repeated here: a role that cannot run
+        mutating tools cannot obtain one through prompting either.
+        """
+        role = getattr(self, "role", None)
+        if role is None or self.role_has(Permission.MUTATING_TOOLS):
+            return None
+        if approval_reason(tool_name, tool_args) is None:
+            return None
+        self._audit("authorization_denied", {"tool_name": tool_name, "role": role.value})
+        return ToolResult(
+            success=False,
+            output="",
+            error=(
+                f"Not authorized: role '{role.value}' cannot run '{tool_name}'. "
+                "Ask an operator or owner to perform this action."
+            ),
+        )
+
+    def _approval_required_result(self, tool_name: str, tool_args: dict) -> Optional[ToolResult]:
+        """Return an actionable blocked result for unapproved high-impact calls."""
+        if not self.require_approval:
+            return None
+        try:
+            request = self.approval_manager.request_for(tool_name, tool_args)
+        except RuntimeError as exc:
+            return ToolResult(success=False, output="", error=f"Approval queue unavailable: {exc}")
+        if request is None:
+            return None
+        if request.id not in self._audited_approval_ids:
+            self._audited_approval_ids.add(request.id)
+            self._audit(
+                "approval_requested",
+                {
+                    "approval_id": request.id,
+                    "tool_name": request.tool_name,
+                    "tool_args": redact_sensitive_data(request.tool_args),
+                    "reason": request.reason,
+                    "expires_at": request.expires_at,
+                },
+            )
+        return ToolResult(
+            success=False,
+            output="",
+            error=(
+                f"Approval required: {request.id}. {request.reason} "
+                "Ask the user to approve or deny this action before execution."
+            ),
+        )
+
+    def _dispatch_tool(
+        self,
+        name: str,
+        args: dict,
+        approval_granted: bool = False,
+    ) -> ToolResult:
+        def safe_tool_result_failure(tool_name: str) -> ToolResult:
+            logger.warning("%s tool returned a failure", tool_name)
+            return ToolResult(
+                success=False,
+                output="",
+                error=f"{tool_name} tool failed. Check server logs.",
+            )
+
+        def safe_tool_failure(tool_name: str, exc: Exception) -> ToolResult:
+            logger.error("%s tool failed (%s)", tool_name, type(exc).__name__)
+            return safe_tool_result_failure(tool_name)
+
         if name == "shell":
             cmd = args.get("command", "")
             unsafe_mode = os.getenv("HELLOCHUSQUIS_UNSAFE_MODE") == "1"
@@ -1129,8 +1336,8 @@ class Agent:
                 safety_check = evaluate_command_safety(cmd, self.pool)
                 if not safety_check.get("safe", True):
                     risk_msg = safety_check.get("reason", "Potentially unsafe command detected.")
-                    logger.warning("Blocked unsafe command: %s — %s", cmd, risk_msg)
-                    console.print(f"[bold red]⛔ Blocked unsafe command:[/bold red] {cmd}")
+                    logger.warning("Blocked unsafe command: %s", risk_msg)
+                    console.print("[bold red]⛔ Blocked unsafe command.[/bold red]")
                     console.print(f"[dim]{risk_msg}[/dim]")
                     return ToolResult(success=False, output="", error=f"Safety check failed: {risk_msg}")
             return self.shell.run(**args)
@@ -1144,10 +1351,17 @@ class Agent:
         if name == "files":
             path = args.get("path", "")
             if not self.workspace.is_allowed(path):
-                granted = self.workspace.request_access(path)
-                if not granted:
-                    return ToolResult(success=False, output="", error="Access denied by user")
-                self.files.allow_dir(path)
+                if approval_granted:
+                    # The request owner has already approved this exact action
+                    # through the authenticated HTTP approval flow. Do not block
+                    # a server worker on a terminal prompt.
+                    self.workspace.allowed.append(Path(path).expanduser().resolve())
+                    self.files.allow_dir(path)
+                else:
+                    granted = self.workspace.request_access(path)
+                    if not granted:
+                        return ToolResult(success=False, output="", error="Access denied by user")
+                    self.files.allow_dir(path)
             return self.files.run(**args)
 
         if name == "browser":
@@ -1244,12 +1458,14 @@ class Agent:
                     return ToolResult(success=success, output=output)
                 return ToolResult(success=True, output=str(result))
 
-            except Exception as e:
-                logger.error("Browser tool error: %s", e)
-                return ToolResult(success=False, output="", error=str(e))
+            except Exception as exc:
+                return safe_tool_failure("Browser", exc)
 
         if name == "web_fetch":
-            return self.web_fetch.run(**args)
+            result = self.web_fetch.run(**args)
+            if isinstance(result, ToolResult) and not result.success:
+                return safe_tool_result_failure("Web fetch")
+            return result
 
         if name == "speak":
             if not self.voice_manager:
@@ -1268,9 +1484,9 @@ class Agent:
                 )
                 if result.success:
                     return ToolResult(success=True, output=f"Audio: {result.audio_path}")
-                return ToolResult(success=False, output="", error=result.error or "TTS synthesis failed")
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
+                return safe_tool_result_failure("Voice")
+            except Exception as exc:
+                return safe_tool_failure("Voice", exc)
 
         if name == "media":
             action = args.get("action", "")
@@ -1303,8 +1519,8 @@ class Agent:
                 else:
                     return ToolResult(success=False, output="", error=f"Unknown media action: {action}")
                 return ToolResult(success=True, output=str(result))
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
+            except Exception as exc:
+                return safe_tool_failure("Media", exc)
 
         if name == "mcp":
             action = args.get("action", "")
@@ -1323,15 +1539,13 @@ class Agent:
                     result = asyncio.get_event_loop().run_until_complete(
                         self.mcp_client.call_tool(server, tool, arguments)
                     )
-                    return ToolResult(
-                        success=result.get("success", False),
-                        output=str(result.get("data", result.get("error", ""))),
-                        error=result.get("error") if not result.get("success") else None,
-                    )
+                    if not result.get("success", False):
+                        return safe_tool_result_failure("MCP")
+                    return ToolResult(success=True, output=str(result.get("data", "")))
                 else:
                     return ToolResult(success=False, output="", error=f"Unknown MCP action: {action}")
-            except Exception as e:
-                return ToolResult(success=False, output="", error=str(e))
+            except Exception as exc:
+                return safe_tool_failure("MCP", exc)
 
         # External tool modules - call run() directly from module
         if name in self._external_tool_modules:
@@ -1339,24 +1553,24 @@ class Agent:
                 module = self._external_tool_modules[name]
                 result = module.run(**args)
                 if isinstance(result, ToolResult):
-                    # Some modules return ToolResult directly — respect its flags
-                    return result
+                    # Some modules return ToolResult directly — preserve only safe failures.
+                    return result if result.success else safe_tool_result_failure(name)
                 text = str(result)
                 # Treat "Error: ..." prefixed strings as failures so the LLM
                 # sees accurate success flags instead of a success-wrapped error
                 if isinstance(result, str) and result.lower().startswith("error"):
-                    return ToolResult(success=False, output="", error=text)
+                    return safe_tool_result_failure(name)
                 return ToolResult(success=True, output=text)
-            except Exception as e:
-                return ToolResult(success=False, output="", error=f"{name} tool error: {e}")
+            except Exception as exc:
+                return safe_tool_failure(name, exc)
 
         for plugin in self.plugins:
             if plugin["name"] == name:
                 try:
                     result_text = plugin["run"](**args)
                     return ToolResult(success=True, output=str(result_text))
-                except Exception as e:
-                    return ToolResult(success=False, output="", error=str(e))
+                except Exception as exc:
+                    return safe_tool_failure(name, exc)
 
         return ToolResult(success=False, output="", error=f"Unknown tool: {name}. I can create this tool for you! Run `hellochusquis build` to create it with AI.")
 
@@ -1408,7 +1622,14 @@ class Agent:
 
         return [{"role": "system", "content": system}, *self.history.get()]
 
-    def run(self, user_input: str, provider: Optional[str] = None, model: Optional[str] = None) -> str:
+    def run(
+        self,
+        user_input: str,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        tool_result_callback=None,
+    ) -> str:
+        """Run one agent turn, optionally observing tools for this request only."""
         self.history.add("user", user_input)
         self.session_manager.append_message(self._session_id, "user", user_input)
         messages = self._build_messages()
@@ -1456,8 +1677,13 @@ class Agent:
                 except json.JSONDecodeError:
                     tool_args = {}
 
-                print_tool_call(tool_name, tool_args)
-                logger.info("Tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
+                safe_tool_args = redact_sensitive_data(tool_args)
+                print_tool_call(tool_name, safe_tool_args)
+                logger.info(
+                    "Tool call: %s(%s)",
+                    tool_name,
+                    json.dumps(safe_tool_args, default=str)[:200],
+                )
 
                 # --- ToolPolicy enforcement ---
                 if not self.tool_policy.is_tool_allowed(tool_name):
@@ -1478,25 +1704,31 @@ class Agent:
                             logger.warning("Loop detected for %s: %s", tool_name, loop_result.message)
                             result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
                         else:
-                            # --- Plugin hooks: before_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("before_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args)
-                                    except Exception:
-                                        pass
+                            approval_result = self._authorization_denied_result(
+                                tool_name, tool_args
+                            ) or self._approval_required_result(tool_name, tool_args)
+                            if approval_result is not None:
+                                result = approval_result
+                            else:
+                                # --- Plugin hooks: before_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("before_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args)
+                                        except Exception:
+                                            pass
 
-                            result = self._dispatch_tool(tool_name, tool_args)
+                                result = self._dispatch_tool(tool_name, tool_args)
 
-                            # --- Plugin hooks: after_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("after_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args, result)
-                                    except Exception:
-                                        pass
+                                # --- Plugin hooks: after_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("after_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args, result)
+                                        except Exception:
+                                            pass
 
                     # --- Record tool call for loop detector ---
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
@@ -1504,6 +1736,11 @@ class Agent:
                 if not result.success:
                     logger.error("Tool error: %s — %s", tool_name, result.error)
                 print_tool_result(result.success, result.output)
+                if callable(tool_result_callback):
+                    try:
+                        tool_result_callback(tool_name, tool_args, result)
+                    except Exception as exc:
+                        logger.warning("Tool result callback failed: %s", exc)
 
                 tool_msg = {
                     "role": "tool",
@@ -1569,14 +1806,19 @@ class Agent:
                     tool_args = {}
 
                 # Yield tool call status event
+                safe_tool_args = redact_sensitive_data(tool_args)
                 yield {
                     "type": "tool_call",
                     "tool": tool_name,
-                    "args": tool_args,
+                    "args": safe_tool_args,
                 }
+                print_tool_call(tool_name, safe_tool_args)
+                logger.info(
+                    "Stream tool call: %s(%s)",
+                    tool_name,
+                    json.dumps(safe_tool_args, default=str)[:200],
+                )
 
-                print_tool_call(tool_name, tool_args)
-                logger.info("Stream tool call: %s(%s)", tool_name, json.dumps(tool_args, default=str)[:200])
 
                 # --- ToolPolicy enforcement ---
                 if not self.tool_policy.is_tool_allowed(tool_name):
@@ -1595,31 +1837,46 @@ class Agent:
                         if loop_result.stuck:
                             result = ToolResult(success=False, output="", error=f"Loop detected: {loop_result.message}")
                         else:
-                            # --- Plugin hooks: before_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("before_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args)
-                                    except Exception:
-                                        pass
-
-                            result = self._dispatch_tool(tool_name, tool_args)
-
-                            # --- Plugin hooks: after_tool ---
-                            for plugin in self.plugins:
-                                hook_fn = plugin.get("after_tool")
-                                if callable(hook_fn):
-                                    try:
-                                        hook_fn(tool_name, tool_args, result)
-                                    except Exception:
-                                        pass
-
+                            approval_result = self._authorization_denied_result(
+                                tool_name, tool_args
+                            ) or self._approval_required_result(tool_name, tool_args)
+                            if approval_result is not None:
+                                result = approval_result
+                                approval_match = re.search(r"Approval required: (apr_[A-Za-z0-9_-]+)\.", result.error)
+                                if approval_match:
+                                    approval_id = approval_match.group(1)
+                                    pending = next(
+                                        (
+                                            item for item in self.pending_approvals()
+                                            if item["id"] == approval_id
+                                        ),
+                                        None,
+                                    )
+                                    if pending is not None:
+                                        yield {"type": "approval_required", "approval": pending}
+                            else:
+                                # --- Plugin hooks: before_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("before_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args)
+                                        except Exception:
+                                            pass
+                                result = self._dispatch_tool(tool_name, tool_args)
+                                # --- Plugin hooks: after_tool ---
+                                for plugin in self.plugins:
+                                    hook_fn = plugin.get("after_tool")
+                                    if callable(hook_fn):
+                                        try:
+                                            hook_fn(tool_name, tool_args, result)
+                                        except Exception:
+                                            pass
                     # --- Record tool call for loop detector ---
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
-
                 if not result.success:
                     logger.error("Stream tool error: %s — %s", tool_name, result.error)
+
                 print_tool_result(result.success, result.output)
 
                 tool_msg = {

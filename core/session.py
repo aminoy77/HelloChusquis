@@ -8,8 +8,8 @@ Optional: tiktoken for accurate token counts (falls back to char/4 estimation).
 
 from __future__ import annotations
 
-import hashlib
 import json
+import os
 import re
 import sqlite3
 import textwrap
@@ -19,7 +19,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Sequence
 
 # ---------------------------------------------------------------------------
 # Optional tiktoken import
@@ -171,6 +171,16 @@ CREATE TABLE IF NOT EXISTS compaction_log (
     strategy      TEXT NOT NULL,
     summary       TEXT
 );
+
+CREATE TABLE IF NOT EXISTS audit_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id    TEXT NOT NULL REFERENCES sessions(session_id),
+    timestamp     REAL NOT NULL,
+    event_type    TEXT NOT NULL,
+    details       TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_events_session ON audit_events(session_id, timestamp DESC);
 """
 
 
@@ -203,9 +213,18 @@ class SessionManager:
 
     def _ensure_connection(self) -> sqlite3.Connection:
         if self._conn is None:
+            file_backed = self._db_path != ":memory:"
+            if file_backed:
+                db_path = Path(self._db_path)
+                db_path.parent.mkdir(parents=True, exist_ok=True)
+                managed_directory = Path.home() / ".hellochusquis"
+                if db_path.parent == managed_directory:
+                    os.chmod(managed_directory, 0o700)
             self._conn = sqlite3.connect(
                 self._db_path, check_same_thread=False
             )
+            if file_backed:
+                os.chmod(db_path, 0o600)
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")
@@ -228,14 +247,15 @@ class SessionManager:
         context_window: int = DEFAULT_CONTEXT_WINDOW,
         title: str = "",
         extra: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> str:
-        """Create a new session and return its ID."""
-        session_id = _generate_session_id(agent_id)
+        """Create a new session, optionally with a stable caller-supplied ID."""
+        session_id = session_id or _generate_session_id(agent_id)
         now = time.time()
         with self._lock:
             conn = self._ensure_connection()
-            conn.execute(
-                """INSERT INTO sessions
+            cur = conn.execute(
+                """INSERT OR IGNORE INTO sessions
                    (session_id, agent_id, title, created_at, updated_at, status,
                     model, context_window, extra)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -251,6 +271,13 @@ class SessionManager:
                     json.dumps(extra or {}),
                 ),
             )
+            if cur.rowcount == 0:
+                conn.execute(
+                    """UPDATE sessions
+                       SET updated_at = ?, status = ?, model = ?, context_window = ?
+                       WHERE session_id = ?""",
+                    (now, SessionStatus.ACTIVE.value, model, context_window, session_id),
+                )
             conn.commit()
         return session_id
 
@@ -323,27 +350,22 @@ class SessionManager:
         """Update session fields. Returns ``True`` if a row was changed."""
         with self._lock:
             conn = self._ensure_connection()
-            sets: list[str] = ["updated_at = ?"]
-            params: list[Any] = [time.time()]
-            if title is not None:
-                sets.append("title = ?")
-                params.append(title)
-            if model is not None:
-                sets.append("model = ?")
-                params.append(model)
-            if context_window is not None:
-                sets.append("context_window = ?")
-                params.append(context_window)
-            if status is not None:
-                sets.append("status = ?")
-                params.append(status.value)
-            if extra is not None:
-                sets.append("extra = ?")
-                params.append(json.dumps(extra))
-            params.append(session_id)
+            serialized_extra = json.dumps(extra) if extra is not None else None
+            status_value = status.value if status is not None else None
             cur = conn.execute(
-                f"UPDATE sessions SET {', '.join(sets)} WHERE session_id = ?",
-                params,
+                "UPDATE sessions SET updated_at = ?, title = COALESCE(?, title), "
+                "model = COALESCE(?, model), context_window = COALESCE(?, context_window), "
+                "status = COALESCE(?, status), extra = COALESCE(?, extra) "
+                "WHERE session_id = ?",
+                (
+                    time.time(),
+                    title,
+                    model,
+                    context_window,
+                    status_value,
+                    serialized_extra,
+                    session_id,
+                ),
             )
             conn.commit()
             return cur.rowcount > 0
@@ -352,11 +374,34 @@ class SessionManager:
         """Mark session as closed."""
         return self.update_session(session_id, status=SessionStatus.CLOSED)
 
+    def prune_closed_sessions(self, agent_id: str, *, keep: int = 200) -> int:
+        """Delete oldest closed sessions for an agent, retaining the newest set."""
+        keep = max(0, int(keep))
+        with self._lock:
+            conn = self._ensure_connection()
+            rows = conn.execute(
+                """SELECT session_id FROM sessions
+                   WHERE agent_id = ? AND status = ?
+                   ORDER BY updated_at DESC, session_id DESC
+                   LIMIT -1 OFFSET ?""",
+                (agent_id, SessionStatus.CLOSED.value, keep),
+            ).fetchall()
+            session_ids = [row["session_id"] for row in rows]
+            for session_id in session_ids:
+                conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+                conn.execute("DELETE FROM compaction_log WHERE session_id = ?", (session_id,))
+                conn.execute("DELETE FROM audit_events WHERE session_id = ?", (session_id,))
+                conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+            conn.commit()
+            return len(session_ids)
+
     def delete_session(self, session_id: str) -> bool:
         """Delete session and all its messages."""
         with self._lock:
             conn = self._ensure_connection()
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM compaction_log WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM audit_events WHERE session_id = ?", (session_id,))
             cur = conn.execute(
                 "DELETE FROM sessions WHERE session_id = ?", (session_id,)
             )
@@ -431,6 +476,31 @@ class SessionManager:
             for r in rows
         ]
 
+    def get_recent_history(self, session_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        """Return the most recent messages in chronological order."""
+        limit = max(1, min(int(limit), 500))
+        with self._lock:
+            conn = self._ensure_connection()
+            rows = conn.execute(
+                """SELECT * FROM (
+                       SELECT * FROM messages WHERE session_id = ?
+                       ORDER BY timestamp DESC, id DESC LIMIT ?
+                   ) ORDER BY timestamp ASC, id ASC""",
+                (session_id, limit),
+            ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "role": row["role"],
+                "content": row["content"],
+                "timestamp": row["timestamp"],
+                "token_count": row["token_count"],
+                "priority": row["priority"],
+                "metadata": json.loads(row["metadata"]),
+            }
+            for row in rows
+        ]
+
     def get_history_tokens(self, session_id: str) -> int:
         """Return total token count across all messages in *session_id*."""
         with self._lock:
@@ -455,6 +525,51 @@ class SessionManager:
             conn = self._ensure_connection()
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
             conn.commit()
+
+    # -- audit log -----------------------------------------------------------
+
+    def log_audit_event(
+        self,
+        session_id: str,
+        event_type: str,
+        details: dict[str, Any] | None = None,
+    ) -> int:
+        """Persist a structured, session-scoped audit event."""
+        now = time.time()
+        with self._lock:
+            conn = self._ensure_connection()
+            cur = conn.execute(
+                """INSERT INTO audit_events (session_id, timestamp, event_type, details)
+                   VALUES (?, ?, ?, ?)""",
+                (session_id, now, event_type, json.dumps(details or {})),
+            )
+            conn.execute(
+                "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
+                (now, session_id),
+            )
+            conn.commit()
+            return cur.lastrowid or 0  # type: ignore[return-value]
+
+    def list_audit_events(self, session_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        """Return recent audit events for one session, newest first."""
+        limit = max(1, min(int(limit), 200))
+        with self._lock:
+            conn = self._ensure_connection()
+            rows = conn.execute(
+                """SELECT id, timestamp, event_type, details
+                   FROM audit_events WHERE session_id = ?
+                   ORDER BY timestamp DESC, id DESC LIMIT ?""",
+                (session_id, limit),
+            ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "timestamp": row["timestamp"],
+                "event_type": row["event_type"],
+                "details": json.loads(row["details"]),
+            }
+            for row in rows
+        ]
 
     # -- compaction log ------------------------------------------------------
 

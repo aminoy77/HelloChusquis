@@ -92,8 +92,11 @@ class DocParser:
         """Extract TODO items from content."""
         todos = []
         
-        for match in re.finditer(r'- \[ \] (.+)|- \[ \] (.+)', content):
-            todos.append(match.group(1) or match.group(2))
+        # Accept the common Markdown task-list markers (-, *, or +),
+        # including indentation, while ignoring completed items.
+        pattern = r'^\s*[-*+]\s+\[ \]\s+(.+?)\s*$'
+        for match in re.finditer(pattern, content, re.MULTILINE):
+            todos.append(match.group(1))
         
         return todos
 

@@ -1,6 +1,24 @@
 from httpx import AsyncClient
 import os
+import re
+from urllib.parse import quote
+
 import httpx
+
+
+_EMAIL_RE = re.compile(
+    r"[A-Za-z0-9.!#$%&'*+=?^_`{|}~-]+@"
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+"
+)
+
+
+def _contact_email_path_segment(email: object) -> str:
+    """Validate a HubSpot contact email and encode it as exactly one path segment."""
+    value = str(email or "").strip()
+    if len(value) > 254 or not _EMAIL_RE.fullmatch(value):
+        raise ValueError("A valid contact email is required.")
+    return quote(value, safe="")
 
 
 def run(action: str, **kwargs) -> str:
@@ -38,14 +56,19 @@ def _run_sync(action: str, api_key: str, kwargs: dict) -> str:
     base_url = "https://api.hubapi.com"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     try:
-        client = httpx.Client(timeout=30)
+        client = httpx.Client(timeout=30, follow_redirects=False)
         if action == "create_lead":
             r = client.post(f"{base_url}/crm/v3/objects/contacts",
                            json={"properties": {"email": kwargs.get("email", ""), "firstname": kwargs.get("first_name", ""), "lastname": kwargs.get("last_name", "")}},
                            headers=headers)
             return str(r.json())[:2000]
         elif action == "get_lead":
-            r = client.get(f"{base_url}/crm/v3/objects/contacts/{kwargs.get('email', '')}", headers=headers)
+            contact_email = _contact_email_path_segment(kwargs.get("email", ""))
+            r = client.get(
+                f"{base_url}/crm/v3/objects/contacts/{contact_email}",
+                headers=headers,
+                params={"idProperty": "email"},
+            )
             return str(r.json())[:2000]
         elif action == "create_deal":
             r = client.post(f"{base_url}/crm/v3/objects/deals",
@@ -66,23 +89,28 @@ def _run_sync(action: str, api_key: str, kwargs: dict) -> str:
 async def create_lead(email: str, first_name: str, last_name: str, api_key: str) -> dict:
     """Create HubSpot lead."""
     url = "https://api.hubapi.com/crm/v3/objects/contacts"
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=30, follow_redirects=False) as client:
         r = await client.post(url, json={"properties": {"email": email, "firstname": first_name, "lastname": last_name}}, headers={"Authorization": f"Bearer {api_key}"})
         return r.json()
 
 
 async def get_lead(email: str, api_key: str) -> dict:
     """Get HubSpot contact."""
-    url = f"https://api.hubapi.com/crm/v3/objects/contacts/{email}"
-    async with AsyncClient() as client:
-        r = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+    contact_email = _contact_email_path_segment(email)
+    url = f"https://api.hubapi.com/crm/v3/objects/contacts/{contact_email}"
+    async with AsyncClient(timeout=30, follow_redirects=False) as client:
+        r = await client.get(
+            url,
+            headers={"Authorization": f"Bearer {api_key}"},
+            params={"idProperty": "email"},
+        )
         return r.json()
 
 
 async def create_deal(name: str, amount: str, stage: str, api_key: str) -> dict:
     """Create HubSpot deal."""
     url = "https://api.hubapi.com/crm/v3/objects/deals"
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=30, follow_redirects=False) as client:
         r = await client.post(url, json={"properties": {"dealname": name, "amount": amount, "dealstage": stage}}, headers={"Authorization": f"Bearer {api_key}"})
         return r.json()
 
@@ -90,6 +118,6 @@ async def create_deal(name: str, amount: str, stage: str, api_key: str) -> dict:
 async def create_company(domain: str, name: str, api_key: str) -> dict:
     """Create HubSpot company."""
     url = "https://api.hubapi.com/crm/v3/objects/companies"
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=30, follow_redirects=False) as client:
         r = await client.post(url, json={"properties": {"domain": domain, "name": name}}, headers={"Authorization": f"Bearer {api_key}"})
         return r.json()

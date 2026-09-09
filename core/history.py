@@ -34,8 +34,12 @@ class History:
         if len(self.messages) <= self.max_entries:
             return
         if self.messages and self.messages[0].get("role") == "system":
-            self.messages = [self.messages[0]] + self.messages[-(self.max_entries - 1):]
-            self._timestamps = [self._timestamps[0]] + self._timestamps[-(self.max_entries - 1):]
+            if self.max_entries == 1:
+                self.messages = [self.messages[0]]
+                self._timestamps = [self._timestamps[0]]
+            else:
+                self.messages = [self.messages[0]] + self.messages[-(self.max_entries - 1):]
+                self._timestamps = [self._timestamps[0]] + self._timestamps[-(self.max_entries - 1):]
         else:
             self.messages = self.messages[-self.max_entries:]
             self._timestamps = self._timestamps[-self.max_entries:]

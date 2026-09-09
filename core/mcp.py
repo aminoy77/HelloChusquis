@@ -12,19 +12,55 @@ Implements the Model Context Protocol. Provides:
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 import json
 import logging
 import os
-import signal
+import shutil
 import subprocess
 import sys
 import time
-import uuid
+from pathlib import Path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
+from urllib.parse import urlsplit
+
+from tools.web_fetch import SsrFBlockedError, validate_url_safety
 
 logger = logging.getLogger(__name__)
+
+MCP_STDIO_MAX_DIAGNOSTIC_LINES = 100
+MCP_STDIO_MAX_LINE_BYTES = 65_536
+MCP_STDIO_STOP_TIMEOUT_SECONDS = 5
+_DEFAULT_MCP_FILESYSTEM_DIRECTORY = Path.home() / ".hellochusquis" / "mcp-files"
+
+
+def _ensure_default_filesystem_workspace(root: Path | None = None) -> Path:
+    """Create the owner-only filesystem root used by the default MCP server."""
+    workspace = root or _DEFAULT_MCP_FILESYSTEM_DIRECTORY
+    if workspace.is_symlink():
+        raise ValueError("default MCP filesystem workspace must not be a symlink")
+    workspace.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(workspace, 0o700)
+    return workspace
+
+
+def validate_mcp_remote_url(url: str) -> str:
+    """Accept only public HTTPS endpoints for remote MCP transports."""
+    if not isinstance(url, str) or not url.strip():
+        raise ValueError("MCP remote URL is required")
+    normalized = url.strip()
+    parsed = urlsplit(normalized)
+    if parsed.scheme != "https":
+        raise ValueError("MCP remote URL must use HTTPS")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("MCP remote URL must not include credentials")
+    try:
+        return validate_url_safety(normalized)
+    except (SsrFBlockedError, ValueError) as exc:
+        raise ValueError("MCP remote URL is unsafe") from exc
+
 
 # ---------------------------------------------------------------------------
 # JSON-RPC 2.0 helpers
@@ -152,7 +188,7 @@ class StdioTransport(MCPTransport):
         self.cwd = cwd
         self._process: Optional[subprocess.Popen[bytes]] = None
         self._connected = False
-        self._stderr_lines: list[str] = []
+        self._stderr_lines: deque[str] = deque(maxlen=MCP_STDIO_MAX_DIAGNOSTIC_LINES)
         self._stderr_task: Optional[asyncio.Task[None]] = None
 
     @property
@@ -163,18 +199,20 @@ class StdioTransport(MCPTransport):
         if self._connected:
             return
         loop = asyncio.get_event_loop()
-        # Build merged env
-        merged_env = os.environ.copy()
-        if self.env:
-            merged_env.update(self.env)
+        # Resolve the executable before spawning, but pass only explicitly
+        # configured variables to avoid leaking host credentials into a server.
+        command = self.command
+        if not os.path.isabs(command):
+            command = shutil.which(command) or command
+        process_env = dict(self.env or {})
         self._process = await loop.run_in_executor(
             None,
             lambda: subprocess.Popen(
-                [self.command] + self.args,
+                [command] + self.args,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=merged_env,
+                env=process_env,
                 cwd=self.cwd,
             ),
         )
@@ -189,7 +227,7 @@ class StdioTransport(MCPTransport):
         try:
             while True:
                 line = await loop.run_in_executor(
-                    None, self._process.stderr.readline
+                    None, self._process.stderr.readline, MCP_STDIO_MAX_LINE_BYTES
                 )
                 if not line:
                     break
@@ -213,9 +251,13 @@ class StdioTransport(MCPTransport):
         if not self.is_connected or not self._process or not self._process.stdout:
             return None
         loop = asyncio.get_event_loop()
-        line = await loop.run_in_executor(None, self._process.stdout.readline)
+        line = await loop.run_in_executor(
+            None, self._process.stdout.readline, MCP_STDIO_MAX_LINE_BYTES
+        )
         if not line:
             return None
+        if len(line) >= MCP_STDIO_MAX_LINE_BYTES and not line.endswith(b"\n"):
+            raise ParseError("MCP stdio response exceeds the line-size limit")
         text = line.decode("utf-8", errors="replace").strip()
         if not text:
             return None
@@ -236,11 +278,15 @@ class StdioTransport(MCPTransport):
             try:
                 self._process.terminate()
                 try:
-                    self._process.wait(timeout=5)
+                    self._process.wait(timeout=MCP_STDIO_STOP_TIMEOUT_SECONDS)
                 except subprocess.TimeoutExpired:
                     self._process.kill()
+                    self._process.wait(timeout=MCP_STDIO_STOP_TIMEOUT_SECONDS)
             except Exception:
                 pass
+            for stream in (self._process.stdin, self._process.stdout, self._process.stderr):
+                if stream is not None:
+                    stream.close()
             self._process = None
 
 
@@ -254,8 +300,9 @@ class HTTPTransport(MCPTransport):
         name: str = "",
         timeout: float = 30.0,
     ):
-        super().__init__(name=name or url, transport_type="http")
-        self.url = url.rstrip("/")
+        safe_url = validate_mcp_remote_url(url).rstrip("/")
+        super().__init__(name=name or safe_url, transport_type="http")
+        self.url = safe_url
         self.headers = headers or {}
         self.timeout = timeout
         self._connected = False
@@ -276,12 +323,14 @@ class HTTPTransport(MCPTransport):
         try:
             import aiohttp
             self._session = aiohttp.ClientSession(
-                headers=self.headers, timeout=aiohttp.ClientTimeout(total=self.timeout)
+                headers=self.headers,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+                raise_for_status=False,
             )
         except ImportError:
             import httpx
             self._session = httpx.AsyncClient(
-                headers=self.headers, timeout=self.timeout
+                headers=self.headers, timeout=self.timeout, follow_redirects=False
             )
         self._connected = True
 
@@ -296,7 +345,10 @@ class HTTPTransport(MCPTransport):
                 import aiohttp
                 if isinstance(self._session, aiohttp.ClientSession):
                     async with self._session.post(
-                        self.url, data=payload, content_type="application/json"
+                        self.url,
+                        data=payload,
+                        content_type="application/json",
+                        allow_redirects=False,
                     ) as resp:
                         body = await resp.text()
                         self._last_response = json.loads(body) if body.strip() else None
@@ -345,8 +397,9 @@ class SSETransport(MCPTransport):
         name: str = "",
         timeout: float = 60.0,
     ):
-        super().__init__(name=name or url, transport_type="sse")
-        self.url = url.rstrip("/")
+        safe_url = validate_mcp_remote_url(url).rstrip("/")
+        super().__init__(name=name or safe_url, transport_type="sse")
+        self.url = safe_url
         self.headers = headers or {}
         self.timeout = timeout
         self._connected = False
@@ -369,13 +422,15 @@ class SSETransport(MCPTransport):
         try:
             import aiohttp
             self._session = aiohttp.ClientSession(
-                headers=self.headers, timeout=aiohttp.ClientTimeout(total=self.timeout)
+                headers=self.headers,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+                raise_for_status=False,
             )
             self._use_aiohttp = True
         except ImportError:
             import httpx
             self._session = httpx.AsyncClient(
-                headers=self.headers, timeout=self.timeout
+                headers=self.headers, timeout=self.timeout, follow_redirects=False
             )
             self._use_aiohttp = False
         self._connected = True
@@ -392,7 +447,7 @@ class SSETransport(MCPTransport):
             if self._use_aiohttp:
                 import aiohttp
                 assert isinstance(self._session, aiohttp.ClientSession)
-                async with self._session.get(sse_url) as resp:
+                async with self._session.get(sse_url, allow_redirects=False) as resp:
                     async for line in resp.content:
                         decoded = line.decode("utf-8", errors="replace").strip()
                         if decoded.startswith("data: "):
@@ -434,7 +489,10 @@ class SSETransport(MCPTransport):
                 import aiohttp
                 if isinstance(self._session, aiohttp.ClientSession):
                     async with self._session.post(
-                        post_url, data=payload, content_type="application/json"
+                        post_url,
+                        data=payload,
+                        content_type="application/json",
+                        allow_redirects=False,
                     ) as resp:
                         body = await resp.text()
                         if body.strip():
@@ -1380,7 +1438,7 @@ class MCPToolBridgeEntry:
 DEFAULT_MCP_SERVERS: dict[str, dict] = {
     "filesystem": {
         "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", ""],
     },
     "git": {
         "command": "npx",
@@ -1405,10 +1463,13 @@ def build_default_configs() -> dict[str, MCPServerConfig]:
     """Build MCPServerConfig instances from DEFAULT_MCP_SERVERS."""
     configs: dict[str, MCPServerConfig] = {}
     for name, cfg in DEFAULT_MCP_SERVERS.items():
+        args = list(cfg.get("args", []))
+        if name == "filesystem":
+            args[-1] = str(_ensure_default_filesystem_workspace())
         configs[name] = MCPServerConfig(
             name=name,
             command=cfg.get("command", ""),
-            args=cfg.get("args", []),
+            args=args,
             transport_type="stdio",
         )
     return configs

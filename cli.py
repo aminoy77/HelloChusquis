@@ -8,7 +8,7 @@ import socket
 # Add project to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-KNOWN_COMMANDS = {"web", "api", "config", "setup", "doctor", "version", "help"}
+KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "users", "version", "help"}
 
 
 def pick_free_port(host="127.0.0.1"):
@@ -21,6 +21,66 @@ def pick_free_port(host="127.0.0.1"):
         s.close()
 
 
+def _print_contract_summary() -> int:
+    """Print offline integration-contract results and return a shell-style status."""
+    from core.integration_contracts import check_integration_contracts, contract_summary
+
+    results = check_integration_contracts()
+    summary = contract_summary(results)
+    print(
+        f"Integration contracts: {summary['passed']}/{summary['total']} passed "
+        f"({summary['failed']} failed)"
+    )
+    for result in results:
+        marker = "PASS" if result.ok else "FAIL"
+        print(f"  [{marker}] {result.name}: {result.detail}")
+    return 0 if summary["failed"] == 0 else 1
+
+
+def _run_users_command(subcommand: str, arguments: list[str], role: str) -> int:
+    """Manage the principals that may authenticate against the HTTP surfaces."""
+    from core.identity import IdentityError, default_store, parse_role
+
+    store = default_store()
+    if subcommand in ("", "list"):
+        principals = store.list_principals()
+        if not principals:
+            print("No users yet. Create one with: hellochusquis users add <name> --role operator")
+            return 0
+        for principal in principals:
+            state = "active" if principal.is_active else f"revoked {principal.revoked_at}"
+            print(f"{principal.name:<24} {principal.role.value:<9} {principal.id}  {state}")
+        return 0
+
+    if subcommand == "add":
+        if not arguments:
+            print("Usage: hellochusquis users add <name> [--role viewer|operator|owner]")
+            return 1
+        try:
+            principal, token = store.create(arguments[0], parse_role(role))
+        except IdentityError as exc:
+            print(f"Error: {exc}")
+            return 1
+        print(f"Created {principal.name} ({principal.role.value}).")
+        print(f"Token (shown once, store it now): {token}")
+        return 0
+
+    if subcommand == "revoke":
+        if not arguments:
+            print("Usage: hellochusquis users revoke <name>")
+            return 1
+        try:
+            principal = store.revoke(arguments[0])
+        except IdentityError as exc:
+            print(f"Error: {exc}")
+            return 1
+        print(f"Revoked {principal.name}.")
+        return 0
+
+    print(f"Unknown users subcommand '{subcommand}'. Try: list, add, revoke.")
+    return 1
+
+
 def _print_help():
     """Print CLI usage summary."""
     print("""HelloChusquis — autonomous terminal AI agent
@@ -31,7 +91,11 @@ Usage:
   hellochusquis api              Launch REST API
   hellochusquis config           Edit configuration
   hellochusquis setup            Run setup wizard
+  hellochusquis status           Show local readiness summary
   hellochusquis doctor           Check providers & dependencies
+  hellochusquis users list       List HTTP users and their roles
+  hellochusquis users add NAME   Create a user and print its token once
+  hellochusquis users revoke NAME  Revoke a user's token
   hellochusquis version          Show version
   hellochusquis help             Show this help
 
@@ -41,13 +105,16 @@ Flags:
   --show             Show current config (masked keys)
   --api-keys         Edit API keys only
   --providers        Edit providers only
-  --port PORT        Port for web/api (default: 8080 api / 8000 web)
-  --host HOST        Host for web/api (default: 0.0.0.0 api / 127.0.0.1 web)
+  --port PORT        Port for web/api (default: 8080 api / 7272 web)
+  --host HOST        Host for web/api (default: 127.0.0.1)
+  --contracts        Verify bundled integration contracts offline (with doctor)
+  --role ROLE        Role for 'users add': viewer, operator or owner (default: operator)
 
 Examples:
   hellochusquis setup --quick       Quick first-time setup
   hellochusquis web --port 3000     Web UI on port 3000
   hellochusquis config --show       View masked config
+  hellochusquis status              Check local readiness
   hellochusquis api --host 0.0.0.0  API on all interfaces
 """)
 
@@ -61,8 +128,10 @@ def main():
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
     parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
     parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
-    parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 8000 web)")
-    parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 0.0.0.0 api / 127.0.0.1 web)")
+    parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 7272 web)")
+    parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 127.0.0.1)")
+    parser.add_argument("--contracts", action="store_true", help="Verify integration contracts offline (with doctor)")
+    parser.add_argument("--role", type=str, default="operator", help="Role for 'users add' (viewer, operator, owner)")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
     args = parser.parse_args()
 
@@ -139,6 +208,33 @@ def main():
         edit_config(section)
         return
 
+    if args.command == "status":
+        from core.setup import ensure_config
+
+        try:
+            config = ensure_config(interactive=False)
+        except FileNotFoundError:
+            print("Status: setup required. Run: hellochusquis setup")
+        else:
+            providers = config.get("providers", [])
+            configured = sum(
+                1
+                for provider in providers
+                if provider.get("api_key", "").strip()
+                or "localhost" in provider.get("base_url", "").lower()
+            )
+            print(
+                f"Status: {configured}/{len(providers)} provider(s) configured. "
+                "Run 'hellochusquis doctor' for provider details."
+            )
+        if args.contracts:
+            _print_contract_summary()
+        return
+
+    if args.command == "users":
+        subcommand = args.args[0] if args.args else "list"
+        sys.exit(_run_users_command(subcommand, args.args[1:], args.role))
+
     if args.command == "web":
         from web.server import start
         host = args.host or "127.0.0.1"
@@ -161,17 +257,23 @@ def main():
     if args.command == "api":
         from api.main import app
         import uvicorn
-        host = args.host or "0.0.0.0"
+        host = args.host or "127.0.0.1"
         port = args.port or 8080
         print(f"Starting HelloChusquis API on http://{host}:{port}")
         uvicorn.run(app, host=host, port=port)
         return
 
     if args.command == "doctor":
+        if args.contracts:
+            return _print_contract_summary()
         from core.setup import ensure_config, console
         from rich.panel import Panel
-
-        config = ensure_config()
+        try:
+            config = ensure_config(interactive=False)
+        except FileNotFoundError:
+            console.print("[red]No providers configured.[/red]")
+            console.print("[dim]Run: hellochusquis setup[/dim]")
+            return
         providers = config.get("providers", [])
 
         console.print(Panel(
@@ -195,12 +297,12 @@ def main():
             else:
                 console.print(f"  [green]✓[/green] {name} — key configured")
 
-        console.print(f"\n[dim]Edit config: hellochusquis config[/dim]")
+        console.print("\n[dim]Edit config: hellochusquis config[/dim]")
         return
 
     # Validate unknown commands
     if args.command is not None:
-        print(f"Unknown command '{args.command}'. Try: web, api, config, setup, or nothing for chat.")
+        print(f"Unknown command '{args.command}'. Try: web, api, config, setup, status, or nothing for chat.")
         print("Run 'hellochusquis help' for full usage.")
         sys.exit(1)
 

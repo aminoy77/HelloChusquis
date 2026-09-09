@@ -21,15 +21,25 @@ import subprocess
 import tempfile
 import time
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Any, BinaryIO, Optional, Sequence, Union
+from typing import Any, Union
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 _MAX_IMAGE_PIXELS = 25_000_000
+_MAX_BASE64_ENCODED_CHARS = 16 * 1024 * 1024
+_MAX_VISION_IMAGE_BYTES = 10 * 1024 * 1024
+_MAX_PDF_IMAGE_PAGES = 25
+_MAX_PDF_IMAGE_BYTES = 50 * 1024 * 1024
+_MAX_PDF_IMAGE_PAGE_BYTES = 10 * 1024 * 1024
+_MIN_PDF_IMAGE_DPI = 72
+_MAX_PDF_IMAGE_DPI = 300
+_MIN_AUDIO_CHUNK_DURATION_MS = 1_000
+_MAX_AUDIO_CHUNK_DURATION_MS = 300_000
+_MAX_AUDIO_CHUNKS = 100
+_MAX_AUDIO_CHUNK_BYTES = 10 * 1024 * 1024
+_MAX_AUDIO_CHUNK_OUTPUT_BYTES = 50 * 1024 * 1024
 _IMAGE_REDUCE_QUALITY_STEPS = [85, 75, 65, 55, 45, 35]
 _DEFAULT_QR_SCALE = 6
 _DEFAULT_QR_MARGIN = 4
@@ -210,6 +220,15 @@ class ImageProcessor:
     # Metadata / probing
     # ----------------------------------------------------------------
 
+    def _require_safe_pixel_count(self, path_or_bytes: Union[str, bytes]) -> None:
+        """Reject images that would require excessive decoded-memory resources."""
+        metadata = self.probe(path_or_bytes)
+        pixels = metadata.width * metadata.height
+        if pixels > _MAX_IMAGE_PIXELS:
+            raise ValueError(
+                f"Image exceeds pixel limit: {pixels} pixels (maximum {_MAX_IMAGE_PIXELS})"
+            )
+
     def probe(self, path_or_bytes: Union[str, bytes]) -> ImageMetadata:
         """Read image dimensions, format, orientation, EXIF from header."""
         if isinstance(path_or_bytes, bytes):
@@ -295,6 +314,7 @@ class ImageProcessor:
         enlarge: bool = False,
     ) -> bytes:
         """Resize image so longest side <= max_side, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -370,6 +390,7 @@ class ImageProcessor:
         height: int = 100,
     ) -> bytes:
         """Crop image to given rectangle, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -412,6 +433,7 @@ class ImageProcessor:
 
     def rotate(self, path_or_bytes: Union[str, bytes], degrees: float) -> bytes:
         """Rotate image by given degrees, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -449,6 +471,7 @@ class ImageProcessor:
 
     def flip(self, path_or_bytes: Union[str, bytes], horizontal: bool = True) -> bytes:
         """Flip image horizontally or vertically, return encoded bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -488,6 +511,7 @@ class ImageProcessor:
 
     def convert(self, path_or_bytes: Union[str, bytes], to_format: str) -> bytes:
         """Convert image to target format (png, jpeg, webp, gif)."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -519,6 +543,7 @@ class ImageProcessor:
 
     def to_jpeg(self, data: bytes, quality: int = 85) -> bytes:
         """Convert image to JPEG."""
+        self._require_safe_pixel_count(data)
         tmp_in = _tmp_path(".bin")
         tmp_out = _tmp_path(".jpg")
         try:
@@ -545,6 +570,7 @@ class ImageProcessor:
 
     def to_webp(self, data: bytes, quality: int = 80) -> bytes:
         """Convert image to WebP."""
+        self._require_safe_pixel_count(data)
         tmp_in = _tmp_path(".bin")
         tmp_out = _tmp_path(".webp")
         try:
@@ -577,6 +603,7 @@ class ImageProcessor:
         quality: int = 75,
     ) -> bytes:
         """Generate a thumbnail image, return JPEG bytes."""
+        self._require_safe_pixel_count(path_or_bytes)
         tmp_in = None
         tmp_out = None
         try:
@@ -720,8 +747,13 @@ class ImageProcessor:
 
     @staticmethod
     def decode_base64(b64: str) -> bytes:
-        """Decode base64 string to bytes."""
-        return base64.b64decode(b64)
+        """Decode bounded, valid base64 image data to bytes."""
+        if len(b64) > _MAX_BASE64_ENCODED_CHARS:
+            raise ValueError(f"base64 input exceeds {_MAX_BASE64_ENCODED_CHARS} characters")
+        try:
+            return base64.b64decode(b64, validate=True)
+        except (ValueError, TypeError) as exc:
+            raise ValueError("Invalid base64 data") from exc
 
     @staticmethod
     def to_data_url(data: bytes, mime: str = "image/png") -> str:
@@ -736,7 +768,7 @@ class ImageProcessor:
         if not match:
             raise ValueError("Invalid data URL format")
         mime = match.group(1)
-        payload = base64.b64decode(match.group(2))
+        payload = ImageProcessor.decode_base64(match.group(2))
         return payload, mime
 
     # ----------------------------------------------------------------
@@ -777,13 +809,19 @@ class ImageProcessor:
             return "Error: No API key available. Set VISION_API_KEY or ANTHROPIC_API_KEY."
 
         if isinstance(path_or_bytes, bytes):
-            b64 = self.encode_base64(path_or_bytes)
-            mime = _detect_mime_from_bytes(path_or_bytes)
+            raw = path_or_bytes
         else:
-            with open(path_or_bytes, "rb") as f:
-                raw = f.read()
-            b64 = self.encode_base64(raw)
-            mime = _detect_mime_from_bytes(raw)
+            try:
+                if os.path.getsize(path_or_bytes) > _MAX_VISION_IMAGE_BYTES:
+                    return f"Error: image exceeds {_MAX_VISION_IMAGE_BYTES} bytes"
+                with open(path_or_bytes, "rb") as image_file:
+                    raw = image_file.read(_MAX_VISION_IMAGE_BYTES + 1)
+            except OSError as exc:
+                return f"Error: unable to read image: {exc}"
+        if len(raw) > _MAX_VISION_IMAGE_BYTES:
+            return f"Error: image exceeds {_MAX_VISION_IMAGE_BYTES} bytes"
+        b64 = self.encode_base64(raw)
+        mime = _detect_mime_from_bytes(raw)
 
         # Anthropic API
         if os.getenv("ANTHROPIC_API_KEY") or "claude" in model.lower():
@@ -1089,76 +1127,90 @@ class PDFExtractor:
         dpi: int = 150,
         pages: list[int] | None = None,
     ) -> list[bytes]:
-        """Convert PDF pages to images. Returns list of image bytes."""
+        """Convert a bounded selection of PDF pages to bounded image output."""
+        if format not in {"png", "jpeg"}:
+            raise ValueError("format must be 'png' or 'jpeg'")
+        if not isinstance(dpi, int) or not _MIN_PDF_IMAGE_DPI <= dpi <= _MAX_PDF_IMAGE_DPI:
+            raise ValueError(f"dpi must be between {_MIN_PDF_IMAGE_DPI} and {_MAX_PDF_IMAGE_DPI}")
+        if pages is not None:
+            if not pages or len(pages) > _MAX_PDF_IMAGE_PAGES:
+                raise ValueError(f"PDF image page limit is {_MAX_PDF_IMAGE_PAGES}")
+            if any(not isinstance(page, int) or page < 1 for page in pages):
+                raise ValueError("pages must contain positive integers")
+
         tmp_in = None
-        out_pattern = None
+        output_directory = None
         try:
             if isinstance(path_or_bytes, bytes):
                 tmp_in = _tmp_path(".pdf")
-                with open(tmp_in, "wb") as f:
-                    f.write(path_or_bytes)
+                with open(tmp_in, "wb") as pdf_file:
+                    pdf_file.write(path_or_bytes)
                 in_path = tmp_in
             else:
                 in_path = str(path_or_bytes)
 
-            prefix = _tmp_path("")
-            if os.path.exists(prefix):
-                os.unlink(prefix)
-            os.makedirs(prefix, exist_ok=True) if not os.path.exists(prefix) else None
-            # Use a proper prefix directory
-            prefix_dir = tempfile.mkdtemp(prefix="pdf2img-")
-            out_pattern = os.path.join(prefix_dir, "page")
+            if pages is None:
+                metadata = self.extract_metadata(in_path)
+                if metadata.page_count > _MAX_PDF_IMAGE_PAGES:
+                    raise ValueError(f"PDF image page limit is {_MAX_PDF_IMAGE_PAGES}")
 
+            output_directory = tempfile.mkdtemp(prefix="hellochus-pdf2img-")
+            out_pattern = os.path.join(output_directory, "page")
+            extensions = (".png",) if format == "png" else (".jpg", ".jpeg")
             images: list[bytes] = []
+            retained_bytes = 0
+
+            def collect_output() -> None:
+                nonlocal retained_bytes
+                for filename in sorted(os.listdir(output_directory)):
+                    if not filename.lower().endswith(extensions):
+                        continue
+                    if len(images) >= _MAX_PDF_IMAGE_PAGES:
+                        raise ValueError(f"PDF image page limit is {_MAX_PDF_IMAGE_PAGES}")
+                    file_path = os.path.join(output_directory, filename)
+                    file_size = os.path.getsize(file_path)
+                    if file_size > _MAX_PDF_IMAGE_PAGE_BYTES:
+                        raise ValueError("PDF image page exceeds byte limit")
+                    if retained_bytes + file_size > _MAX_PDF_IMAGE_BYTES:
+                        raise ValueError("PDF image output exceeds byte limit")
+                    with open(file_path, "rb") as image_file:
+                        image = image_file.read(_MAX_PDF_IMAGE_PAGE_BYTES + 1)
+                    if len(image) > _MAX_PDF_IMAGE_PAGE_BYTES:
+                        raise ValueError("PDF image page exceeds byte limit")
+                    images.append(image)
+                    retained_bytes += len(image)
+                    os.unlink(file_path)
 
             if self._bin_pdftoppm:
-                cmd = [self._bin_pdftoppm, "-r", str(dpi), "-" + format, in_path, out_pattern]
+                base_command = [self._bin_pdftoppm, "-r", str(dpi), "-" + format]
                 if pages:
                     for page in pages:
-                        page_pattern = out_pattern
-                        cmd = [self._bin_pdftoppm, "-r", str(dpi), "-f", str(page), "-l", str(page), "-" + format, in_path, out_pattern]
-                        _run(cmd, timeout=120)
-                        for fname in sorted(os.listdir(prefix_dir)):
-                            if fname.endswith(f".{format}") or fname.endswith(f".{format[0].upper() + format[1:]}"):
-                                fpath = os.path.join(prefix_dir, fname)
-                                with open(fpath, "rb") as f:
-                                    images.append(f.read())
-                                os.unlink(fpath)
+                        _run(base_command + ["-f", str(page), "-l", str(page), in_path, out_pattern], timeout=120)
+                        collect_output()
                 else:
-                    _run(cmd, timeout=120)
-                    for fname in sorted(os.listdir(prefix_dir)):
-                        if fname.endswith(f".{format}") or fname.endswith(f".{format[0].upper() + format[1:]}"):
-                            fpath = os.path.join(prefix_dir, fname)
-                            with open(fpath, "rb") as f:
-                                images.append(f.read())
-
+                    _run(base_command + [in_path, out_pattern], timeout=120)
+                    collect_output()
                 return images
 
             if self._bin_gs:
-                cmd = [
+                command = [
                     self._bin_gs,
                     f"-sDEVICE={'png16m' if format == 'png' else 'jpeg'}",
                     f"-r{dpi}",
-                    f"-o", f"{out_pattern}-%03d.{format}",
+                    "-o", f"{out_pattern}-%03d.{format}",
                     "-dNOPAUSE", "-dBATCH",
                     in_path,
                 ]
-                _run(cmd, timeout=120)
-                for fname in sorted(os.listdir(prefix_dir)):
-                    if fname.endswith(f".{format}"):
-                        fpath = os.path.join(prefix_dir, fname)
-                        with open(fpath, "rb") as f:
-                            images.append(f.read())
+                _run(command, timeout=120)
+                collect_output()
                 return images
 
             raise RuntimeError("No PDF to image converter available (install poppler-utils or ghostscript)")
         finally:
             if tmp_in and os.path.exists(tmp_in):
                 os.unlink(tmp_in)
-            if out_pattern:
-                prefix_dir = os.path.dirname(out_pattern)
-                if os.path.isdir(prefix_dir):
-                    shutil.rmtree(prefix_dir, ignore_errors=True)
+            if output_directory and os.path.isdir(output_directory):
+                shutil.rmtree(output_directory, ignore_errors=True)
 
     # ----------------------------------------------------------------
     # PDF merging
@@ -1431,7 +1483,7 @@ class AudioProcessor:
             except ImportError:
                 pass
 
-            return f"Transcription requires whisper. Install: pip install openai-whisper"
+            return "Transcription requires whisper. Install: pip install openai-whisper"
         finally:
             if tmp_in and os.path.exists(tmp_in):
                 os.unlink(tmp_in)
@@ -1447,13 +1499,24 @@ class AudioProcessor:
         chunk_duration_ms: int = 30_000,
         overlap_ms: int = 0,
     ) -> list[bytes]:
-        """Split audio into chunks of chunk_duration_ms milliseconds."""
+        """Split audio into a bounded sequence of PCM chunks with guaranteed progress."""
+        if not isinstance(chunk_duration_ms, int) or not _MIN_AUDIO_CHUNK_DURATION_MS <= chunk_duration_ms <= _MAX_AUDIO_CHUNK_DURATION_MS:
+            raise ValueError(
+                f"chunk_duration_ms must be between {_MIN_AUDIO_CHUNK_DURATION_MS} and {_MAX_AUDIO_CHUNK_DURATION_MS}"
+            )
+        if not isinstance(overlap_ms, int) or overlap_ms < 0:
+            raise ValueError("overlap_ms must be a non-negative integer")
+        if overlap_ms >= chunk_duration_ms:
+            raise ValueError("overlap_ms must be smaller than chunk_duration_ms")
+        if not self._bin_ffmpeg:
+            raise RuntimeError("ffmpeg not found on PATH")
+
         tmp_in = None
         try:
             if isinstance(path_or_bytes, bytes):
                 tmp_in = _tmp_path(".bin")
-                with open(tmp_in, "wb") as f:
-                    f.write(path_or_bytes)
+                with open(tmp_in, "wb") as audio_file:
+                    audio_file.write(path_or_bytes)
                 in_path = tmp_in
             else:
                 in_path = str(path_or_bytes)
@@ -1461,14 +1524,18 @@ class AudioProcessor:
             duration_ms = self.get_duration_ms(in_path)
             if duration_ms <= 0:
                 return []
+            stride_ms = chunk_duration_ms - overlap_ms
+            expected_chunks = math.ceil(max(0, duration_ms - overlap_ms) / stride_ms)
+            if expected_chunks > _MAX_AUDIO_CHUNKS:
+                raise ValueError(f"audio chunk limit is {_MAX_AUDIO_CHUNKS}")
 
             chunks: list[bytes] = []
+            retained_bytes = 0
             start_ms = 0
             while start_ms < duration_ms:
                 end_ms = min(start_ms + chunk_duration_ms, duration_ms)
                 tmp_out = _tmp_path(".wav")
-
-                if self._bin_ffmpeg:
+                try:
                     start_s = start_ms / 1000.0
                     duration_s = (end_ms - start_ms) / 1000.0
                     _run(
@@ -1484,13 +1551,21 @@ class AudioProcessor:
                         ],
                         timeout=30,
                     )
-                    with open(tmp_out, "rb") as f:
-                        chunks.append(f.read())
-                os.unlink(tmp_out)
-
-                start_ms += chunk_duration_ms - overlap_ms
-                if start_ms >= duration_ms:
-                    break
+                    file_size = os.path.getsize(tmp_out)
+                    if file_size > _MAX_AUDIO_CHUNK_BYTES:
+                        raise ValueError("audio chunk exceeds byte limit")
+                    if retained_bytes + file_size > _MAX_AUDIO_CHUNK_OUTPUT_BYTES:
+                        raise ValueError("audio chunk output exceeds byte limit")
+                    with open(tmp_out, "rb") as chunk_file:
+                        audio_chunk = chunk_file.read(_MAX_AUDIO_CHUNK_BYTES + 1)
+                    if len(audio_chunk) > _MAX_AUDIO_CHUNK_BYTES:
+                        raise ValueError("audio chunk exceeds byte limit")
+                    chunks.append(audio_chunk)
+                    retained_bytes += len(audio_chunk)
+                finally:
+                    if os.path.exists(tmp_out):
+                        os.unlink(tmp_out)
+                start_ms += stride_ms
 
             return chunks
         finally:

@@ -3,9 +3,9 @@
 import json
 import os
 import re
+import shlex
 import subprocess
 import mimetypes
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -183,23 +183,49 @@ def merge_json(json1: str, json2: str, mode: str = "combine") -> str:
         return {"error": str(e)}
 
 
-def run_command(command: str, shell: bool = True) -> dict:
-    """Run shell command."""
+_COMMAND_TIMEOUT_SECONDS = 30
+_COMMAND_OUTPUT_MAX_CHARS = 65_536
+_COMMAND_ENVIRONMENT_KEYS = ("HOME", "LANG", "LC_ALL", "PATH", "TMPDIR")
+
+
+def run_command(command: str, shell: bool = False) -> dict:
+    """Run a tokenized command without a shell or inherited secrets."""
+    if shell:
+        return {"error": "shell execution is not supported"}
+    if not isinstance(command, str):
+        return {"error": "command must be a string"}
+    try:
+        argv = shlex.split(command)
+    except ValueError as exc:
+        return {"error": f"invalid command: {exc}"}
+    if not argv:
+        return {"error": "command cannot be empty"}
+
+    environment = {
+        key: value
+        for key in _COMMAND_ENVIRONMENT_KEYS
+        if (value := os.environ.get(key))
+    }
     try:
         result = subprocess.run(
-            command,
-            shell=shell,
+            argv,
+            shell=False,
             capture_output=True,
-            timeout=30
+            timeout=_COMMAND_TIMEOUT_SECONDS,
+            env=environment,
         )
+        stdout = result.stdout.decode("utf-8", errors="replace")[:_COMMAND_OUTPUT_MAX_CHARS]
+        stderr = result.stderr.decode("utf-8", errors="replace")[:_COMMAND_OUTPUT_MAX_CHARS]
         return {
             "returncode": result.returncode,
-            "stdout": result.stdout.decode("utf-8", errors="ignore"),
-            "stderr": result.stderr.decode("utf-8", errors="ignore"),
-            "success": result.returncode == 0
+            "stdout": stdout,
+            "stderr": stderr,
+            "success": result.returncode == 0,
         }
-    except Exception as e:
-        return {"error": str(e)}
+    except subprocess.TimeoutExpired:
+        return {"error": f"command timed out after {_COMMAND_TIMEOUT_SECONDS} seconds"}
+    except OSError as exc:
+        return {"error": f"command failed: {exc}"}
 
 
 def monitor_process(pid: int) -> dict:
