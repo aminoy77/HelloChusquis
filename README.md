@@ -1,236 +1,297 @@
-# HelloChusquis v5.0
+# HelloChusquis
 
-**HelloChusquis** is an AI terminal agent with a full-screen TUI, web search, file management, code execution, and multiple AI integrations. 
+> **A local-first AI agent for the terminal, the browser, and the systems around your work.**
 
-![HelloChusquis](hc.png)
+HelloChusquis brings conversation, tools, memory, web access, code execution, and integrations into one developer-controlled workspace. Run it interactively in the terminal, expose it through the authenticated web interface, or use the REST API from your own workflows.
 
-## What's New in v5.0
+[![License: MIT](https://img.shields.io/badge/license-MIT-f5a623.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-35d39a.svg)](pyproject.toml)
+[![Tests](https://img.shields.io/badge/tests-359%20passing-35d39a.svg)](tests/)
+[![GitHub](https://img.shields.io/badge/source-GitHub-17191e.svg)](https://github.com/aminoy77/HelloChusquis)
 
-- **54-Provider Catalog** — Expanded from 35 to 54 AI providers across 9 categories (Major, European, Chinese, AI Platforms, Open Source, Local, Enterprise, Specialized, Custom)
-- **20 New Providers** — Cerebras, NVIDIA NIM, DeepInfra, SiliconFlow, Volcengine, Baidu Qianfan, Tencent Hunyuan, StepFun, Jina AI, FriendliAI, LM Studio, vLLM, Jan, AI21, TextCortex, Baseten, Modal, TextGen WebUI, LocalAI, AnythingLLM
-- **Provider/Model Selection UI** — Full catalog browsing with grouped categories, paginated model lists, number or text search
-- **Unified Setup Flow** — `run_quick_setup` and `run_setup` now use the full 54-provider catalog with model lists
-- **SSE Streaming** — `/clear` and `/status` now return Server-Sent Events; `/chat/stream` for real-time responses
-- **20+ New Tool Integrations** — GitHub, Discord, Stripe, Shopify, Notion, Twilio, HubSpot, Intercom, Mailchimp, MongoDB, PagerDuty, Datadog, ClickUp, Resend, Sanity, Vercel, and more
-- **Security Hardening Round 2** — Block renamed fork bombs, 2-stage RCE patterns, `python -c` with dangerous imports, disk destruction commands, and more
-- **Performance Improvements** — Flat write path for db_memory, vocab cache reuse, no per-query vocabulary rebuild
-- **TUI Interface** — New `ui/tui.py` with 481 lines of rich terminal UI
-- **Web UI Restructured** — Sidebar with Providers, Memory, Learnings panels; model dropdown population fix
-- **Secure-by-default Web UI** — the web interface requires an API key by default, including on localhost
-- **Recoverable HTTP Startup** — API and web servers remain live before setup and expose readiness instead of blocking on prompts
-- **Isolated HTTP Sessions** — each client session receives separate agent context and history, with bounded LRU retention
-- **Human Approval Gate** — HTTP agents stop high-impact actions such as shell execution, file mutation, external writes, MCP calls, and browser submissions until the session owner confirms them
-- **Serialized Session Turns** — a session processes one chat request at a time, preventing concurrent requests from interleaving context or tool state; session-scoped provider changes, conversation clearing, and approval decisions use the same guard and return `409` while a turn is active
-- **Persistent Approval Audit** — requested, decided, and executed high-impact actions are retained per HTTP session with redacted arguments and can be inspected after a runtime reload; closed HTTP sessions are pruned to the 200 most recent records
-- **Bounded Rate Limiting** — per-client request windows cap retained client state at 10,000 entries, reject invalid settings, and clean up without allocating state for read-only limit checks
-- **Protected Administrative Operations** — runtime reloads allow at most 3 requests per minute per client, session-scoped provider updates allow 15, and model discovery allows 30 requests with only 5 forced remote refreshes; public key verification is limited to 20 attempts per minute; excess requests receive a `429` response with a `Retry-After` header
-- **Safe Learning Persistence** — feedback is capped at 10 submissions per minute per client with a 500-character request bound; local learning writes are serialized, atomic, and retained with owner-only file permissions
-- **Protected Provider Credentials** — provider configuration is written atomically under `~/.hellochusquis` with `0700` directory and `0600` file permissions, protecting locally stored API keys
-- **Private Local Persistence** — session, conversation, memory, and approval-audit SQLite databases repair their managed directory to `0700` and their database file to `0600` when opened
-- **Safe HTTP Error Contracts** — unavailable runtimes, failed reloads, approval conflicts, and execution failures return stable public messages while detailed diagnostics remain confined to server logs
-- **Browser Injection Defenses** — the web interface sends a strict per-response Content Security Policy with a script nonce, restrictive source lists, and baseline anti-framing, anti-sniffing, referrer, and permissions controls
-- **Global Request Bounds** — API and web reject declared or streamed request bodies larger than 1 MiB with a `413` response before parsing, while normal requests retain their existing contracts
-- **Offline Integration Contracts** — `doctor --contracts` verifies the import and local entry-point contract of every bundled external integration without calling third-party services
+## Why HelloChusquis?
 
-## Quick Start
+Most AI tools make you leave the place where the work happens. HelloChusquis keeps the agent close to your terminal and gives it a controlled set of tools for doing useful work: inspect a codebase, search the web, run bounded code, manage files, remember context, and connect to external services.
+
+It is designed for people who want **automation with visibility**. High-impact operations can pause for approval, HTTP sessions are isolated, credentials are protected, and the public web/API surfaces expose stable readiness and error contracts.
+
+## Quick start
+
+### 1. Install
 
 ```bash
-pip install hellochusquis
+python -m pip install hellochusquis
+```
+
+### 2. Configure a provider
+
+The setup wizard stores provider configuration under `~/.hellochusquis`.
+
+```bash
+hellochusquis config
+```
+
+For a fast OpenRouter setup:
+
+```bash
+hellochusquis --quick
+```
+
+### 3. Start chatting
+
+```bash
 hellochusquis
 ```
 
-Optional extras install the SDKs that only some integrations need:
+Then ask for something concrete:
 
-```bash
-pip install 'hellochusquis[aws]'    # S3, Cloudflare R2, DigitalOcean Spaces, Wasabi
-pip install 'hellochusquis[voice]'  # speech-to-text tool
-pip install 'hellochusquis[watch]'  # filesystem watching
-pip install 'hellochusquis[dev]'    # pytest + ruff
+```text
+Search the web for the latest Python release and summarize what changed.
 ```
 
-## Web Interface
+> HelloChusquis can run with different provider configurations. Keep API keys in the local setup store or environment variables; never commit them to the repository.
+
+## Three ways to use it
+
+| Surface | Start command | Best for |
+| --- | --- | --- |
+| **Terminal** | `hellochusquis` | Interactive work, planning, tools, and fast feedback |
+| **Web interface** | `hellochusquis web` | A visual chat workspace with streaming, voice, themes, and export |
+| **REST API** | `hellochusquis api --port 8080` | Applications, automation, isolated sessions, and service integrations |
+
+## What it can do
+
+### Work beside your code
+
+Use the built-in shell, code, file, browser, and web-search tools from one conversation. Multi-step tasks can be planned explicitly with `/plan`, while tool calls remain visible in the response stream.
+
+### Connect to the services you already use
+
+The `tools/` package contains integrations for services such as GitHub, Slack, Discord, Docker, Notion, AWS, Gmail, Jira, PostgreSQL, MongoDB, Stripe, Twilio, Supabase, Vercel, HubSpot, Shopify, Mailchimp, Airtable, Linear, Kubernetes, and Terraform. Provider-specific SDKs are kept optional where possible.
+
+### Keep context useful
+
+Conversation history is bounded and can be compressed. SQLite-backed memory stores sessions, summaries, learnings, and search indexes locally so the agent can retain useful context without turning every prompt into a transcript dump.
+
+### Use the web and API safely
+
+The web interface and REST API support streaming responses, readiness checks, request limits, isolated HTTP sessions, persistent approval audit records, and principal-based roles. Sessions are scoped to their caller rather than shared globally.
+
+## Web interface
+
+Start the authenticated web interface locally:
 
 ```bash
 hellochusquis web
-
-# The first launch creates a local API key; supply it in the web UI.
-cat ~/.hellochusquis/api_key.txt
-
-# Or set your own key before starting the server.
-HELLOCHUSQUIS_API_KEY=your-secret-key hellochusquis web
 ```
 
-Then open http://localhost:7272. The web UI is authenticated by default. Only for an intentionally isolated local development session may you disable it with `HELLOCHUSQUIS_AUTH=0`.
+Open [http://localhost:7272](http://localhost:7272). On first launch, the server creates a local access key. You can inspect it with:
+
+```bash
+cat ~/.hellochusquis/api_key.txt
+```
+
+Or provide one explicitly before starting:
+
+```bash
+HELLOCHUSQUIS_API_KEY=replace-me hellochusquis web
+```
+
+Authentication is enabled by default. Only disable it for an intentionally isolated local session:
+
+```bash
+HELLOCHUSQUIS_AUTH=0 hellochusquis web
+```
+
+The web workspace includes provider/model selection, streaming chat, voice input controls, conversation export, feedback, appearance settings, command palette actions, approvals, and a landing page that links back to the application.
 
 ## REST API
 
+Start the API:
+
 ```bash
-hellochusquis api --port 8080
+hellochusquis api --host 127.0.0.1 --port 8080
 export HC_TOKEN="$(cat ~/.hellochusquis/api_key.txt)"
-
-# Regular request with an explicit isolated conversation session
-curl -X POST http://localhost:8080/chat \
-  -H "Authorization: Bearer $HC_TOKEN" \
-  -H "X-HelloChusquis-Session: my-session" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello!", "stream": false}'
-
-# Streaming (SSE)
-curl -X POST http://localhost:8080/chat \
-  -H "Authorization: Bearer $HC_TOKEN" \
-  -H "X-HelloChusquis-Session: my-session" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello!", "stream": true}'
-
-# Health and readiness checks
-curl http://localhost:8080/health
-curl http://localhost:8080/health/ready
-
-# After changing providers with the setup CLI, reload configuration without restart
-curl -X POST http://localhost:8080/runtime/reload \
-  -H "Authorization: Bearer $HC_TOKEN"
-
-# Inspect high-impact actions pending for your current session
-curl http://localhost:8080/approvals \
-  -H "Authorization: Bearer $HC_TOKEN" \
-  -H "X-HelloChusquis-Session: my-session"
-
-# Inspect the redacted, persistent approval audit for the same session
-curl 'http://localhost:8080/audit?limit=50' \
-  -H "Authorization: Bearer $HC_TOKEN" \
-  -H "X-HelloChusquis-Session: my-session"
-
-# Approve and execute exactly one pending action. Replaying the same request fails.
-curl -X POST http://localhost:8080/approvals/APPROVAL_ID \
-  -H "Authorization: Bearer $HC_TOKEN" \
-  -H "X-HelloChusquis-Session: my-session" \
-  -H "Content-Type: application/json" \
-  -d '{"approve": true}'
 ```
 
-## Users and Roles
-
-Every HTTP request resolves to a *principal*. The deployment-wide key in `~/.hellochusquis/api_key.txt` still works and acts as an owner, and named users can be issued their own tokens:
+Send a regular request with an explicit isolated session:
 
 ```bash
-hellochusquis users add dana --role operator   # prints the token exactly once
+curl -X POST http://localhost:8080/chat \
+  -H "Authorization: Bearer $HC_TOKEN" \
+  -H "X-HelloChusquis-Session: local-demo" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain this repository in three steps.","stream":false}'
+```
+
+Request a streaming response:
+
+```bash
+curl -N -X POST http://localhost:8080/chat \
+  -H "Authorization: Bearer $HC_TOKEN" \
+  -H "X-HelloChusquis-Session: local-demo" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Inspect the tests and summarize the riskiest area.","stream":true}'
+```
+
+Check health and readiness:
+
+```bash
+curl http://localhost:8080/health
+curl http://localhost:8080/health/ready
+```
+
+## Approvals, roles, and audit
+
+HTTP sessions use a local approval gate for high-impact actions. Shell execution, file mutation, external writes, browser submissions, MCP calls, and similar operations can require a human decision before dispatch.
+
+Approval requests are session-local, short-lived, single-use, and shown to clients with credential-like fields redacted. Approval requests and decisions are retained in the persistent audit store for later inspection.
+
+Named principals can be managed from the CLI:
+
+```bash
+hellochusquis users add dana --role operator
 hellochusquis users list
 hellochusquis users revoke dana
 ```
 
-| Role | May do |
+| Role | Access |
 | --- | --- |
-| `viewer` | read state: history, approvals, audit |
-| `operator` | everything a viewer can, plus chat, approvals and mutating tools (through the approval gate) |
-| `owner` | everything, plus runtime reload, provider updates and user management |
+| `viewer` | Read history, approvals, and audit state |
+| `operator` | Viewer access plus chat, approvals, and mutating tools through the approval gate |
+| `owner` | Operator access plus runtime reload, provider updates, and user management |
 
-Tokens are stored only as hashes in `~/.hellochusquis/identity.db` (override with `HELLOCHUSQUIS_IDENTITY_DB`) and are shown once at creation. Conversation sessions are scoped to their principal, so the same `X-HelloChusquis-Session` header from two users never shares state. Roles are enforced at tool dispatch as well as at the route, so a viewer cannot reach a mutating tool even if the model asks for one, and an approval granted earlier is re-checked against the caller's current role before it executes.
+The deployment-wide API key acts as an owner key. Named tokens are stored as hashes in `~/.hellochusquis/identity.db` and are shown once when created.
 
-Owners can manage users over the API too:
+Inspect pending approvals or redacted audit records:
 
 ```bash
-curl -X POST http://localhost:8080/users \
+curl http://localhost:8080/approvals \
   -H "Authorization: Bearer $HC_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "dana", "role": "operator"}'
+  -H "X-HelloChusquis-Session: local-demo"
 
-curl http://localhost:8080/users -H "Authorization: Bearer $HC_TOKEN"
-curl -X DELETE http://localhost:8080/users/dana -H "Authorization: Bearer $HC_TOKEN"
+curl 'http://localhost:8080/audit?limit=50' \
+  -H "Authorization: Bearer $HC_TOKEN" \
+  -H "X-HelloChusquis-Session: local-demo"
 ```
 
-High-impact calls issued through HTTP require approval by default. Approval requests are **session-local**, expire after five minutes, are consumed before execution, and redact credential-like fields from the client view. Local terminal use remains interactive.
-
-## Integration Diagnostics
+Approve one pending action:
 
 ```bash
-# Offline only: imports every integration exposed by the agent and checks its callable entry point.
-# No provider credentials, network calls, or tool actions are used.
+curl -X POST http://localhost:8080/approvals/APPROVAL_ID \
+  -H "Authorization: Bearer $HC_TOKEN" \
+  -H "X-HelloChusquis-Session: local-demo" \
+  -H "Content-Type: application/json" \
+  -d '{"approve":true}'
+```
+
+## Configuration and optional extras
+
+Core runtime dependencies are installed with the package. Optional extras add SDKs for specific integrations:
+
+```bash
+python -m pip install 'hellochusquis[aws]'    # S3-compatible integrations
+python -m pip install 'hellochusquis[voice]'  # speech recognition
+python -m pip install 'hellochusquis[watch]'  # filesystem watching
+python -m pip install 'hellochusquis[dev]'    # pytest and ruff
+```
+
+Common environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `HELLOCHUSQUIS_API_KEY` | Deployment-wide owner key for web/API clients |
+| `HELLOCHUSQUIS_IDENTITY_DB` | Override the identity database path |
+| `HELLOCHUSQUIS_AUTH=0` | Disable web auth only for isolated local development |
+| `HELLOCHUSQUIS_UNSAFE_MODE=1` | Skip safety checks; use only in a controlled environment |
+| `HELLOCHUSQUIS_PROFILE=aggressive` | Skip safety reviews; use only when you understand the trade-off |
+| `DEBUG=1` | Enable debug logging |
+
+Configuration files and local stores are kept under `~/.hellochusquis` by default. The runtime repairs managed directory/file permissions when opening protected local stores.
+
+## Command reference
+
+```text
+hellochusquis                         Start interactive chat
+hellochusquis web                     Start the web interface on port 7272
+hellochusquis api --port 8080         Start the REST API
+hellochusquis config                   Open the setup wizard
+hellochusquis config --show            Display current configuration
+hellochusquis config --api-keys        Edit provider keys
+hellochusquis config --providers       Edit provider selection
+hellochusquis users list               List principals
+hellochusquis users add NAME --role ROLE
+hellochusquis users revoke NAME        Revoke a principal
+hellochusquis doctor --contracts       Run offline integration contract checks
+```
+
+Useful in-chat commands:
+
+```text
+/help                                  Show available commands
+/status                                Show provider status
+/clear                                 Clear the current conversation
+/plan <task>                           Force a multi-step plan
+exit                                   Leave the terminal session
+```
+
+## Architecture at a glance
+
+```text
+main.py / cli.py              CLI entry points and interactive loop
+core/agent.py                 Orchestration, planning, and tool dispatch
+core/provider.py              Provider pool and fallback behavior
+core/history.py               Bounded context and compression
+core/db_memory.py             SQLite sessions, summaries, and memory
+core/runtime.py               Recoverable startup and isolated HTTP sessions
+core/approvals.py             Session-local, replay-safe human approvals
+core/integration_contracts.py Offline integration diagnostics
+web/server.py                 Authenticated FastAPI web interface
+api/main.py                   Authenticated REST API and rate limits
+tools/                        Service integrations and built-in tool modules
+ui/                           Terminal UI and interactive presentation
+```
+
+## Development
+
+Clone the repository and create a virtual environment:
+
+```bash
+git clone https://github.com/aminoy77/HelloChusquis.git
+cd HelloChusquis
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+```
+
+Run the full test suite:
+
+```bash
+python -m unittest discover tests -q
+```
+
+Run lint checks:
+
+```bash
+ruff check .
+```
+
+Run offline integration diagnostics without provider credentials or third-party calls:
+
+```bash
 hellochusquis doctor --contracts
 ```
 
-## Command Reference
+When contributing, keep changes focused, add regression coverage for behavior changes, and avoid committing local keys, databases, caches, or generated artifacts.
 
-### Core Commands:
-```
-hellochusquis              # Start interactive chat
-hellochusquis web          # Open web interface
-hellochusquis api --port 8080 --host 0.0.0.0  # Start REST API
-hellochusquis config       # Reopen setup wizard
-hellochusquis config --show  # Show current config
-hellochusquis config --api-keys  # Edit API keys
-hellochusquis config --providers  # Edit providers
-hellochusquis users list   # Manage principals and their roles
-hellochusquis users add NAME --role viewer|operator|owner
-hellochusquis users revoke NAME
-```
+## Project links
 
-### CLI Flags:
-```
---quick              # Quick setup with OpenRouter only
---full               # Full setup wizard with all providers
---port PORT          # Port for API/web server (default: 8080/7272)
---host HOST          # Host for API/web server (default: 0.0.0.0/127.0.0.1)
-```
-
-### Built-in Tools:
-- **shell** - Execute terminal commands
-- **code** - Run Python code
-- **files** - Read/write files (read, write, delete, list, create_dir)
-- **web_search** - Search the web via DuckDuckGo
-- **browser** - Browser automation (navigate, click, type, screenshot)
-
-### Available Integrations:
-GitHub, Slack, Discord, Docker, Notion, AWS, Gmail, Jira, PostgreSQL, MongoDB, Stripe, Twilio, Supabase, Vercel, HubSpot, Shopify, Mailchimp, Airtable, Linear, Kubernetes, Terraform, and more.
-
-## Environment Variables
-
-```bash
-HELLOCHUSQUIS_API_KEY=your-key    # Deployment-wide owner key for web/API clients
-HELLOCHUSQUIS_IDENTITY_DB=path    # Principal/token database (default ~/.hellochusquis/identity.db)
-HELLOCHUSQUIS_AUTH=0              # Disable web auth only for isolated local development
-HELLOCHUSQUIS_UNSAFE_MODE=1       # Skip security checks
-HELLOCHUSQUIS_PROFILE=aggressive  # Skip safety reviews
-DEBUG=1                           # Enable debug logging
-```
-
-## Architecture
-
-```
-main.py          → Interactive loop, task detection
-core/agent.py    → LLM orchestration, tool dispatch
-core/provider.py → Multi-provider pool with fallback
-core/history.py  → Smart context compression
-core/planner.py  → Multi-step task planning
-core/db_memory.py → SQLite session persistence
-core/logger.py   → Structured JSON logging
-core/runtime.py  → Recoverable startup and bounded isolated HTTP sessions
-core/approvals.py → Expiring, session-local, replay-safe human approvals
-core/integration_contracts.py → Offline structural diagnostics for bundled integrations
-web/server.py    → Authenticated FastAPI web interface
-api/main.py      → Authenticated REST API with rate limiting
-tools/           → 130+ integration modules
-```
-
-## Testing
-
-```bash
-python -m unittest discover tests/
-# or
-python -m pytest tests/
-```
-
-The suite runs on a bare install: no optional extra is required to collect or pass it. CI runs
-ruff plus the suite on Python 3.10, 3.11 and 3.12, and verifies the offline integration contracts.
-
-## Documentation
-
-- [README](README.md) - This file
-- [CHANGELOG](CHANGELOG.md) - Release history
-- [docs/index.html](docs/index.html) - Web interface
+- [Landing page](https://hellochusquis.dev)
+- [Source code](https://github.com/aminoy77/HelloChusquis)
+- [Issue tracker](https://github.com/aminoy77/HelloChusquis/issues)
+- [Changelog](CHANGELOG.md)
+- [Web interface source](web/index.html)
 
 ## License
 
-MIT License.
-
----
-*Built with ❤️ by aminoy77*
+HelloChusquis is released under the [MIT License](LICENSE).
