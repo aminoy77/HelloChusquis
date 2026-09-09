@@ -15,6 +15,7 @@ import json
 import hashlib
 import hmac
 import secrets
+import threading
 import urllib.parse
 from pathlib import Path
 from typing import Literal
@@ -122,6 +123,8 @@ config = ensure_config()
 agent = Agent(config)
 
 _chat_limiter = RateLimiter(requests_per_minute=30)
+_feedback_limiter = RateLimiter(requests_per_minute=10)
+_chat_lock = threading.Lock()
 
 
 # --- Request models ---
@@ -173,7 +176,7 @@ def health_check():
     ready = sum(1 for p in providers if p["status"] == "ready")
     return {
         "status": "ok",
-        "version": "1.4.3",
+        "version": "5.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "providers": {"total": total, "ready": ready},
     }
@@ -239,15 +242,15 @@ def chat(req: MessageRequest, http_request: Request):
         })
         return result
 
-    agent._dispatch_tool = logged_dispatch
-
-    try:
-        response = agent.run(user_input, provider=req.provider, model=req.model)
-    except RuntimeError as e:
-        logger.error("Chat error: %s", e)
-        response = f"Error: {e}"
-    finally:
-        agent._dispatch_tool = original_dispatch
+    with _chat_lock:
+        agent._dispatch_tool = logged_dispatch
+        try:
+            response = agent.run(user_input, provider=req.provider, model=req.model)
+        except RuntimeError as e:
+            logger.error("Chat error: %s", e)
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            agent._dispatch_tool = original_dispatch
 
     return {"response": response, "tool_calls": tool_calls_log}
 
@@ -310,8 +313,16 @@ def chat_stream(req: MessageRequest, http_request: Request):
 
 
 @app.post("/feedback")
-def feedback(req: FeedbackRequest):
+def feedback(req: FeedbackRequest, http_request: Request):
     """Accept positive/negative feedback from frontend."""
+    ip = http_request.client.host if http_request.client else "unknown"
+    if not _feedback_limiter.is_allowed(ip):
+        retry = _feedback_limiter.get_retry_after(ip)
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Max 10 feedback requests/minute.",
+            headers={"Retry-After": str(int(retry) + 1)},
+        )
     add_feedback(req.type, req.context)
     return {"status": "ok"}
 
@@ -340,11 +351,10 @@ def status():
         from pathlib import Path
         db_path = Path.home() / ".hellochusquis/memory.db"
         if db_path.exists():
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM sessions")
-            sessions = cursor.fetchone()[0]
-            conn.close()
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM sessions")
+                sessions = cursor.fetchone()[0]
     except Exception:
         pass
     learnings = load_learnings()
@@ -414,7 +424,7 @@ def update_provider(data: ProviderUpdate):
 
 def start(host: str = "127.0.0.1", port: int = 8000):
     if AUTH_ENABLED:
-        logger.info("Auth enabled — API key: %s (%s)", REQUIRED_API_KEY, _auth_hint())
+        logger.info("Auth enabled (%s)", _auth_hint())
     else:
         logger.info("Auth disabled — set HELLOCHUSQUIS_AUTH=1 to protect the web UI")
     uvicorn.run(app, host=host, port=port, log_level="warning")

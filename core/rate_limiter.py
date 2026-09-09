@@ -25,9 +25,10 @@ class RateLimiter:
         now = time.time()
         cutoff = now - self._window
         with self._lock:
-            expired = [ip for ip, ts in self._hits.items() if not ts or ts[-1] < cutoff]
-            for ip in expired:
-                del self._hits[ip]
+            for ip in list(self._hits):
+                self._hits[ip] = [t for t in self._hits[ip] if t > cutoff]
+                if not self._hits[ip]:
+                    del self._hits[ip]
 
     def is_allowed(self, ip: str) -> bool:
         now = time.time()

@@ -28,9 +28,6 @@ class WorkspaceManager:
 
     def is_allowed(self, path: str) -> bool:
         p = Path(path).expanduser().resolve()
-        # Always allow anything under home directory
-        if str(p).startswith(str(Path.home())):
-            return True
         return any(p == d or d in p.parents for d in self.allowed)
 
     def request_access(self, path: str) -> bool:

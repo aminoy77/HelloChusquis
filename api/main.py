@@ -70,7 +70,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-app = FastAPI(title="HelloChusquis API", version="1.4.3")
+app = FastAPI(title="HelloChusquis API", version="5.0")
 app.add_middleware(AuthMiddleware)
 
 # Rate limiters: /chat = 30/min, /feedback = 10/min
@@ -110,7 +110,7 @@ class FeedbackRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"name": "HelloChusquis", "version": "1.4.3", "status": "running"}
+    return {"name": "HelloChusquis", "version": "5.0", "status": "running"}
 
 
 @app.get("/health")
@@ -120,7 +120,7 @@ def health_check():
     ready = sum(1 for p in providers if p["status"] == "ready")
     return {
         "status": "ok",
-        "version": "1.4.3",
+        "version": "5.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "providers": {"total": total, "ready": ready},
     }
@@ -246,7 +246,7 @@ def get_history():
 def start(host: str = "127.0.0.1", port: int = 8080):
     """Start the API server."""
     logger.info("Starting HelloChusquis API on %s:%s", host, port)
-    print(f"API key: {REQUIRED_API_KEY}")
+    print(f"API key stored in {API_KEY_FILE} (or HELLOCHUSQUIS_API_KEY). Not shown for security.")
     uvicorn.run(app, host=host, port=port)
 
 

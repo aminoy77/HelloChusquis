@@ -72,31 +72,31 @@ def main():
         return
 
     # Handle --quick flag directly (no command needed)
-    if args.quick:
+    if args.quick and args.command is None:
         from core.setup import run_quick_setup
         run_quick_setup()
         return
 
     # Handle --full flag directly
-    if args.full:
+    if args.full and args.command is None:
         from core.setup import run_setup
         run_setup()
         return
 
     # Handle --show flag directly
-    if args.show:
+    if args.show and args.command is None:
         from core.setup import show_config
         show_config()
         return
 
     # Handle --api-keys flag directly
-    if args.api_keys:
+    if args.api_keys and args.command is None:
         from core.setup import edit_config
         edit_config("api-keys")
         return
 
     # Handle --providers flag directly
-    if args.providers:
+    if args.providers and args.command is None:
         from core.setup import edit_config
         edit_config("providers")
         return
