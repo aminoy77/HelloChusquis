@@ -8,8 +8,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-import boto3
-from botocore.config import Config
+from tools.optional_deps import require
 
 
 _ENDPOINT = "https://s3.wasabisys.com"
@@ -51,6 +50,8 @@ def _client(api_key: str, secret_key: str):
     secret = str(secret_key or "").strip() or os.getenv("WASABI_SECRET_KEY")
     if not access_key or not secret:
         raise ValueError("Wasabi access key ID and secret access key are required.")
+    boto3 = require("boto3")
+    Config = require("botocore.config").Config
     return boto3.client(
         "s3",
         endpoint_url=_ENDPOINT,
