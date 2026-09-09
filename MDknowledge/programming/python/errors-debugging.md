@@ -1,0 +1,26 @@
+# Python errors and debugging
+
+- In Python, read tracebacks bottom-up: the last line names the exception, the frames above show the call path.
+- In Python, `try/except/else/finally` runs `else` only when no exception occurred and always runs `finally`.
+- In Python, catch specific exceptions (`except ValueError`) instead of bare `except:`, which also swallows KeyboardInterrupt and SystemExit.
+- In Python, `except Exception as e` gives the instance; `str(e)` is the message, `type(e).__name__` the class.
+- In Python, `raise ... from e` chains causes explicitly; bare `raise` re-raises the current exception preserving the traceback.
+- In Python, NameError means an undefined name (typo or missing import); check spelling and imports first.
+- In Python, TypeError means a wrong type or arity: passing a str where a number is expected, or wrong argument count.
+- In Python, `NoneType has no attribute X` means a function returned None unexpectedly; check the producer, not the crash site.
+- In Python, IndexError means an out-of-range sequence index; empty results often come from an earlier silent filter.
+- In Python, KeyError means a missing dict key; use `d.get(k, default)` or `collections.defaultdict` when absence is normal.
+- In Python, AttributeError on a module usually means a circular import or a name shadowed by a local file.
+- In Python, `ModuleNotFoundError: No module named X` means install it (`pip install X`) or fix `PYTHONPATH`.
+- In Python, IndentationError/TabError come from mixing tabs and spaces; configure the editor for spaces only.
+- In Python, `SyntaxError: invalid syntax` on old code often means Python-2-only constructs running under Python 3.
+- In Python, `UnboundLocalError` means a variable assigned later in the function shadows the outer binding for the whole scope.
+- In Python, `ValueError: not enough values to unpack` means the iterable is shorter than the target list; print its length first.
+- In Python, add `print(repr(x))` (not `print(x)`) when debugging values: repr reveals type and hidden whitespace.
+- In Python, `breakpoint()` drops into pdb; use `n` (next), `c` (continue), `p expr` (print) to inspect state.
+- In Python, reproduce with the smallest input first, then bisect: comment out half the suspect code until the failure disappears.
+- In Python, `python -m traceback` is not a thing; instead run the script directly so the full traceback prints to stderr.
+- In Python, warnings become errors with `python -W error` to catch deprecations at their source.
+- In Python, `assert cond, msg` documents invariants but is stripped under `python -O`; never use assert for input validation.
+- In Python, log with the `logging` module instead of print in anything long-lived; set levels per module.
+- In Python, `faulthandler.enable()` dumps tracebacks on segfaults and timeouts in native extensions.

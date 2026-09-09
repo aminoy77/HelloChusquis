@@ -125,6 +125,15 @@ class ProviderPool:
             PathLib.home() / "config.yaml",
             PathLib.home() / ".hellochusquis" / "config.yaml",
         ]
+        # Explicit path wins when it exists: callers (and tests) passing a
+        # file expect that file, not the home config with the most keys.
+        # ponytail: explicit-path priority; fall back to best-count only
+        # when the explicit path is missing (default "config.yaml" case).
+        if config_path.is_file():
+            with config_path.open() as f:
+                explicit = yaml.safe_load(f) or {}
+            self._load_config(explicit, source=str(config_path))
+            return
         best_config: Optional[dict] = None
         best_valid_count = -1
         best_path: Optional[Path] = None

@@ -22,21 +22,28 @@ class TestIsolation(unittest.TestCase):
             self.assertTrue(FilesTool([tmp])._is_allowed(Path(tmp) / "a.txt"))
 
     def test_cleanup_prunes_stale(self):
-        rl = RateLimiter(requests_per_minute=10)
-        now = time.time()
-        rl._hits["m"] = [now - 70, now]
-        rl._cleanup()
-        self.assertEqual(len(rl._hits["m"]), 1)
-        rl._hits["old"] = [now - 70]
-        rl._cleanup()
-        self.assertNotIn("old", rl._hits)
+        now = [1000.0]
+        rl = RateLimiter(requests_per_minute=10, clock=lambda: now[0])
+        try:
+            rl.is_allowed("active")
+            now[0] += 70.0
+            rl.is_allowed("newcomer")
+            rl._cleanup()
+            # Fully-expired client evicted, active window kept.
+            self.assertNotIn("active", rl._hits)
+            self.assertIn("newcomer", rl._hits)
+        finally:
+            rl.close()
 
     def test_web_concurrency_and_limits(self):
         import web.server as srv
-        self.assertIsInstance(srv._chat_lock, type(threading.Lock()))
-        self.assertEqual(srv._feedback_limiter._limit, 10)
+        # Upstream uses per-session turn locks + request-local callback,
+        # not a shared-dispatcher monkey-patch.
         src = Path("web/server.py").read_text()
-        self.assertIn("with _chat_lock", src)
+        self.assertIn("try_acquire_turn", src)
+        self.assertIn("tool_result_callback", src)
+        self.assertIn("release_turn", src)
+        self.assertEqual(srv._feedback_limiter._limit, 10)
         self.assertIn("with sqlite3.connect", src)
 
     def test_cli_flag_guard(self):

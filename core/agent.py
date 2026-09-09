@@ -1015,6 +1015,33 @@ def _build_tools_schema(plugins: list) -> list:
     return schema
 
 
+def extract_memory_facts(text: str, max_facts: int = 2) -> list[tuple[str, str]]:
+    """Deterministic fact patterns: explicit remember, 'my X is Y', 'I prefer X'."""
+    facts: list[tuple[str, str]] = []
+    for value in re.findall(r"\bremember\s+(.{1,120})", text or "", re.I):
+        facts.append(("note", re.sub(r"\s+", " ", value.strip(" .;!?"))))
+    for key, value in re.findall(
+        r"\bmy\s+([\w ]{1,40}?)\s+is\s+([^.,;!?]{1,120})", text or "", re.I
+    ):
+        facts.append((re.sub(r"\s+", " ", key.strip().lower()), re.sub(r"\s+", " ", value.strip())))
+    for value in re.findall(r"\bi\s+prefer\s+([^.,;!?]{1,120})", text or "", re.I):
+        facts.append(("preference", re.sub(r"\s+", " ", value.strip())))
+    seen = set()
+    unique = [f for f in facts if f[1] and not (f in seen or seen.add(f))]
+    return unique[:max(1, max_facts)]
+
+
+def parse_memory_command(text: str) -> tuple[str, str] | None:
+    """Parse 'remember <fact>' / 'forget <key>' chat commands."""
+    stripped = (text or "").strip()
+    lowered = stripped.lower()
+    if lowered.startswith("remember ") and stripped[9:].strip():
+        return ("remember", stripped[9:].strip()[:500])
+    if lowered.startswith("forget ") and stripped[7:].strip():
+        return ("forget", stripped[7:].strip()[:120])
+    return None
+
+
 class Agent:
     def __init__(
         self,
@@ -1050,6 +1077,12 @@ class Agent:
         learning_prompt = learning.build_learning_prompt(learnings)
         if learning_prompt:
             self.system_prompt += f"\n\n{learning_prompt}"
+
+        # Reference knowledge base (repo MDknowledge + user overrides, best-effort)
+        try:
+            memory.load_knowledge()
+        except Exception:
+            pass
 
         # Plugins — schema se construye una vez aquí, no se modifica una lista global
         self.plugins = load_plugins()
@@ -1632,7 +1665,29 @@ class Agent:
         """Run one agent turn, optionally observing tools for this request only."""
         self.history.add("user", user_input)
         self.session_manager.append_message(self._session_id, "user", user_input)
+
+        # Memory commands short-circuit the LLM round-trip (best-effort store).
+        command = parse_memory_command(user_input)
+        if command:
+            action, payload = command
+            try:
+                if action == "remember":
+                    memory._get_store().add_entry(
+                        key="note", value=payload, category="fact", importance=6
+                    )
+                    reply = f"Remembered: {payload}"
+                else:
+                    reply = f"Forgot {memory.forget_matching(payload)} memories matching '{payload}'."
+            except Exception:
+                reply = "Memory unavailable right now."
+            self.history.add("assistant", reply)
+            self.session_manager.append_message(self._session_id, "assistant", reply)
+            return reply
+
         messages = self._build_messages()
+        recall = memory.recall_context(user_input)
+        if recall:
+            messages.insert(1, {"role": "system", "content": recall})
 
         # Preserve tool results across turns - don't optimize history during execution
         # This ensures tool responses from previous steps remain available
@@ -1662,6 +1717,15 @@ class Agent:
                 content = message.get("content") or ""
                 self.history.add("assistant", content)
                 self.session_manager.append_message(self._session_id, "assistant", content)
+                # Autolog: searchable turn + curated facts, never fails the turn.
+                try:
+                    memory.save_turn(user_input, content)
+                    for key, value in extract_memory_facts(user_input):
+                        memory._get_store().add_entry(
+                            key=key, value=value, category="fact", importance=6
+                        )
+                except Exception:
+                    pass
                 # Clear pending tool results on successful completion
                 self._pending_tool_results = []
                 return content
@@ -1759,7 +1823,30 @@ class Agent:
         """
         self.history.add("user", user_input)
         self.session_manager.append_message(self._session_id, "user", user_input)
+
+        command = parse_memory_command(user_input)
+        if command:
+            action, payload = command
+            try:
+                if action == "remember":
+                    memory._get_store().add_entry(
+                        key="note", value=payload, category="fact", importance=6
+                    )
+                    reply = f"Remembered: {payload}"
+                else:
+                    reply = f"Forgot {memory.forget_matching(payload)} memories matching '{payload}'."
+            except Exception:
+                reply = "Memory unavailable right now."
+            self.history.add("assistant", reply)
+            self.session_manager.append_message(self._session_id, "assistant", reply)
+            yield {"type": "chunk", "content": reply}
+            yield {"type": "done"}
+            return
+
         messages = self._build_messages()
+        recall = memory.recall_context(user_input)
+        if recall:
+            messages.insert(1, {"role": "system", "content": recall})
 
         self._pending_tool_results = getattr(self, '_pending_tool_results', [])
         for tr in self._pending_tool_results:
@@ -1786,6 +1873,14 @@ class Agent:
                 self.history.add("assistant", content)
                 self.session_manager.append_message(self._session_id, "assistant", content)
                 self._pending_tool_results = []
+                try:
+                    memory.save_turn(user_input, content)
+                    for key, value in extract_memory_facts(user_input):
+                        memory._get_store().add_entry(
+                            key=key, value=value, category="fact", importance=6
+                        )
+                except Exception:
+                    pass
 
                 # Yield content in ~50 char chunks to simulate streaming
                 chunk_size = 50

@@ -1,0 +1,32 @@
+# Python lists
+
+- In Python, `append(x)` adds one element to the end of a list.
+- In Python, `extend(iterable)` appends each element of the iterable to a list.
+- In Python, `insert(i, x)` inserts x at index i, shifting later elements right.
+- In Python, `pop()` removes and returns the last element; `pop(i)` removes index i.
+- In Python, `remove(x)` deletes the first occurrence of value x, raising ValueError if absent.
+- In Python, list slicing `a[start:stop:step]` returns a new list and never raises on out-of-range bounds.
+- In Python, `a[::-1]` returns a reversed copy of list a.
+- In Python, negative indices count from the end: `a[-1]` is the last element.
+- In Python, `[x] * n` repeats references, so `[[0]] * 3` aliases the same inner list; use a comprehension for independent rows.
+- In Python, list comprehensions `[f(x) for x in items if cond(x)]` build lists; the `if` filters elements.
+- In Python, `enumerate(items)` yields `(index, value)` pairs, prefer it over `range(len(...))`.
+- In Python, `zip(a, b)` pairs elements positionally and stops at the shorter input.
+- In Python, `sorted(a)` returns a new sorted list; `a.sort()` sorts in place and returns None.
+- In Python, `sorted(a, key=len)` sorts by a key function; add `reverse=True` for descending order.
+- In Python, `in` tests membership: `x in a` scans the list in O(n) time.
+- In Python, `list.append` is amortized O(1) while `list.insert(0, x)` is O(n).
+- In Python, `a.copy()` and `a[:]` are shallow copies; nested objects are still shared.
+- In Python, use `copy.deepcopy(a)` when nested lists must be fully independent.
+- In Python, `sum(a)`, `min(a)`, `max(a)`, and `len(a)` work on any list of comparable items.
+- In Python, `any(a)` is True if any element is truthy; `all(a)` requires every element truthy.
+- In Python, joining strings uses `"sep".join(list_of_str)`, not `+` in a loop.
+- In Python, unpack with `first, *rest = a` to split head and tail of a list.
+- In Python, `del a[i]` and `del a[i:j]` remove by index or slice without returning anything.
+- In Python, `a.clear()` empties a list in place, affecting all aliases.
+- In Python, comparing lists with `==` checks element-wise equality in order.
+- In Python, `list(dict)` returns its keys; `list(dict.items())` returns key-value tuples.
+- In Python, flatten one level with `[x for row in matrix for x in row]`.
+- In Python, `collections.Counter(a)` counts occurrences, with `.most_common(n)` for the top n.
+- In Python, `list(filter(None, a))` drops all falsy elements (None, 0, "", [], {}).
+- In Python, iterating while mutating skips elements; iterate over `a[:]` or build a new list instead.

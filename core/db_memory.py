@@ -195,6 +195,13 @@ CREATE TABLE IF NOT EXISTS write_provenance (
 );
 
 CREATE INDEX IF NOT EXISTS idx_prov_entry ON write_provenance(entry_id);
+
+CREATE TABLE IF NOT EXISTS kb_sources (
+    path        TEXT PRIMARY KEY,
+    sha256      TEXT NOT NULL,
+    entries     INTEGER DEFAULT 0,
+    ingested_at TEXT NOT NULL
+);
 """
 
 
@@ -635,14 +642,18 @@ class MemoryStore:
             bounded_limit = max(1, min(int(limit), 100))
         except (TypeError, ValueError):
             bounded_limit = 20
+        tokens_json = json.dumps(tokens, ensure_ascii=False)
         rows = self.conn.execute(
             "SELECT id, session_id, key, value, tags, category, importance, created_at, updated_at "
             "FROM memory_entries WHERE EXISTS ("
             "SELECT 1 FROM json_each(?) AS token "
             "WHERE LOWER(memory_entries.key) LIKE '%' || token.value || '%' "
             "OR LOWER(memory_entries.value) LIKE '%' || token.value || '%'"
-            ") ORDER BY importance DESC, created_at DESC LIMIT ?",
-            (json.dumps(tokens, ensure_ascii=False), bounded_limit),
+            ") ORDER BY (SELECT COUNT(*) FROM json_each(?) AS token "
+            "WHERE LOWER(memory_entries.key) LIKE '%' || token.value || '%' "
+            "OR LOWER(memory_entries.value) LIKE '%' || token.value || '%') DESC, "
+            "importance DESC, created_at DESC LIMIT ?",
+            (tokens_json, tokens_json, bounded_limit),
         ).fetchall()
         return [self._row_to_entry(row) for row in rows]
 
@@ -1221,6 +1232,98 @@ class MemoryBootstrap:
 
 
 # ---------------------------------------------------------------------------
+# Knowledge base: repo MDknowledge + user-local overrides (deduped ingest)
+# ---------------------------------------------------------------------------
+
+KNOWLEDGE_DIR_NAME = "MDknowledge"
+USER_KNOWLEDGE_DIR = Path.home() / ".hellochusquis" / "knowledge"
+_KB_SKIP_FILES = {"README.md"}
+_KB_IMPORTANCE = 5
+
+
+def _default_repo_kb() -> Path:
+    return Path(__file__).resolve().parent.parent / KNOWLEDGE_DIR_NAME
+
+
+def collect_knowledge_files(
+    repo_dir: Union[Path, str, None] = None,
+    user_dir: Union[Path, str, None] = None,
+) -> List[Tuple[str, Path]]:
+    """List (rel, path) KB markdown files; user-local wins on same rel path."""
+    repo = Path(repo_dir).expanduser() if repo_dir else _default_repo_kb()
+    user = Path(user_dir).expanduser() if user_dir else USER_KNOWLEDGE_DIR
+    found: Dict[str, Path] = {}
+    for root in (repo, user):
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*.md")):
+            if path.name in _KB_SKIP_FILES or path.name.startswith("_"):
+                continue
+            found[path.relative_to(root).as_posix()] = path
+    return sorted(found.items())
+
+
+def _kb_bullets(content: str) -> List[str]:
+    """Bullet facts outside fenced code blocks."""
+    bullets: List[str] = []
+    in_fence = False
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if stripped.startswith("- ") or stripped.startswith("* "):
+            text = stripped[2:].strip()
+            if len(text) >= 12:
+                bullets.append(text)
+    return bullets
+
+
+def load_knowledge(
+    repo_dir: Union[Path, str, None] = None,
+    user_dir: Union[Path, str, None] = None,
+) -> int:
+    """Ingest changed KB files into entries; skip unchanged (sha256)."""
+    try:
+        store = _get_store()
+    except Exception:
+        return 0
+    total = 0
+    for rel, path in collect_knowledge_files(repo_dir, user_dir):
+        try:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            continue
+        try:
+            row = store.conn.execute(
+                "SELECT sha256 FROM kb_sources WHERE path=?", (rel,)
+            ).fetchone()
+            if row and row[0] == digest:
+                continue
+            bullets = _kb_bullets(path.read_text(encoding="utf-8"))
+            store.conn.execute("DELETE FROM memory_entries WHERE category='kb' AND key=?", (rel,))
+            parts = rel.split("/")
+            tags = ["kb", parts[0]]
+            if len(parts) > 2:
+                tags.append(parts[1])
+            for text in bullets:
+                store.add_entry(key=rel, value=text, tags=tags, category="kb",
+                                importance=_KB_IMPORTANCE)
+            store.conn.execute(
+                "INSERT OR REPLACE INTO kb_sources (path, sha256, entries, ingested_at)"
+                " VALUES (?, ?, ?, ?)",
+                (rel, digest, len(bullets), _now_iso()),
+            )
+            store.conn.commit()
+            total += len(bullets)
+        except Exception:
+            continue
+    return total
+
+
+# ---------------------------------------------------------------------------
 # Legacy module-level API (backward compatibility)
 # ---------------------------------------------------------------------------
 
@@ -1262,3 +1365,70 @@ def save_summary(summary: str) -> None:
 def load_summary() -> str:
     """Carga el último resumen guardado."""
     return _get_store().load_summary()
+
+
+# ---------------------------------------------------------------------------
+# Autolog: every turn searchable + curated facts (best-effort, never raises)
+# ---------------------------------------------------------------------------
+
+AUTOLOG_TURN_CHARS = 2000
+RECALL_TOP_K = 3
+RECALL_MAX_CHARS = 800
+
+
+def save_turn(user_text: str, assistant_text: str) -> None:
+    """Persist one chat turn as a session row + one searchable entry."""
+    try:
+        user = (user_text or "")[:AUTOLOG_TURN_CHARS]
+        assistant = (assistant_text or "")[:AUTOLOG_TURN_CHARS]
+        if not (user.strip() or assistant.strip()):
+            return
+        store = _get_store()
+        store.save_session([
+            {"role": "user", "content": user},
+            {"role": "assistant", "content": assistant},
+        ])
+        store.add_entry(
+            key=(user[:120] or "turn"),
+            value=f"User: {user}\nAssistant: {assistant}"[: AUTOLOG_TURN_CHARS * 2],
+            category="turn",
+            importance=3,
+        )
+    except Exception:
+        pass
+
+
+def recall_context(query: str, limit: int = RECALL_TOP_K, max_chars: int = RECALL_MAX_CHARS) -> str:
+    """Return a small 'Past context' block of relevant past turns/facts."""
+    try:
+        tokens = [t for t in re.findall(r"[\w\u00C0-\u024F]+", (query or "").lower()) if len(t) > 2]
+        if not tokens:
+            return ""
+        entries = _get_store().search_entries_keyword(
+            " ".join(tokens), limit=max(1, min(int(limit), 10))
+        )
+        lines = [
+            f"- {e.key}: {e.value[:200]}".strip()
+            for e in entries
+            if (e.key or e.value)
+        ]
+        if not lines:
+            return ""
+        return ("Past context:\n" + "\n".join(lines))[:max_chars]
+    except Exception:
+        return ""
+
+
+def forget_matching(key: str) -> int:
+    """Delete entries matching key; return how many were removed."""
+    try:
+        if not (key or "").strip():
+            return 0
+        store = _get_store()
+        entries = store.search_entries_keyword(key, limit=100)
+        for entry in entries:
+            if entry.id is not None:
+                store.delete_entry(entry.id)
+        return len(entries)
+    except Exception:
+        return 0

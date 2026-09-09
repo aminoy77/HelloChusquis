@@ -1,0 +1,30 @@
+# Python functions
+
+- In Python, define a function with `def name(params):` and return values with `return`.
+- In Python, a function without `return` returns None implicitly.
+- In Python, default arguments are evaluated once at definition time; never use a mutable default like `[]`, use None plus a guard.
+- In Python, `*args` collects extra positional arguments into a tuple.
+- In Python, `**kwargs` collects extra keyword arguments into a dict.
+- In Python, parameters after bare `*` are keyword-only and must be passed by name.
+- In Python, call with `f(*a_list)` to unpack a list into positional args and `f(**a_dict)` for keywords.
+- In Python, `lambda x: expr` creates a small anonymous function limited to one expression.
+- In Python, closures capture variables by reference, so loop-created lambdas share the final loop value unless bound via a default arg.
+- In Python, `def` inside a function creates a closure that remembers enclosing locals.
+- In Python, `nonlocal name` rebinds a closure variable; `global name` rebinds a module-level one.
+- In Python, decorators are functions wrapping functions: `@dec` equals `f = dec(f)`.
+- In Python, use `functools.wraps` inside decorator wrappers to preserve name and docstring.
+- In Python, `functools.lru_cache` memoizes pure function calls by arguments.
+- In Python, annotate with `def f(x: int) -> str:`; annotations are unchecked at runtime.
+- In Python, `*` in unpacking gathers: `head, *tail = values`.
+- In Python, a generator function uses `yield` and produces values lazily one at a time.
+- In Python, `yield from iterable` delegates iteration to a sub-iterable.
+- In Python, `return` inside a generator stops iteration; the return value lands on StopIteration, not the caller.
+- In Python, `next(gen, default)` avoids StopIteration by returning default when exhausted.
+- In Python, recursive functions need an explicit base case or they hit RecursionError around depth 1000.
+- In Python, `sys.setrecursionlimit` raises the limit but deep recursion still risks a C stack overflow.
+- In Python, `map(f, items)` and `filter(p, items)` are lazy iterators; wrap with `list()` to materialize.
+- In Python, `sorted(items, key=...)` with a small local function beats `cmp`-style comparators, which no longer exist in Python 3.
+- In Python, `operator.itemgetter("k")` and `operator.attrgetter("x")` are fast key functions for sorted/min/max.
+- In Python, functions are objects: pass them as arguments for callbacks, strategies, and hooks.
+- In Python, document public functions with a docstring as the first statement of the body.
+- In Python, `inspect.signature(f)` reveals a function's parameters programmatically.
