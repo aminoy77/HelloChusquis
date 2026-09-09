@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
+from core.identity import legacy_owner
 from tools.base import ToolResult
 from web import server as web_server
 
@@ -47,6 +48,7 @@ class TestWebRequestIsolation(unittest.TestCase):
         http_request = SimpleNamespace(
             client=SimpleNamespace(host="isolation-test"),
             headers={"x-hellochusquis-session": "isolation-test"},
+            state=SimpleNamespace(principal=legacy_owner()),
         )
 
         with patch.object(web_server.runtime, "_agent", fake_agent), patch.object(

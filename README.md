@@ -108,6 +108,36 @@ curl -X POST http://localhost:8080/approvals/APPROVAL_ID \
   -d '{"approve": true}'
 ```
 
+## Users and Roles
+
+Every HTTP request resolves to a *principal*. The deployment-wide key in `~/.hellochusquis/api_key.txt` still works and acts as an owner, and named users can be issued their own tokens:
+
+```bash
+hellochusquis users add dana --role operator   # prints the token exactly once
+hellochusquis users list
+hellochusquis users revoke dana
+```
+
+| Role | May do |
+| --- | --- |
+| `viewer` | read state: history, approvals, audit |
+| `operator` | everything a viewer can, plus chat, approvals and mutating tools (through the approval gate) |
+| `owner` | everything, plus runtime reload, provider updates and user management |
+
+Tokens are stored only as hashes in `~/.hellochusquis/identity.db` (override with `HELLOCHUSQUIS_IDENTITY_DB`) and are shown once at creation. Conversation sessions are scoped to their principal, so the same `X-HelloChusquis-Session` header from two users never shares state. Roles are enforced at tool dispatch as well as at the route, so a viewer cannot reach a mutating tool even if the model asks for one, and an approval granted earlier is re-checked against the caller's current role before it executes.
+
+Owners can manage users over the API too:
+
+```bash
+curl -X POST http://localhost:8080/users \
+  -H "Authorization: Bearer $HC_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "dana", "role": "operator"}'
+
+curl http://localhost:8080/users -H "Authorization: Bearer $HC_TOKEN"
+curl -X DELETE http://localhost:8080/users/dana -H "Authorization: Bearer $HC_TOKEN"
+```
+
 High-impact calls issued through HTTP require approval by default. Approval requests are **session-local**, expire after five minutes, are consumed before execution, and redact credential-like fields from the client view. Local terminal use remains interactive.
 
 ## Integration Diagnostics
@@ -129,6 +159,9 @@ hellochusquis config       # Reopen setup wizard
 hellochusquis config --show  # Show current config
 hellochusquis config --api-keys  # Edit API keys
 hellochusquis config --providers  # Edit providers
+hellochusquis users list   # Manage principals and their roles
+hellochusquis users add NAME --role viewer|operator|owner
+hellochusquis users revoke NAME
 ```
 
 ### CLI Flags:
@@ -152,7 +185,8 @@ GitHub, Slack, Discord, Docker, Notion, AWS, Gmail, Jira, PostgreSQL, MongoDB, S
 ## Environment Variables
 
 ```bash
-HELLOCHUSQUIS_API_KEY=your-key    # API key required by web/API clients
+HELLOCHUSQUIS_API_KEY=your-key    # Deployment-wide owner key for web/API clients
+HELLOCHUSQUIS_IDENTITY_DB=path    # Principal/token database (default ~/.hellochusquis/identity.db)
 HELLOCHUSQUIS_AUTH=0              # Disable web auth only for isolated local development
 HELLOCHUSQUIS_UNSAFE_MODE=1       # Skip security checks
 HELLOCHUSQUIS_PROFILE=aggressive  # Skip safety reviews

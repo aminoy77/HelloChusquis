@@ -77,10 +77,11 @@ class _FakePool:
 
 
 class _FakeAgent:
-    def __init__(self, config, require_approval=False, session_key=None):
+    def __init__(self, config, require_approval=False, session_key=None, role=None):
         self.config = config
         self.require_approval = require_approval
         self.session_key = session_key
+        self.role = role
         self.pool = _FakePool()
         self.dispose_calls = 0
 
