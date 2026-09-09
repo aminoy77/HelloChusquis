@@ -22,6 +22,9 @@ class TestApprovalClassification(unittest.TestCase):
     def test_read_only_file_operation_does_not_need_approval(self):
         self.assertIsNone(approval_reason("files", {"action": "read", "path": "/tmp/a"}))
 
+    def test_generic_upload_needs_approval(self):
+        self.assertIsNotNone(approval_reason("cloud_storage", {"action": "upload"}))
+
     def test_shell_and_external_mutation_need_approval(self):
         self.assertIsNotNone(approval_reason("shell", {"command": "echo hello"}))
         self.assertIsNotNone(approval_reason("github", {"action": "create_issue"}))

@@ -238,6 +238,11 @@ class FeedbackRequest(BaseModel):
     type: Literal["positive", "negative"]
     context: str = Field(default="", max_length=500)
 
+    @field_validator("context")
+    @classmethod
+    def normalize_context(cls, value: str) -> str:
+        return value.strip()
+
 
 class ApprovalDecisionRequest(BaseModel):
     approve: bool

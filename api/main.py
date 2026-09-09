@@ -367,7 +367,8 @@ def _sse_generator(agent, message: str, release_turn: bool = False):
             yield f"data: {json.dumps(event)}\n\n"
     except Exception:
         logger.exception("SSE stream error")
-        yield f'data: {json.dumps({"type": "error", "content": "Stream failed. Check server logs."})}\n\n'
+        if not terminal_emitted:
+            yield f'data: {json.dumps({"type": "error", "content": "Stream failed. Check server logs."})}\n\n'
     finally:
         if not terminal_emitted:
             yield f'data: {json.dumps({"type": "done"})}\n\n'

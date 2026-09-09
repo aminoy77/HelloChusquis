@@ -70,8 +70,22 @@ class TestSmartCacheLRUEviction(unittest.TestCase):
         self.assertEqual(c.get("b"), 2)
         self.assertEqual(c.get("d"), 4)
 
+    def test_recently_accessed_entry_is_not_evicted(self):
+        c = SmartCache(max_size=3)
+        c.set("a", 1)
+        time.sleep(0.01)
+        c.set("b", 2)
+        time.sleep(0.01)
+        c.set("c", 3)
+        self.assertEqual(c.get("a"), 1)
+
+        c.set("d", 4)
+
+        self.assertEqual(c.get("a"), 1)
+        self.assertIsNone(c.get("b"))
+
     def test_lru_eviction_order(self):
-        """Eviction targets oldest created_at entry."""
+        """Eviction targets the least recently accessed entry."""
         c = SmartCache(max_size=3)
         c.set("a", 1)
         time.sleep(0.01)

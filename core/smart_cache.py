@@ -12,6 +12,7 @@ class CacheEntry:
     created_at: float
     expires_at: float | None = None
     hit_count: int = 0
+    last_accessed_at: float | None = None
 
     def is_expired(self) -> bool:
         if self.expires_at is None:
@@ -37,6 +38,7 @@ class SmartCache:
         entry = self._cache.get(key)
         if entry and not entry.is_expired():
             entry.hit_count += 1
+            entry.last_accessed_at = time.time()
             self._hits += 1
             return entry.value
         elif entry:
@@ -48,12 +50,14 @@ class SmartCache:
         if len(self._cache) >= self.max_size:
             self._evict_lru()
 
-        expires_at = time.time() + (ttl if ttl is not None else self.default_ttl) if ttl is not None else None
+        now = time.time()
+        expires_at = now + (ttl if ttl is not None else self.default_ttl) if ttl is not None else None
         self._cache[key] = CacheEntry(
             key=key,
             value=value,
-            created_at=time.time(),
-            expires_at=expires_at
+            created_at=now,
+            expires_at=expires_at,
+            last_accessed_at=now,
         )
 
     def remember(self, key: str, value: Any, ttl: int | None = None):
@@ -87,7 +91,10 @@ class SmartCache:
     def _evict_lru(self):
         if not self._cache:
             return
-        lru_key = min(self._cache.keys(), key=lambda k: self._cache[k].created_at)
+        lru_key = min(
+            self._cache.keys(),
+            key=lambda k: self._cache[k].last_accessed_at or self._cache[k].created_at,
+        )
         del self._cache[lru_key]
 
     def stats(self) -> dict:

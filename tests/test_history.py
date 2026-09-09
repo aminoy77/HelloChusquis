@@ -56,6 +56,15 @@ class TestHistoryClear(unittest.TestCase):
 class TestHistoryMaxEntries(unittest.TestCase):
     """Add >100 messages, verify oldest trimmed."""
 
+    def test_max_entries_one_does_not_exceed_bound_with_system_message(self):
+        h = History(max_entries=1)
+        h.add_system_message("system")
+        h.add("user", "first")
+        h.add("assistant", "second")
+
+        self.assertEqual(h.get(), [{"role": "system", "content": "system"}])
+        self.assertEqual(len(h.get()), 1)
+
     def test_max_entries_default(self):
         h = History()  # max_entries=100
         for i in range(105):

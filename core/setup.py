@@ -766,5 +766,6 @@ def show_config():
     console.print("\n[bold cyan]Settings:[/bold cyan]")
     console.print(f"  • Reset after: {settings.get('provider_reset_hours', 1)} hours")
     console.print(f"  • Memory retention: {settings.get('memory_retention_days', 30)} days")
-    console.print(f"  • Workspace: {settings.get('workspace_dirs', ['N/A'])[0]}")
+    workspace_dirs = settings.get("workspace_dirs") or ["N/A"]
+    console.print(f"  • Workspace: {workspace_dirs[0]}")
     console.print(f"  • Timeout: {settings.get('timeout_seconds', 15)} seconds")

@@ -83,7 +83,7 @@ _MUTATING_PREFIXES = (
     "create", "update", "delete", "remove", "send", "post", "publish",
     "invite", "transfer", "charge", "refund", "purchase", "checkout",
     "deploy", "destroy", "start", "stop", "restart", "invoke", "trigger",
-    "write", "set", "enable", "disable", "grant", "revoke",
+    "write", "set", "enable", "disable", "grant", "revoke", "upload",
 )
 _SQL_MUTATING_KEYWORDS = re.compile(
     r"\b(?:ALTER|CREATE|DELETE|DROP|GRANT|INSERT|REVOKE|TRUNCATE|UPDATE)\b",

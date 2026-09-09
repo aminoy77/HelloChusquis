@@ -725,32 +725,37 @@ class EdgeTTS(TTSProvider):
             await communicate.save(tmp_path)
 
         # Run async in sync context
-        loop: Optional[asyncio.AbstractEventLoop] = None
+        succeeded = False
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            pass
-        if loop and loop.is_running():
-            # We're inside an async context; run in new thread
-            import concurrent.futures
+            loop: Optional[asyncio.AbstractEventLoop] = None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass
+            if loop and loop.is_running():
+                # We're inside an async context; run in new thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(asyncio.run, _run())
+                    future.result(timeout=60)
+            else:
+                asyncio.run(_run())
+            audio_bytes = Path(tmp_path).read_bytes()
+            latency = (time.monotonic() - start) * 1000
+            succeeded = True
+            return TTSResult(
+                success=True,
+                audio_path=tmp_path,
+                audio_bytes=audio_bytes,
+                provider=self.provider_id,
+                voice_id=voice,
+                latency_ms=latency,
+                output_format=output_format,
+            )
+        finally:
+            if not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, _run())
-                future.result(timeout=60)
-        else:
-            asyncio.run(_run())
-
-        audio_bytes = Path(tmp_path).read_bytes()
-        latency = (time.monotonic() - start) * 1000
-        return TTSResult(
-            success=True,
-            audio_path=tmp_path,
-            audio_bytes=audio_bytes,
-            provider=self.provider_id,
-            voice_id=voice,
-            latency_ms=latency,
-            output_format=output_format,
-        )
 
     def _synth_with_cli(
         self,
@@ -786,24 +791,30 @@ class EdgeTTS(TTSProvider):
             "--write-media",
             tmp_path,
         ]
-        proc = subprocess.run(cmd, capture_output=True, timeout=60)
-        if proc.returncode != 0:
+        succeeded = False
+        try:
+            proc = subprocess.run(cmd, capture_output=True, timeout=60)
+            if proc.returncode != 0:
+                return TTSResult(
+                    success=False,
+                    error=f"edge-tts failed: {proc.stderr.decode('utf-8', errors='replace')}",
+                )
+            audio_bytes = Path(tmp_path).read_bytes()
+            latency = (time.monotonic() - start) * 1000
+            succeeded = True
             return TTSResult(
-                success=False,
-                error=f"edge-tts failed: {proc.stderr.decode('utf-8', errors='replace')}",
+                success=True,
+                audio_path=tmp_path,
+                audio_bytes=audio_bytes,
+                provider=self.provider_id,
+                voice_id=voice,
+                latency_ms=latency,
+                output_format=output_format,
             )
+        finally:
+            if not succeeded:
+                Path(tmp_path).unlink(missing_ok=True)
 
-        audio_bytes = Path(tmp_path).read_bytes()
-        latency = (time.monotonic() - start) * 1000
-        return TTSResult(
-            success=True,
-            audio_path=tmp_path,
-            audio_bytes=audio_bytes,
-            provider=self.provider_id,
-            voice_id=voice,
-            latency_ms=latency,
-            output_format=output_format,
-        )
 
     def list_voices(self, language: Optional[str] = None) -> List[VoiceInfo]:
         voices = []

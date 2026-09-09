@@ -59,6 +59,7 @@ async def _json_request(
         headers.update(extra_headers)
     async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
         response = await client.request(method, url, json=json_body, content=content, headers=headers)
+        response.raise_for_status()
         return response.json()
 
 
@@ -87,6 +88,7 @@ async def download_file(access_token: str, path: str) -> dict[str, Any]:
     content = bytearray()
     async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
         async with client.stream("POST", f"{_CONTENT_BASE_URL}/files/download", headers=headers) as response:
+            response.raise_for_status()
             async for chunk in response.aiter_bytes():
                 remaining = _MAX_TRANSFER_BYTES - len(content)
                 if remaining <= 0 or len(chunk) > remaining:
