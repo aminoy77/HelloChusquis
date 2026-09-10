@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="264" role="img" aria-label="Latency before versus after v5.2, log scale">
+<rect width="560" height="264" fill="#0a0a0c"/>
+<text x="280" y="18" fill="#f1efe9" font-size="13" font-family="sans-serif" text-anchor="middle">v5.2 latency wins (seconds, log scale)</text>
+<line x1="44" y1="212" x2="548" y2="212" stroke="#26262e"/>
+<text x="38" y="216" fill="#a3a0b0" font-size="10" text-anchor="end">0.1s</text>
+<line x1="44" y1="151" x2="548" y2="151" stroke="#26262e"/>
+<text x="38" y="155" fill="#a3a0b0" font-size="10" text-anchor="end">1s</text>
+<line x1="44" y1="89" x2="548" y2="89" stroke="#26262e"/>
+<text x="38" y="93" fill="#a3a0b0" font-size="10" text-anchor="end">10s</text>
+<line x1="44" y1="28" x2="548" y2="28" stroke="#26262e"/>
+<text x="38" y="32" fill="#a3a0b0" font-size="10" text-anchor="end">100s</text>
+<rect x="74" y="40" width="34" height="172" rx="4" fill="#a3a0b0"/>
+<rect x="118" y="169" width="34" height="43" rx="4" fill="#34d399"/>
+<text x="113" y="230" fill="#f1efe9" font-size="11" text-anchor="middle">KB ingest</text>
+<text x="113" y="244" fill="#a3a0b0" font-size="9" text-anchor="middle">64s→0.5s</text>
+<rect x="206" y="60" width="34" height="152" rx="4" fill="#a3a0b0"/>
+<rect x="250" y="194" width="34" height="18" rx="4" fill="#34d399"/>
+<text x="245" y="230" fill="#f1efe9" font-size="11" text-anchor="middle">browser fail</text>
+<text x="245" y="244" fill="#a3a0b0" font-size="9" text-anchor="middle">30s→0.2s</text>
+<rect x="338" y="90" width="34" height="122" rx="4" fill="#a3a0b0"/>
+<rect x="382" y="102" width="34" height="110" rx="4" fill="#34d399"/>
+<text x="377" y="230" fill="#f1efe9" font-size="11" text-anchor="middle">search worst</text>
+<text x="377" y="244" fill="#a3a0b0" font-size="9" text-anchor="middle">9.6s→6.2s</text>
+<circle cx="388" cy="16" r="5" fill="#a3a0b0"/><text x="398" y="20" fill="#a3a0b0" font-size="10">before</text>
+<circle cx="448" cy="16" r="5" fill="#34d399"/><text x="458" y="20" fill="#a3a0b0" font-size="10">v5.2</text>
+</svg>

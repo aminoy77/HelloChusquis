@@ -1,6 +1,6 @@
 # Calculus essentials
 
-- In calculus, the derivative of x squared is 2x by the power rule.
+- In calculus, d/dx[x^2] = 2x by the power rule.
 - In calculus, the derivative measures instantaneous rate of change as the limit of secant slopes.
 - In calculus, the power rule drops exponents: d/dx[x^n] = n·x^(n-1).
 - In calculus, the product rule differentiates products: (fg)' = f'g + fg'.

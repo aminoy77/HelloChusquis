@@ -77,7 +77,10 @@ Every turn is automatically saved and searchable: before answering, the agent re
 
 ### Reference knowledge (MDknowledge)
 
-The `MDknowledge/` folder ships 500+ curated markdown files (programming idioms, capitals, elements, math, science, history) that are ingested into memory at startup and recalled per turn as reference context. Add your own under the same tree, or override any file in `~/.hellochusquis/knowledge/<same/path.md>`. One fact per `- bullet`; fenced code blocks are skipped. Measured on a 35-question factual probe with a local 3B model: 86% → **100%** accuracy (retrieval coverage 97% vs 0% without it). Smaller models gain the most; reasoning-heavy tasks gain less.
+The `MDknowledge/` folder ships 1200+ curated markdown files (~9900 facts: programming idioms, capitals, elements, math, science, history) that are ingested into memory at startup and recalled per turn as reference context. Add your own under the same tree, or override any file in `~/.hellochusquis/knowledge/<same/path.md>`. One fact per `- bullet`; fenced code blocks are skipped. Measured on a 35-question factual probe with a local 3B model: 86% → **100%** accuracy (retrieval coverage 97% vs 0% without it). Smaller models gain the most; reasoning-heavy tasks gain less.
+
+![Factual accuracy: bare model vs + MDknowledge](docs/assets/kb-accuracy.svg)
+![v5.2 latency wins](docs/assets/v52-latency.svg)
 
 ### Use the web and API safely
 

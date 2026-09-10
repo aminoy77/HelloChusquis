@@ -1455,7 +1455,7 @@
         </div>
         <div class="tip-card">
             <h4>Reference knowledge</h4>
-            <p>500+ curated markdown files in <code>MDknowledge/</code> (code idioms, capitals, elements, math, science) load into memory at startup and get recalled per turn. Override any file under <code>~/.hellochusquis/knowledge/</code>.</p>
+            <p>1200+ curated markdown files in <code>MDknowledge/</code> (code idioms, capitals, elements, math, science) load into memory at startup and get recalled per turn. Override any file under <code>~/.hellochusquis/knowledge/</code>.</p>
         </div>
     </div>
 </section>
@@ -1560,7 +1560,16 @@
                 <div class="feature-icon" aria-hidden="true">📚</div>
                 <div class="feature-title">Built-in knowledge</div>
             </div>
-            <div class="feature-desc">500+ reference files recalled per turn — small local models answer covered facts like far bigger ones (measured 86% → 100% on a 3B model).</div>
+            <div class="feature-desc">1200+ reference files (9900+ facts) recalled per turn — small local models answer covered facts like far bigger ones (measured 86% → 100% on a 3B model).</div>
+            <img src="assets/kb-accuracy.svg" alt="Factual accuracy bare model versus with knowledge base" loading="lazy" style="width:100%;border-radius:10px;margin-top:10px">
+        </div>
+        <div class="feature-card">
+            <div class="feature-header">
+                <div class="feature-icon" aria-hidden="true">⚡</div>
+                <div class="feature-title">v5.2 speed</div>
+            </div>
+            <div class="feature-desc">Knowledge loads in 0.5s not 64s, dead browsers fail in 0.2s not 30s, down providers exhaust instead of hanging every turn.</div>
+            <img src="assets/v52-latency.svg" alt="Latency before versus after v5.2" loading="lazy" style="width:100%;border-radius:10px;margin-top:10px">
         </div>
         <div class="feature-card">
             <div class="feature-header">
@@ -1770,7 +1779,7 @@
         </div>
         <div class="faq-item">
             <div class="faq-q">How does the built-in knowledge work?</div>
-            <div class="faq-a">500+ curated markdown files ship in MDknowledge/ and load into memory at startup; relevant facts are recalled into context each turn. Small local models answer covered facts like far bigger ones — override any file under ~/.hellochusquis/knowledge/.</div>
+            <div class="faq-a">1200+ curated markdown files ship in MDknowledge/ and load into memory at startup; relevant facts are recalled into context each turn. Small local models answer covered facts like far bigger ones — override any file under ~/.hellochusquis/knowledge/.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">How much does it cost?</div>
