@@ -126,6 +126,7 @@ class BrowserAgent:
         self.context = None
         self.page = None
         self.state = BrowserState()
+        self.start_fatal: str | None = None  # set when retrying can never help
         self._screenshot_count = 0
         self._session_dir = None
         self._last_mouse_pos = (0, 0)
@@ -226,6 +227,12 @@ class BrowserAgent:
                 "Playwright not installed. Run: pip install playwright && playwright install chromium"
             )
         except Exception as e:
+            if "Executable doesn't exist" in str(e):
+                # Missing browser binary: retrying is pointless, fail fast.
+                self.start_fatal = "Browser executable missing. Run: playwright install chromium"
+                logger.error(self.start_fatal)
+                await self.close()
+                return False
             logger.error("BrowserAgent start failed: %s", e, exc_info=self.debug)
             # Startup may have initialized Playwright or the browser before
             # failing; release those resources before reporting failure.

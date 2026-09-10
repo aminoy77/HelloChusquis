@@ -57,6 +57,7 @@ class PersistentBrowser:
         self._started = False
         self._stopped = False
         self._init_event = threading.Event()
+        self._fatal_error: str | None = None
 
     @classmethod
     def get_instance(cls) -> 'PersistentBrowser':
@@ -89,6 +90,7 @@ class PersistentBrowser:
 
             self._stopped = False
             self._init_event.clear()
+            self._fatal_error = None
 
         def run_browser_loop():
             """Run the browser event loop in a daemon thread."""
@@ -110,6 +112,10 @@ class PersistentBrowser:
             self._started = False
             raise BrowserError("Browser initialization timed out after 30s")
 
+        if self._fatal_error:
+            self._started = False
+            raise BrowserError(self._fatal_error)
+
         self._started = True
         logger.info("PersistentBrowser ready")
 
@@ -126,6 +132,12 @@ class PersistentBrowser:
                 )
                 success = await self._agent.start()
                 if not success:
+                    fatal = getattr(self._agent, "start_fatal", None)
+                    if fatal:
+                        # Unrecoverable (e.g. missing binary): wake the waiter, stop retrying.
+                        self._fatal_error = fatal
+                        self._init_event.set()
+                        return
                     logger.error("Failed to start browser agent")
                     await asyncio.sleep(3)
                     continue
@@ -526,8 +538,8 @@ class PersistentBrowser:
         if not self._started or not self._thread or not self._thread.is_alive():
             try:
                 self.start()
-            except BrowserError:
-                return {'success': False, 'error': 'Failed to start browser'}
+            except BrowserError as e:
+                return {'success': False, 'error': str(e)}
 
         task_id = self._get_task_id()
         result_queue = queue.Queue()

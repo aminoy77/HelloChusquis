@@ -51,9 +51,7 @@ class TestWebRequestIsolation(unittest.TestCase):
             state=SimpleNamespace(principal=legacy_owner()),
         )
 
-        with patch.object(web_server.runtime, "_agent", fake_agent), patch.object(
-            web_server.runtime, "_error", None
-        ):
+        with patch.object(web_server, "_require_agent", return_value=fake_agent):
             response = web_server.chat(request, http_request)
 
         self.assertEqual(response["response"], "completed")

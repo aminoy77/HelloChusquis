@@ -1309,8 +1309,10 @@ def load_knowledge(
             if len(parts) > 2:
                 tags.append(parts[1])
             for text in bullets:
+                # ponytail: no embeddings on bulk path — recall is keyword-only
+                # and nothing in agent/server/api consumes vectors.
                 store.add_entry(key=rel, value=text, tags=tags, category="kb",
-                                importance=_KB_IMPORTANCE)
+                                importance=_KB_IMPORTANCE, auto_embed=False)
             store.conn.execute(
                 "INSERT OR REPLACE INTO kb_sources (path, sha256, entries, ingested_at)"
                 " VALUES (?, ?, ?, ?)",

@@ -4,6 +4,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from api import main as api_main
@@ -52,7 +53,10 @@ class TestAdministrativeRateLimits(unittest.TestCase):
 
     def test_web_provider_update_returns_429_after_limit(self):
         limiter = self._one_request_limiter()
-        with patch.object(web_server, "_provider_update_limiter", limiter):
+        with patch.object(web_server, "_provider_update_limiter", limiter), patch.object(
+            web_server, "_require_agent",
+            side_effect=HTTPException(status_code=503, detail="not ready"),
+        ):
             client = TestClient(web_server.app)
             headers = {
                 "Authorization": f"Bearer {web_server.REQUIRED_API_KEY}",

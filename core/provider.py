@@ -272,6 +272,7 @@ class ProviderPool:
                     / (provider.total_calls + 1)
                 )
                 provider.total_calls += 1
+                provider.failed_calls = 0
                 return result
             except httpx.HTTPStatusError as e:
                 provider.failed_calls += 1
@@ -281,6 +282,11 @@ class ProviderPool:
             except (httpx.TimeoutException, httpx.ConnectError) as e:
                 provider.failed_calls += 1
                 logger.debug("%s error for provider %s: %s", e.__class__.__name__, provider.name, e)
+                if provider.failed_calls >= 2:
+                    # Repeatedly unreachable: skip until the reset window.
+                    # A lone blip never exhausts because success resets the count.
+                    provider.exhausted = True
+                    provider.exhausted_at = time.time()
                 last_error = e
                 continue
         raise RuntimeError(f"All providers failed. Last error: {last_error}")
@@ -338,7 +344,11 @@ class ProviderPool:
         if tools and supports_tools:
             payload["tools"] = tools
 
-        with httpx.Client(timeout=self.timeout) as client:
+        # Split timeouts: blackhole connects fail in 5s instead of 15s.
+        # ponytail: read/write unchanged; only the connect phase shortens.
+        timeout = httpx.Timeout(connect=5.0, read=float(self.timeout),
+                                write=10.0, pool=5.0)
+        with httpx.Client(timeout=timeout) as client:
             response = client.post(
                 f"{provider.base_url}/chat/completions",
                 headers={

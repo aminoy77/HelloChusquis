@@ -24,6 +24,25 @@ class TestBrowserStartupCleanup(unittest.TestCase):
         self.assertFalse(started)
         close.assert_awaited_once_with()
 
+    def test_missing_executable_is_fatal_not_retried(self):
+        playwright = SimpleNamespace(
+            chromium=SimpleNamespace(
+                launch=AsyncMock(
+                    side_effect=Exception("Executable doesn't exist at /cache/ms-playwright")
+                ),
+            )
+        )
+        manager = SimpleNamespace(start=AsyncMock(return_value=playwright))
+        agent = BrowserAgent()
+
+        with patch("playwright.async_api.async_playwright", return_value=manager), patch.object(
+            agent, "close", new=AsyncMock()
+        ):
+            started = asyncio.run(agent.start())
+
+        self.assertFalse(started)
+        self.assertIn("playwright install", agent.start_fatal)
+
 
 if __name__ == "__main__":
     unittest.main()

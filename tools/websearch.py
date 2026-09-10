@@ -243,7 +243,9 @@ def search(
     for engine_name, engine_fn in engines:
         try:
             if engine_name == "browser":
-                result = _with_retry(engine_fn, query, num_results)
+                # Browser ops carry their own timeouts; retrying a fatal
+                # error (e.g. missing binary) only adds backoff latency.
+                result = engine_fn(query, num_results)
             else:
                 result = _with_retry(engine_fn, query, num_results, region, time_filter)
 
