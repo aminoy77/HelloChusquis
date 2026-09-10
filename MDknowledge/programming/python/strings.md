@@ -1,0 +1,22 @@
+# Python strings
+
+- In Python, strings are immutable: methods like `upper()` return new strings, never modify in place.
+- In Python, f-strings `f"name={name}"` interpolate expressions; use `f"{x:.2f}"` for float formatting.
+- In Python, `s.strip()` removes surrounding whitespace; `s.strip(chars)` strips the given character set.
+- In Python, `s.split(",")` splits on a delimiter while `s.split()` splits on any whitespace run.
+- In Python, `"sep".join(parts)` requires all parts to be strings already.
+- In Python, `s.startswith(prefix)` and `s.endswith(suffix)` accept tuples of candidates.
+- In Python, `s.replace(old, new)` replaces all occurrences and returns a new string.
+- In Python, `s.find(sub)` returns the lowest index or -1; `s.index(sub)` raises ValueError instead.
+- In Python, `"key" in s` tests substring membership in O(n) time.
+- In Python, `s.lower()` and `s.upper()` case-fold for comparisons; `s.casefold()` is stronger for Unicode.
+- In Python, raw strings `r"C:\path"` keep backslashes literal, ideal for regex and Windows paths.
+- In Python, triple-quoted `"""..."""` strings span lines and suit docstrings and templates.
+- In Python, `s.encode("utf-8")` makes bytes and `b.decode("utf-8")` decodes back; always specify encodings explicitly.
+- In Python, `"..."format()` is legacy; prefer f-strings, which are faster and clearer.
+- In Python, `s.zfill(width)` and `s.ljust/rjust/center` pad strings for aligned output.
+- In Python, `s.count(sub)` counts non-overlapping occurrences of a substring.
+- In Python, `s.partition(sep)` splits once into (before, sep, after), handy for key=value parsing.
+- In Python, `ord("A")` gives 65 and `chr(65)` gives "A" for character-code conversion.
+- In Python, string concatenation with `+` in a loop is O(n^2); accumulate a list and `join` once.
+- In Python, `textwrap.dedent` cleans indentation of embedded multi-line template strings.

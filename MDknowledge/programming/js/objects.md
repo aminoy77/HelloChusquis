@@ -1,0 +1,22 @@
+# JavaScript objects
+
+- In JavaScript, object literals `{name: "a", age: 3}` hold key-value pairs; keys are strings (or Symbols).
+- In JavaScript, `obj.key` and `obj["key"]` both read properties; bracket syntax fits dynamic or spaced names.
+- In JavaScript, shorthand `{name, age}` builds objects from same-named variables.
+- In JavaScript, method shorthand `{save() {...}}` defines functions without the `function` keyword.
+- In JavaScript, destructuring `const {name, age = 0} = user` extracts fields with optional defaults.
+- In JavaScript, `const {name: n} = user` renames while destructuring.
+- In JavaScript, `Object.keys/values/entries(obj)` list an object's own enumerable properties.
+- In JavaScript, `JSON.stringify(obj)` serializes (dropping functions/undefined) and `JSON.parse(str)` revives plain data.
+- In JavaScript, `{...a, ...b}` shallow-merges with b winning; nested objects stay shared references.
+- In JavaScript, `structuredClone(obj)` deep-copies plain data including Dates and Maps.
+- In JavaScript, `?.` stops nullish chains (`user?.address?.city`) and `??` defaults only on null/undefined.
+- In JavaScript, `delete obj.key` removes a property; it is slow on hot objects, so prefer building new ones.
+- In JavaScript, `in` checks key existence (`"x" in obj`) while `obj.x !== undefined` conflates missing with undefined values.
+- In JavaScript, `Object.hasOwn(obj, key)` (or `hasOwnProperty`) ignores inherited prototype properties.
+- In JavaScript, `Object.freeze(obj)` makes an object shallow-immutable; nested objects stay mutable.
+- In JavaScript, computed keys `{[dynamic]: value}` evaluate expressions as property names.
+- In JavaScript, `Map` beats plain objects for frequent add/delete cycles and non-string keys.
+- In JavaScript, classes are constructor-function sugar: `class A extends B` with `super()` in derived constructors.
+- In JavaScript, private fields `#x` are truly class-private, unlike `_x` naming conventions.
+- In JavaScript, `this` in callbacks loses its object; bind it, use an arrow, or pass a bound method.

@@ -1,0 +1,22 @@
+# Python dicts
+
+- In Python, `{}` and `dict()` create dicts; `d[k]` raises KeyError on missing keys while `d.get(k, default)` returns the default.
+- In Python, `k in d` tests key membership in O(1) average time.
+- In Python, `d.keys()`, `d.values()`, and `d.items()` return live views reflecting later mutations.
+- In Python, iterate pairs with `for key, value in d.items():` instead of indexing inside the loop.
+- In Python, `d.setdefault(k, default)` inserts and returns the default only when k is absent.
+- In Python, `collections.defaultdict(list)` auto-creates missing values, ideal for grouping loops.
+- In Python, `collections.Counter(iterable)` tallies frequencies with `.most_common(n)` for rankings.
+- In Python, dict comprehensions `{k: f(v) for k, v in items}` transform mappings declaratively.
+- In Python, `{**a, **b}` merges dicts with b winning; Python 3.9+ also allows `a | b`.
+- In Python, `d.update(other)` merges in place and returns None, so it cannot be chained.
+- In Python, `d.pop(k, default)` removes and returns a value safely; without a default it raises KeyError when absent.
+- In Python, dicts preserve insertion order (guaranteed since 3.7); `d.popitem()` removes the last inserted pair.
+- In Python, `sorted(d)` yields keys in order; `sorted(d.items(), key=lambda kv: kv[1])` sorts by value.
+- In Python, `dict(zip(keys, values))` builds a dict from two parallel sequences.
+- In Python, never mutate a dict's keys while iterating it; iterate over `list(d)` or collect changes first.
+- In Python, `json.dumps(d)` serializes string-keyed dicts; tuples become lists and non-string keys become strings.
+- In Python, `dict.get` chains like `d.get("a", {}).get("b")` for safe nested access one level at a time.
+- In Python, `types.MappingProxyType(d)` exposes a read-only view of a dict for safe sharing.
+- In Python, `key in d` is O(1) while `value in d.values()` scans in O(n); invert the mapping for repeated reverse lookups.
+- In Python, `d | {"k": v}` returns a new merged dict, leaving both operands untouched.

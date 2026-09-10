@@ -1,0 +1,27 @@
+# JavaScript arrays
+
+- In JavaScript, `push(x)` appends to the end and `pop()` removes and returns the last element.
+- In JavaScript, `shift()` removes the first element and `unshift(x)` prepends; both are O(n).
+- In JavaScript, `slice(start, end)` returns a shallow copy without mutating; `splice(start, deleteCount, ...items)` mutates and returns the removed elements.
+- In JavaScript, `map(fn)` returns a new transformed array and never mutates the original.
+- In JavaScript, `filter(fn)` keeps elements where fn returns truthy; `find(fn)` returns the first match or undefined.
+- In JavaScript, `reduce((acc, x) => ..., initial)` folds an array into one value; always pass the initial value.
+- In JavaScript, `forEach` cannot be broken out of; use `for...of` with `break` when early exit is needed.
+- In JavaScript, `arr.sort()` without a comparator sorts elements as strings, so `[10, 9, 80]` becomes `[10, 80, 9]`; use `(a, b) => a - b` for numbers.
+- In JavaScript, `sort()` and `reverse()` mutate the array in place; copy first with `[...arr]` when the original must survive.
+- In JavaScript, `includes(x)` tests membership and handles NaN correctly, unlike `indexOf`.
+- In JavaScript, `indexOf(x)` returns the first index or -1; `findIndex(fn)` does the same with a predicate.
+- In JavaScript, spread `[...a, ...b]` concatenates arrays into a new one; `[...str]` splits a string into characters.
+- In JavaScript, `Array.isArray(x)` is the reliable array check; `typeof []` is just "object".
+- In JavaScript, `Array.from({length: n}, (_, i) => ...)` builds initialized arrays; `new Array(n)` makes holes that `map` skips.
+- In JavaScript, assigning `arr.length = 0` empties an array in place, visible through all references.
+- In JavaScript, `arr.at(-1)` reads the last element; negative indices do not work with bracket syntax.
+- In JavaScript, `flat(depth)` flattens nested arrays and `flatMap(fn)` maps then flattens one level.
+- In JavaScript, `join(sep)` builds a string; `split(sep)` on strings is its inverse.
+- In JavaScript, `[...new Set(arr)]` removes duplicates from an array of primitives.
+- In JavaScript, destructuring `const [first, ...rest] = arr` splits head and tail.
+- In JavaScript, `for...of` iterates values while `for...in` iterates string keys; prefer `for...of` for arrays.
+- In JavaScript, `every(fn)` requires all elements to pass and `some(fn)` needs just one.
+- In JavaScript, holes in sparse arrays are skipped by `map`/`forEach` but counted by `length`.
+- In JavaScript, `fill(value, start, end)` overwrites a range in place with the same value reference.
+- In JavaScript, comparing arrays with `===` checks identity, not contents; compare element-wise or via JSON for snapshots.

@@ -1,0 +1,22 @@
+# C memory management
+
+- In C, automatic (stack) variables die when their block ends; never return their address from a function.
+- In C, `malloc(n)` allocates n bytes of uninitialized heap memory and returns NULL on failure.
+- In C, `calloc(count, size)` allocates zero-initialized memory for count elements.
+- In C, `realloc(p, n)` resizes an allocation and may move it; assign to a temporary and check NULL before overwriting p.
+- In C, every successful `malloc`/`calloc`/`realloc` needs exactly one `free`; freeing twice is undefined behavior.
+- In C, always check allocation results for NULL before use, especially on constrained systems.
+- In C, `free(NULL)` is a safe no-op, which simplifies cleanup paths.
+- In C, using memory after `free` (use-after-free) is undefined behavior; null the pointer after freeing.
+- In C, `sizeof(*p)` in the allocation call (`malloc(n * sizeof(*p))`) keeps sizes correct if the type changes.
+- In C, `strdup(s)` duplicates a string on the heap (POSIX); the copy must be freed by the caller.
+- In C, `realloc(p, 0)` semantics vary by platform; prefer explicit `free` plus fresh allocation.
+- In C, growing buffers geometrically (e.g. doubling capacity) keeps append costs amortized O(1).
+- In C, `valgrind ./program` reports leaks, invalid reads/writes, and use-after-free; fix errors before benchmarking.
+- In C, compile with `-Wall -Wextra -g` during development and `-fsanitize=address,undefined` to catch memory bugs early.
+- In C, flexible array members (`char data[]` as the last struct member) pair with one oversized `malloc` for variable payloads.
+- In C, `alloca` allocates on the stack frame and vanishes on return; never store or return its result.
+- In C, prefer bounded string functions (`snprintf`, `strncpy` with explicit termination) over unbounded `strcpy`/`sprintf`.
+- In C, `fopen` results must be `fclose`d and `malloc` results freed on every exit path, including error returns.
+- In C, ownership must be documented per function: state whether the caller or callee frees returned pointers.
+- In C, static buffers shared across calls are not thread-safe; prefer caller-provided buffers or heap allocations.

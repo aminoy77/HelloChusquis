@@ -73,6 +73,12 @@ The `tools/` package contains integrations for services such as GitHub, Slack, D
 
 Conversation history is bounded and can be compressed. SQLite-backed memory stores sessions, summaries, learnings, and search indexes locally so the agent can retain useful context without turning every prompt into a transcript dump.
 
+Every turn is automatically saved and searchable: before answering, the agent recalls the most relevant past turns and facts into context. Say `remember <fact>` to pin something explicitly and `forget <key>` to remove matching memories — both work mid-chat without calling the model.
+
+### Reference knowledge (MDknowledge)
+
+The `MDknowledge/` folder ships 500+ curated markdown files (programming idioms, capitals, elements, math, science, history) that are ingested into memory at startup and recalled per turn as reference context. Add your own under the same tree, or override any file in `~/.hellochusquis/knowledge/<same/path.md>`. One fact per `- bullet`; fenced code blocks are skipped. Measured on a 35-question factual probe with a local 3B model: 86% → **100%** accuracy (retrieval coverage 97% vs 0% without it). Smaller models gain the most; reasoning-heavy tasks gain less.
+
 ### Use the web and API safely
 
 The web interface and REST API support streaming responses, readiness checks, request limits, isolated HTTP sessions, persistent approval audit records, and principal-based roles. Sessions are scoped to their caller rather than shared globally.

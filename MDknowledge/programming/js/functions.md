@@ -1,0 +1,26 @@
+# JavaScript functions
+
+- In JavaScript, `function` declarations are hoisted with their body; `const f = () => {}` arrows are not usable before their line (temporal dead zone).
+- In JavaScript, arrow functions capture `this` lexically from the enclosing scope and never get their own.
+- In JavaScript, use a regular `function` (not an arrow) for object methods and event handlers that need dynamic `this`.
+- In JavaScript, arrow functions have no `arguments` object; use rest params `(...args)` instead.
+- In JavaScript, default parameters apply only when the argument is `undefined`, e.g. `function f(x = 10)`.
+- In JavaScript, rest syntax `function f(...args)` gathers extra arguments into a real array.
+- In JavaScript, spread in calls `f(...arr)` expands an array into positional arguments.
+- In JavaScript, closures capture variables by reference: loop callbacks share one `var`, so declare the loop variable with `let`.
+- In JavaScript, an IIFE `(() => { ... })()` runs once and keeps its variables private.
+- In JavaScript, `function f() {}` declarations create a named binding useful in stack traces; prefer names over anonymous callbacks.
+- In JavaScript, `setTimeout(fn, ms)` and `setInterval(fn, ms)` schedule work; both return ids for `clearTimeout`/`clearInterval`.
+- In JavaScript, a Promise represents a future value: `new Promise((resolve, reject) => ...)` settles it exactly once.
+- In JavaScript, `async` functions always return a promise; `await` pauses only inside them (or top-level modules).
+- In JavaScript, `await` in a loop runs sequentially; use `Promise.all(arr.map(f))` for concurrency.
+- In JavaScript, `Promise.all` rejects on the first failure; `Promise.allSettled` waits for every outcome.
+- In JavaScript, `throw new Error("msg")` signals failures; `try/catch/finally` handles them, with `finally` always running.
+- In JavaScript, `fn.bind(obj)` returns a new function with fixed `this`; `call`/`apply` invoke immediately.
+- In JavaScript, generator `function*` with `yield` produces lazy sequences consumed via `for...of` or `.next()`.
+- In JavaScript, recursion needs a base case; deep recursion overflows the call stack, so prefer iteration for long loops.
+- In JavaScript, higher-order functions like `map`/`filter` take callbacks; keep callbacks pure for predictable results.
+- In JavaScript, `console.error` and `throw` surface failures; silently swallowing rejections hides bugs.
+- In JavaScript, unhandled promise rejections crash Node processes; always end chains with `.catch` or try/catch around await.
+- In JavaScript, `?.` optional chaining short-circuits nullish access and `??` defaults only on null/undefined, not on 0 or "".
+- In JavaScript, `typeof fn === "function"` is the safe check before invoking an optional callback.

@@ -1,0 +1,22 @@
+# JavaScript async
+
+- In JavaScript, callbacks `doWork(arg, (err, result) => ...)` use error-first convention in Node APIs.
+- In JavaScript, `new Promise((resolve, reject) => ...)` settles once; later calls are ignored.
+- In JavaScript, `.then(value => ...)` chains transforms and `.catch(err => ...)` handles any earlier rejection.
+- In JavaScript, always return the inner promise inside `.then` or the chain will not wait for it.
+- In JavaScript, `async` functions return promises implicitly; a plain `return x` resolves with x.
+- In JavaScript, `await` unwraps promises and throws rejections as catchable exceptions.
+- In JavaScript, wrap awaited calls in try/catch (or end chains with `.catch`) — floating promises hide failures.
+- In JavaScript, sequential awaits in loops are slow for independent work; prefer `Promise.all(items.map(fetchItem))`.
+- In JavaScript, `Promise.all` rejects fast on the first failure; `Promise.allSettled` reports every outcome.
+- In JavaScript, `Promise.race` settles with the first outcome and `Promise.any` with the first success.
+- In JavaScript, `fetch(url)` returns a promise of a Response; check `res.ok` before `res.json()` since HTTP errors do not reject.
+- In JavaScript, `await res.json()` parses bodies; network failures (not HTTP statuses) are what reject fetch.
+- In JavaScript, `setTimeout(fn, ms)` defers once and `setInterval` repeats; both are cancelled via their clear functions.
+- In JavaScript, `queueMicrotask(fn)` runs after the current task before timers and I/O callbacks.
+- In JavaScript, top-level `await` works in ES modules but not in classic scripts or CommonJS.
+- In JavaScript, `for await (const x of stream)` consumes async iterables chunk by chunk.
+- In JavaScript, `AbortController` with `signal` cancels fetch and other signal-aware async work.
+- In JavaScript, never mix `await` with blocking synchronous loops over huge inputs; chunk the work or offload it.
+- In JavaScript, `process.nextTick` (Node) runs before promise microtasks; prefer explicit scheduling over relying on it.
+- In JavaScript, unhandled rejections terminate modern Node processes; attach handlers at creation time.

@@ -1144,7 +1144,7 @@
           "name": "What is HelloChusquis?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 54 AI providers, 150+ tool integrations, browser automation, SSE streaming, and persistent memory — all from one pip install."
+            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 54 AI providers, 150+ tool integrations, browser automation, SSE streaming, persistent memory, and a built-in reference knowledge base — all from one pip install."
           }
         },
         {
@@ -1451,7 +1451,11 @@
         </div>
         <div class="tip-card">
             <h4>Persistent memory</h4>
-            <p>The agent remembers past sessions. Use 👍/👎 feedback to help it learn. Memory persists in <code>~/.hellochusquis/</code>.</p>
+            <p>Every turn is auto-saved and searchable. Say <code>remember &lt;fact&gt;</code> to pin things, <code>forget &lt;key&gt;</code> to drop them. Memory persists in <code>~/.hellochusquis/</code> (git-ignored).</p>
+        </div>
+        <div class="tip-card">
+            <h4>Reference knowledge</h4>
+            <p>500+ curated markdown files in <code>MDknowledge/</code> (code idioms, capitals, elements, math, science) load into memory at startup and get recalled per turn. Override any file under <code>~/.hellochusquis/knowledge/</code>.</p>
         </div>
     </div>
 </section>
@@ -1549,7 +1553,14 @@
                 <div class="feature-icon" aria-hidden="true">🧠</div>
                 <div class="feature-title">Persistent memory</div>
             </div>
-            <div class="feature-desc">Tell it once, it remembers forever. Learns from 👍/👎 feedback and gets better every session.</div>
+            <div class="feature-desc">Every turn auto-saved and searchable, with <code>remember</code>/<code>forget</code> commands. Learns from 👍/👎 feedback and gets better every session.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-header">
+                <div class="feature-icon" aria-hidden="true">📚</div>
+                <div class="feature-title">Built-in knowledge</div>
+            </div>
+            <div class="feature-desc">500+ reference files recalled per turn — small local models answer covered facts like far bigger ones (measured 86% → 100% on a 3B model).</div>
         </div>
         <div class="feature-card">
             <div class="feature-header">
@@ -1755,7 +1766,11 @@
     <div class="faq-grid">
         <div class="faq-item">
             <div class="faq-q">What is HelloChusquis?</div>
-            <div class="faq-a">An open source terminal AI agent. One pip install, 54 providers, 150+ tools, browser automation, SSE streaming, persistent memory. Runs locally on your machine.</div>
+            <div class="faq-a">An open source terminal AI agent. One pip install, 54 providers, 150+ tools, browser automation, SSE streaming, persistent memory, built-in knowledge base. Runs locally on your machine.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">How does the built-in knowledge work?</div>
+            <div class="faq-a">500+ curated markdown files ship in MDknowledge/ and load into memory at startup; relevant facts are recalled into context each turn. Small local models answer covered facts like far bigger ones — override any file under ~/.hellochusquis/knowledge/.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">How much does it cost?</div>

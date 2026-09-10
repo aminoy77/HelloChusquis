@@ -1,0 +1,22 @@
+# Regex basics
+
+- In regex, `.` matches any single character except newline; escape a literal dot as `\.`.
+- In regex, `*` repeats zero or more times, `+` one or more, and `?` zero or one occurrence.
+- In regex, `{n}`, `{n,}`, and `{n,m}` specify exact, minimum, and ranged repetition counts.
+- In regex, quantifiers are greedy by default; append `?` (`.*?`) for the shortest (lazy) match.
+- In regex, `[abc]` matches one of the listed characters and `[^abc]` matches anything except them.
+- In regex, ranges work inside classes: `[a-z]`, `[A-Z]`, `[0-9]`; place `-` first or last for a literal dash.
+- In regex, `\d` matches digits, `\w` word characters (letters, digits, underscore), and `\s` whitespace.
+- In regex, uppercase `\D`, `\W`, `\S` negate their lowercase counterparts.
+- In regex, `^` anchors to string start and `$` to string end (or use `\b` for word boundaries).
+- In regex, `(...)` groups and captures; `(?:...)` groups without capturing for performance.
+- In regex, `a|b` alternates; scope it with a group (`(jpg|png)$`) instead of leaking across the pattern.
+- In regex, backreferences `\1`, `\2` reuse captured groups, e.g. `(['"])(.*?)\1` matches quoted strings.
+- In regex, escape metacharacters `.*+?^${}()|[]\` with a backslash when matching them literally.
+- In regex, flags change behavior: case-insensitive, multiline (`^`/`$` per line), and dot-all (dot matches newline).
+- In regex, `re.findall` (Python) returns all non-overlapping matches; `re.search` finds the first.
+- In regex, prefer `re.fullmatch` over `^...$` anchors in Python for whole-string validation.
+- In regex, catastrophic backtracking comes from nested quantifiers like `(a+)+`; rewrite with possessive or atomic constructs.
+- In regex, validate emails and URLs with purpose-built parsers first; regex approximations reject valid inputs.
+- In regex, test patterns on sample inputs (positive and negative) before embedding them in code.
+- In regex, keep patterns small and commented (`re.VERBOSE`) instead of one unreadable line.

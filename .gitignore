@@ -24,3 +24,14 @@ study_flow.iml
 # Local virtualenvs
 .venv/
 venv/
+
+# Local runtime state (credentials, SQLite stores, sessions) — never commit
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+api_key.txt
+memory.json
+sessions/
+.hellochusquis/
+nohup.out

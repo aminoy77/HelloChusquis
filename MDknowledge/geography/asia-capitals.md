@@ -1,0 +1,29 @@
+# Asian capitals (example)
+
+- The capital of China is Beijing.
+- The capital of Japan is Tokyo.
+- The capital of India is New Delhi.
+- The capital of Indonesia is Jakarta.
+- The capital of Pakistan is Islamabad.
+- The capital of Bangladesh is Dhaka.
+- The capital of the Philippines is Manila.
+- The capital of Vietnam is Hanoi.
+- The capital of Thailand is Bangkok.
+- The capital of South Korea is Seoul.
+- The capital of North Korea is Pyongyang.
+- The capital of Mongolia is Ulaanbaatar.
+- The capital of Nepal is Kathmandu.
+- The capital of Sri Lanka is Sri Jayawardenepura Kotte (Colombo is the commercial center).
+- The capital of Myanmar is Naypyidaw.
+- The capital of Cambodia is Phnom Penh.
+- The capital of Laos is Vientiane.
+- The capital of Malaysia is Kuala Lumpur.
+- The capital of Singapore is Singapore (a city-state).
+- The capital of Taiwan is Taipei.
+- The capital of Kazakhstan is Astana.
+- The capital of Uzbekistan is Tashkent.
+- The capital of Turkey is Ankara (not Istanbul).
+- The capital of Saudi Arabia is Riyadh.
+- The capital of the UAE is Abu Dhabi (not Dubai).
+- The capital of Iran is Tehran.
+- The capital of Iraq is Baghdad.

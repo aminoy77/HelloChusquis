@@ -1,0 +1,22 @@
+# Periodic table first 20 (example)
+
+- Hydrogen (H, 1) is the lightest element and fuels stars through fusion.
+- Helium (He, 2) is inert and the second most abundant element in the universe.
+- Lithium (Li, 3) is the lightest metal and powers rechargeable batteries.
+- Beryllium (Be, 4) is light and stiff but toxic to machine and inhale.
+- Boron (B, 5) is a metalloid used in glass, semiconductors, and detergents.
+- Carbon (C, 6) forms diamond, graphite, and the backbone of organic chemistry.
+- Nitrogen (N, 7) makes up about 78 percent of Earth's atmosphere.
+- Oxygen (O, 8) makes up about 21 percent of air and drives respiration and combustion.
+- Fluorine (F, 9) is the most reactive element and appears in toothpaste as fluoride.
+- Neon (Ne, 10) is a noble gas glowing orange-red in discharge tubes.
+- Sodium (Na, 11) is a soft metal reacting violently with water.
+- Magnesium (Mg, 12) burns bright white and centers the chlorophyll molecule.
+- Aluminium (Al, 13) is the most abundant metal in Earth's crust.
+- Silicon (Si, 14) is the metalloid foundation of chips and solar cells.
+- Phosphorus (P, 15) is essential to DNA, bones, and matches.
+- Sulfur (S, 16) smells of rotten eggs in compounds and vulcanizes rubber.
+- Chlorine (Cl, 17) disinfects water and forms table salt with sodium.
+- Argon (Ar, 18) is the inert third-most abundant gas in air, used in welding.
+- Potassium (K, 19) is vital for nerves and ignites lilac in flame tests.
+- Calcium (Ca, 20) builds bones and teeth and hardens water as limestone.

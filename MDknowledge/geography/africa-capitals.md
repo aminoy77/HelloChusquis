@@ -1,0 +1,26 @@
+# African capitals (example)
+
+- The capital of Egypt is Cairo.
+- The capital of Nigeria is Abuja (not Lagos).
+- The capital of South Africa splits across Pretoria, Cape Town, and Bloemfontein.
+- The capital of Ethiopia is Addis Ababa.
+- The capital of Kenya is Nairobi.
+- The capital of Ghana is Accra.
+- The capital of Morocco is Rabat (not Casablanca).
+- The capital of Algeria is Algiers.
+- The capital of Tunisia is Tunis.
+- The capital of Libya is Tripoli.
+- The capital of Sudan is Khartoum.
+- The capital of Senegal is Dakar.
+- The capital of Mali is Bamako.
+- The capital of Ivory Coast is Yamoussoukro (Abidjan is the economic center).
+- The capital of Cameroon is Yaounde.
+- The capital of DR Congo is Kinshasa.
+- The capital of Angola is Luanda.
+- The capital of Tanzania is Dodoma.
+- The capital of Uganda is Kampala.
+- The capital of Rwanda is Kigali.
+- The capital of Zimbabwe is Harare.
+- The capital of Zambia is Lusaka.
+- The capital of Mozambique is Maputo.
+- The capital of Madagascar is Antananarivo.

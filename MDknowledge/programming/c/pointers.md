@@ -1,0 +1,22 @@
+# C pointers
+
+- In C, `&x` is the address of x and `*p` dereferences pointer p to access its target.
+- In C, declare a pointer with `int *p;` — the `*` binds to the variable, so `int *a, b;` makes only `a` a pointer.
+- In C, always initialize pointers (`= NULL` if no target yet); uninitialized pointers cause undefined behavior.
+- In C, `NULL` marks a pointer with no target; dereferencing it crashes.
+- In C, pointer arithmetic scales by the pointed-to size: `p + 1` on `int *` advances by `sizeof(int)` bytes.
+- In C, arrays decay to a pointer to their first element in most expressions, but not under `sizeof` or unary `&`.
+- In C, `sizeof(arr)` gives whole-array bytes only in the scope where the array is declared, never in a function receiving it as a parameter.
+- In C, string literals like `"abc"` live in read-only memory; modifying through a `char *` to one is undefined behavior.
+- In C, `char buf[64]` owns mutable storage while `char *s = "..."` points at read-only storage.
+- In C, `const char *p` forbids modifying the target through p; `char * const p` forbids reseating p itself.
+- In C, `void *` holds any object pointer but cannot be dereferenced or stepped without a cast.
+- In C, `int **pp` is a pointer to a pointer, used when a function must change the caller's pointer.
+- In C, function pointers look like `int (*cmp)(int, int)`; call via `cmp(a, b)` and pass to sort/search routines.
+- In C, `p->field` is shorthand for `(*p).field` when p points to a struct.
+- In C, subtracting two pointers to the same array yields the element distance, not a byte count.
+- In C, comparing pointers is only meaningful within the same array or allocation.
+- In C, `sizeof(*p)` stays correct if p's type changes, unlike repeating the type name.
+- In C, `&arr[i]` equals `arr + i`, and `arr[i]` equals `*(arr + i)` by definition.
+- In C, a dangling pointer targets freed or out-of-scope storage; set pointers to NULL right after freeing.
+- In C, `uintptr_t` from `<stdint.h>` is the integer type meant to round-trip a pointer value.

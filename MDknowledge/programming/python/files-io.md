@@ -1,0 +1,22 @@
+# Python files and IO
+
+- In Python, always open files with `with open(path) as f:` so handles close on every exit path.
+- In Python, mode `"r"` reads text, `"w"` truncates then writes, `"a"` appends, and `"x"` fails if the file exists.
+- In Python, add `"b"` for binary modes (`"rb"`, `"wb"`) when handling images, archives, or protocols.
+- In Python, pass `encoding="utf-8"` explicitly on text files; the platform default varies by OS.
+- In Python, `pathlib.Path` beats `os.path`: `p.read_text()`, `p.write_text(data)`, `p.exists()`, `p.mkdir(parents=True, exist_ok=True)`.
+- In Python, `Path("a") / "b"` joins paths portably with the `/` operator.
+- In Python, `p.glob("*.md")` and `p.rglob("*.py")` find files; `rglob` recurses into subdirectories.
+- In Python, iterate large files line by line (`for line in f:`) instead of `read()` to keep memory flat.
+- In Python, the `json` module serializes dicts/lists: `json.dump(obj, f)` writes, `json.load(f)` reads.
+- In Python, the `csv` module with `newline=""` handles quoting and dialects better than manual `split(",")`.
+- In Python, `shutil.copy`, `shutil.move`, and `shutil.rmtree` cover file operations beyond `pathlib`.
+- In Python, `tempfile.TemporaryDirectory()` and `tempfile.mkstemp()` create safely unique scratch space.
+- In Python, catch `FileNotFoundError` for missing paths and `PermissionError` for access problems specifically.
+- In Python, `os.environ.get("KEY", default)` reads environment configuration without raising.
+- In Python, flush output before crashes with `print(..., flush=True)` or run Python with `-u`.
+- In Python, `sys.stdin`/`sys.stdout`/`sys.stderr` are the standard streams; redirect or pipe them in CLI tools.
+- In Python, `argparse` parses CLI flags with help text; `sys.argv[1:]` holds raw arguments.
+- In Python, set restrictive permissions on secret files with `os.chmod(path, 0o600)` after writing.
+- In Python, write-then-rename (temp file plus `os.replace`) makes file updates atomic against crashes.
+- In Python, `p.stat().st_size` reports file size in bytes without reading content.

@@ -1,0 +1,22 @@
+# Americas capitals (example)
+
+- The capital of the United States is Washington, D.C.
+- The capital of Canada is Ottawa (not Toronto).
+- The capital of Mexico is Mexico City.
+- The capital of Brazil is Brasilia (not Rio de Janeiro).
+- The capital of Argentina is Buenos Aires.
+- The capital of Chile is Santiago.
+- The capital of Colombia is Bogota.
+- The capital of Peru is Lima.
+- The capital of Venezuela is Caracas.
+- The capital of Ecuador is Quito.
+- Bolivia has two capitals: Sucre (constitutional) and La Paz (seat of government).
+- The capital of Paraguay is Asuncion.
+- The capital of Uruguay is Montevideo.
+- The capital of Cuba is Havana.
+- The capital of Jamaica is Kingston.
+- The capital of the Dominican Republic is Santo Domingo.
+- The capital of Costa Rica is San Jose.
+- The capital of Panama is Panama City.
+- The capital of Guatemala is Guatemala City.
+- The capital of Honduras is Tegucigalpa.

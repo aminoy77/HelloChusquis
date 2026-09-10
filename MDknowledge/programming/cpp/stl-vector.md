@@ -1,0 +1,22 @@
+# C++ vectors and strings
+
+- In C++, `#include <vector>` then `std::vector<int> v;` gives a resizable array managing its own memory.
+- In C++, `push_back(x)` appends a copy while `emplace_back(args...)` constructs the element in place.
+- In C++, `v[i]` is unchecked and undefined on out-of-range access; `v.at(i)` throws `std::out_of_range` instead.
+- In C++, `v.size()` is the element count and `v.empty()` the preferred emptiness test.
+- In C++, `v.reserve(n)` preallocates capacity without changing size; `v.resize(n)` changes size, value-initializing new elements.
+- In C++, growing without `reserve` in a loop causes repeated reallocations; reserve when the final size is known.
+- In C++, iterate with range-for `for (auto& x : v)` to mutate and `for (const auto& x : v)` for read-only access.
+- In C++, `auto x : v` (no reference) copies every element, which is costly for large objects.
+- In C++, `v.begin()`/`v.end()` iterators work with `<algorithm>`; `v.back()` is the last element.
+- In C++, `std::sort(v.begin(), v.end())` sorts ascending; pass a lambda like `[](int a, int b){ return a > b; }` for custom order.
+- In C++, `v.clear()` removes all elements; `v.shrink_to_fit()` is a non-binding request to release spare capacity.
+- In C++, `std::string s = "text";` owns a mutable character buffer with value semantics.
+- In C++, `s.substr(pos, len)`, `s.find("x")` (returns `std::string::npos` when absent), and `s.c_str()` for C APIs cover daily string work.
+- In C++, read full lines with `std::getline(std::cin, s)`; `cin >> s` stops at whitespace.
+- In C++, `std::stoi`/`std::stod` parse numbers from strings and `std::to_string(x)` converts back.
+- In C++, prefer `std::string` over raw `char*` buffers; it prevents most classic C string overflows.
+- In C++, `const std::string&` parameters avoid copies when the function only reads the string.
+- In C++, brace-init `std::vector<int> v{1, 2, 3};` lists elements, while `std::vector<int> v(3);` makes three zeros.
+- In C++, `v.data()` exposes the contiguous buffer for C APIs; it stays valid only while the vector is unchanged in size.
+- In C++, `std::vector<bool>` is a bit-packed specialization with proxy references; prefer `std::deque<bool>` or `std::vector<char>` when real references matter.

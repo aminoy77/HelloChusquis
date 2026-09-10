@@ -1,0 +1,22 @@
+# Bash basics
+
+- In Bash, scripts start with the shebang `#!/usr/bin/env bash` to select the interpreter portably.
+- In Bash, assign with `name="value"` (no spaces around `=`) and read with `$name` or `${name}`.
+- In Bash, always quote expansions (`"$var"`) to survive spaces and glob characters in values.
+- In Bash, `$?` holds the previous command's exit status; `0` means success.
+- In Bash, `set -euo pipefail` fails fast on errors, undefined variables, and broken pipeline stages.
+- In Bash, `if [ -f "$f" ]` tests files (`-d` directories, `-z` empty strings, `-n` non-empty).
+- In Bash, prefer `[[ ... ]]` over `[ ... ]` for safer pattern matching (`== pattern`) and regex (`=~`).
+- In Bash, `for f in *.md; do ...; done` loops over glob matches; `for i in {1..10}` counts.
+- In Bash, `while IFS= read -r line; do ...; done < file` reads lines safely without mangling backslashes.
+- In Bash, `$(cmd)` captures output (modern form); backticks are legacy and nest poorly.
+- In Bash, pipes `a | b` feed stdout to stdin; `cmd1 && cmd2` chains on success, `cmd1 || cmd2` on failure.
+- In Bash, `>` truncates-then-writes, `>>` appends, and `2>` / `2>&1` capture stderr.
+- In Bash, `grep -r "pattern" dir` searches recursively; `-i` ignores case, `-n` shows line numbers.
+- In Bash, `sed 's/old/new/g'` substitutes stream text and `awk '{print $1}'` extracts columns.
+- In Bash, functions group logic: `backup() { cp "$1" "$1.bak"; }`, called as `backup file`.
+- In Bash, `$1`, `$2`, `$@` (quoted as `"$@"`), and `$#` are the positional parameters and their count.
+- In Bash, `export KEY=value` shares variables with child processes; plain assignment stays shell-local.
+- In Bash, `cd "$(dirname "$0")"` (or `workdir` parameters in tooling) anchors relative paths to the script location.
+- In Bash, `trap cleanup EXIT` guarantees temp-file removal even when the script fails midway.
+- In Bash, `find . -name "*.tmp" -delete` removes matched files; preview with `-print` before `-delete`.

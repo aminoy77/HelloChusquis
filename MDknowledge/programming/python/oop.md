@@ -1,0 +1,22 @@
+# Python OOP
+
+- In Python, `class Dog:` defines a class and `__init__(self, ...)` initializes instances; always name the first parameter `self`.
+- In Python, instance attributes live in `self`; assignments to bare names inside methods create locals instead.
+- In Python, `class Child(Parent):` inherits, and `super().__init__(...)` runs the parent initializer.
+- In Python, methods resolving through the MRO can be inspected via `ClassName.__mro__`.
+- In Python, `@property` exposes a method as read-only attribute access; add `@x.setter` for writable properties.
+- In Python, `@staticmethod` takes neither self nor cls; `@classmethod` receives the class as first argument.
+- In Python, double-underscore names like `self.__x` are name-mangled to `_ClassName__x`, not truly private.
+- In Python, dunder methods customize behavior: `__str__` for readable display, `__repr__` for unambiguous debugging output.
+- In Python, implement `__eq__` together with `__hash__` (or set `__hash__ = None`) to keep instances usable in sets and dicts.
+- In Python, `__len__`, `__iter__`, and `__getitem__` make custom classes work with `len()`, loops, and indexing.
+- In Python, `@dataclass` from `dataclasses` auto-generates `__init__`, `__eq__`, and `__repr__` from annotated fields.
+- In Python, dataclasses compare by value with `==` out of the box, unlike plain classes which compare by identity.
+- In Python, use `field(default_factory=list)` for mutable dataclass defaults instead of a shared literal.
+- In Python, composition (holding helper objects) is usually more flexible than deep inheritance hierarchies.
+- In Python, abstract base classes from `abc` with `@abstractmethod` enforce interfaces across subclasses.
+- In Python, `isinstance(obj, Cls)` checks types safely; avoid `type(obj) == Cls`, which breaks subclassing.
+- In Python, `hasattr`/`getattr(obj, name, default)` enable duck-typed access without rigid type checks.
+- In Python, `__slots__` reduces per-instance memory for classes with fixed attributes but blocks ad-hoc attributes.
+- In Python, `@functools.total_ordering` derives all comparisons from `__eq__` plus one ordering method.
+- In Python, metaclasses and `__init_subclass__` customize class creation; reach for them only after simpler patterns fail.
