@@ -773,6 +773,52 @@
         @media (max-width: 900px) { .landing-header { padding: 0 20px; }.landing-nav { display: none; }.landing-hero { grid-template-columns: 1fr; min-height: auto; padding: 74px 0 80px; }.landing-hero-copy { max-width: 680px; }.landing-terminal { max-width: 680px; }.landing-step-grid, .landing-capability-grid { grid-template-columns: repeat(2, 1fr); }.landing-capability-featured { grid-row: span 1; min-height: 260px; }.landing-control-panel, .landing-cta-grid { grid-template-columns: 1fr; gap: 34px; }.landing-signal-row { grid-template-columns: 1fr; }.landing-signal-row div { min-height: 68px; border-right: 0; border-bottom: 1px solid #252a31; }.landing-signal-row div:last-child { border-bottom: 0; } }
         @media (max-width: 600px) { .landing-header { height: 62px; }.landing-text-link { display: none; }.landing-hero, .landing-section, .landing-cta { width: min(100% - 36px, 1160px); }.landing-signal-row, .landing-footer { width: calc(100% - 36px); }.landing-hero h1 { font-size: clamp(2.8rem, 14vw, 4rem); }.landing-hero-lede { font-size: .9rem; }.landing-terminal-body { min-height: 300px; padding: 22px 17px; font-size: .66rem; }.landing-install-line { width: 100%; font-size: .62rem; }.landing-section { padding: 92px 0; }.landing-step-grid, .landing-capability-grid { grid-template-columns: 1fr; }.landing-capability-featured { min-height: 260px; }.landing-control-panel { padding: 28px 22px; }.landing-control-list div { grid-template-columns: 1fr; gap: 6px; }.landing-footer { flex-wrap: wrap; }.landing-footer > span { order: 3; width: 100%; }.landing-footer > div { margin-left: auto; } }
         @media (prefers-reduced-motion: reduce) { .landing *, .landing *::before, .landing *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+
+        /* HelloChusquis app: minimal bonita, misma paleta */
+        .app-container { background: radial-gradient(900px 320px at 50% -80px, var(--accent-soft), transparent 70%), var(--bg); }
+        .app-header { height: 60px; padding: 0 16px 0 18px; gap: 12px; }
+        .header-logo { font-size: 1rem; }
+        .chat-area { align-items: center; }
+        .messages, .input-shell { width: 100%; max-width: 780px; margin: 0 auto; }
+        .messages { padding: 40px 28px 20px; gap: 20px; }
+        .message { max-width: 84%; }
+        .message.user { align-self: flex-end; }
+        .message.assistant { align-self: flex-start; }
+        .message-bubble { box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset; }
+        .message.user .message-bubble { background: linear-gradient(180deg, var(--accent-soft), rgba(245,166,35,0.06)); border-color: var(--accent-border); }
+        .message.assistant .message-bubble { background: var(--surface); border-color: var(--border-soft); }
+        .sidebar { width: 264px; gap: 20px; padding: 20px 14px; }
+        .sidebar.hidden { margin-left: -264px; }
+        .side-section h3 { font-size: 0.62rem; }
+        .prov-count { margin-left: auto; font-family: var(--font-mono); font-size: 0.62rem; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-border); padding: 1px 8px; border-radius: 100px; }
+        .provider-card { background: var(--surface2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; }
+        .provider-card .pc-head { display: flex; align-items: center; gap: 9px; }
+        .provider-card .pc-name { font-size: 0.78rem; font-weight: 700; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .provider-card .pc-badge { font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 100px; }
+        .provider-card .pc-badge.ok { color: var(--green); background: var(--green-soft); border: 1px solid rgba(52,211,153,0.25); }
+        .provider-card .pc-badge.bad { color: var(--red); background: var(--red-soft); border: 1px solid rgba(248,113,113,0.25); }
+        .provider-card .pc-model { font-size: 0.66rem; margin-top: 5px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat-card { background: var(--surface2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 11px 12px; }
+        .stat-card b { display: block; font-family: var(--font-display); font-size: 1.15rem; line-height: 1.1; }
+        .stat-card span { font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.13em; color: var(--text-dim); }
+        .stat-card.accent b { color: var(--accent); }
+        .stat-card.green b { color: var(--green); }
+        .side-stat.mini { font-size: 0.7rem; line-height: 1.65; color: var(--text-muted); }
+        .side-stat.mini span { color: var(--accent); font-family: var(--font-mono); font-weight: 700; }
+        .welcome { padding: 12px 0; }
+        .welcome .w-logo { width: 64px; height: 64px; border-radius: 18px; }
+        .welcome h2 { font-size: 2.2rem; letter-spacing: -0.03em; }
+        .welcome > p { font-size: 0.72rem; }
+        .welcome-stats { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 18px 0 22px; }
+        .welcome-stats span { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 7px 13px; }
+        .welcome-stats b { color: var(--accent); font-family: var(--font-mono); }
+        .welcome .chips { gap: 9px; }
+        .chip { padding: 12px 15px; border-radius: 12px; }
+        .composer { border-radius: 16px; padding: 10px 10px 10px 16px; }
+        .model-bar { padding: 10px 6px 2px; }
+        .hint-line { font-size: 0.6rem; }
+        @media (max-width: 768px) { .messages, .input-shell { max-width: 100%; } .sidebar { width: 248px; } }
 </style>
 </head>
 <body class="theme-dark accent-amber font-inter">
@@ -795,7 +841,7 @@
             </nav>
             <div class="landing-header-actions">
                 <a class="landing-text-link" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
-                <button class="landing-button landing-button-small" type="button" onclick="showApp()">Launch app <span aria-hidden="true">→</span></button>
+                <button class="landing-button landing-button-small" type="button" id="launch-top">Launch app <span aria-hidden="true">→</span></button>
             </div>
         </header>
 
@@ -806,7 +852,7 @@
                     <h1 id="landing-title">Make the terminal<br><em>your command center.</em></h1>
                     <p class="landing-hero-lede">HelloChusquis connects conversation, tools, memory, web access, and integrations in one developer-controlled agent.</p>
                     <div class="landing-hero-actions">
-                        <button class="landing-button" type="button" onclick="copyInstall()">Copy install command <span aria-hidden="true">⌘</span></button>
+                        <button class="landing-button" type="button" id="copy-install-btn">Copy install command <span aria-hidden="true">⌘</span></button>
                         <a class="landing-button landing-button-quiet" href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Read the docs <span aria-hidden="true">↗</span></a>
                     </div>
                     <div class="landing-install-line" aria-label="Install command"><span>$</span> python -m pip install hellochusquis <button id="install-copy-btn" class="landing-copy" type="button" aria-label="Copy install command">copy</button></div>
@@ -862,7 +908,7 @@
                 <div class="landing-integration-cloud"><span>GitHub</span><span>Slack</span><span>Discord</span><span>Docker</span><span>Notion</span><span>AWS</span><span>Gmail</span><span>Jira</span><span>PostgreSQL</span><span>MongoDB</span><span>Stripe</span><span>Supabase</span><span>Vercel</span><span>Shopify</span><span>Linear</span><span>Kubernetes</span></div>
             </section>
 
-            <section class="landing-cta" aria-labelledby="cta-title"><div class="landing-cta-grid"><div><div class="landing-eyebrow">Start local</div><h2 id="cta-title">Give your next task<br><em>a better place to run.</em></h2></div><div><p>One install gets you from a blank terminal to a capable AI workspace.</p><div class="landing-hero-actions"><button class="landing-button" type="button" onclick="showApp()">Launch the app <span aria-hidden="true">→</span></button><a class="landing-button landing-button-quiet" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">View source <span aria-hidden="true">↗</span></a></div></div></div></section>
+            <section class="landing-cta" aria-labelledby="cta-title"><div class="landing-cta-grid"><div><div class="landing-eyebrow">Start local</div><h2 id="cta-title">Give your next task<br><em>a better place to run.</em></h2></div><div><p>One install gets you from a blank terminal to a capable AI workspace.</p><div class="landing-hero-actions"><button class="landing-button" type="button" id="launch-cta">Launch the app <span aria-hidden="true">→</span></button><a class="landing-button landing-button-quiet" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">View source <span aria-hidden="true">↗</span></a></div></div></div></section>
         </main>
 
         <footer class="landing-footer" role="contentinfo"><a href="#top" class="landing-brand"><span class="landing-brand-mark" aria-hidden="true"><span>&gt;_</span></span><span>HelloChusquis</span></a><span>Open source, local-first, built for people who ship.</span><div><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub ↗</a><a href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Docs ↗</a></div></footer>
@@ -875,7 +921,7 @@
                 <button class="icon-btn" id="sidebar-toggle" aria-label="Toggle sidebar" title="Toggle sidebar (S)">
                     <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                 </button>
-                <a href="#" class="header-logo" onclick="showLanding(); return false;" aria-label="Back to landing page">
+                <a href="#" class="header-logo" id="brand-home" aria-label="Back to landing page">
                     <span class="logo-mark" aria-hidden="true">
                         <svg class="ic" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
                     </span>
@@ -899,30 +945,30 @@
             </div>
         </header>
 
-        <div class="auth-bar" id="auth-bar" role="dialog" aria-label="Authentication required">
-            <span class="auth-msg">Access key required. Enter the key shown when the server started: <b id="auth-hint"></b></span>
-            <input type="password" id="auth-input" placeholder="Paste access key" autocomplete="off" aria-label="Access key">
-            <button class="btn btn-primary" id="auth-submit">Unlock</button>
-        </div>
-
         <div class="main" id="main">
 
-            <aside class="sidebar" id="sidebar" aria-label="Providers and memory">
+            <aside class="sidebar" id="sidebar" aria-label="Providers y resumen">
                 <div class="side-section">
-                    <h3><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Providers</h3>
-                    <div id="provider-list"><div class="side-stat">Loading...</div></div>
+                    <h3><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Providers <span class="prov-count" id="prov-count">–</span></h3>
+                    <div id="provider-list"><div class="side-stat">Cargando tus providers...</div></div>
                 </div>
                 <div class="side-section">
-                    <h3><svg class="ic" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Memory</h3>
-                    <div class="side-stat" id="memory-stat">Loading...</div>
+                    <h3><svg class="ic" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Resumen</h3>
+                    <div class="stat-grid">
+                        <div class="stat-card accent"><b id="stat-sessions">–</b><span>Sesiones</span></div>
+                        <div class="stat-card"><b id="stat-msgs">0</b><span>Mensajes</span></div>
+                        <div class="stat-card green"><b id="stat-ready">–</b><span>Listos</span></div>
+                        <div class="stat-card"><b id="stat-tools">0</b><span>Tools</span></div>
+                    </div>
                 </div>
                 <div class="side-section">
-                    <h3><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Learnings</h3>
-                    <div class="side-stat" id="learnings-stat">Loading...</div>
+                    <h3><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Memoria</h3>
+                    <div class="side-stat mini" id="memory-stat">Loading...</div>
+                    <div class="side-stat mini" id="learnings-stat">Loading...</div>
                 </div>
                 <div class="side-actions">
-                    <button class="btn" id="side-reload"><svg class="ic ic-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Reload providers</button>
-                    <button class="btn" id="side-landing"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Back to landing</button>
+                    <button class="btn" id="side-reload"><svg class="ic ic-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Recargar</button>
+                    <button class="btn" id="side-landing"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Inicio</button>
                 </div>
             </aside>
 
@@ -932,24 +978,25 @@
                         <div class="w-logo" aria-hidden="true">
                             <svg class="ic ic-lg" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
                         </div>
-                        <h2>Hello, Chusquis.</h2>
-                        <p>Your local AI agent</p>
+                        <h2>Hola, Chusquis.</h2>
+                        <p>Tu agente local — tus providers, tus chats</p>
+                        <div class="welcome-stats" aria-label="Chat insights">
+                            <span><b id="w-sessions">–</b> sesiones</span>
+                            <span><b id="w-ready">–</b> listos</span>
+                            <span><b id="w-msgs">0</b> mensajes</span>
+                        </div>
                         <div class="chips">
-                            <button class="chip" data-prompt="What can you do?">
+                            <button class="chip" data-prompt="¿Qué puedes hacer?">
                                 <svg class="ic" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                                <span>What can you do?</span>
-                            </button>
-                            <button class="chip" data-prompt="Search the web for the latest Python release">
-                                <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                <span>Search the web for the latest Python release</span>
-                            </button>
-                            <button class="chip" data-prompt="Create a todo REST API with Flask">
-                                <svg class="ic" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                                <span>Create a todo REST API with Flask</span>
+                                <span>¿Qué puedes hacer?</span>
                             </button>
                             <button class="chip" data-prompt="/status">
                                 <svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                                <span>Check provider status</span>
+                                <span>Ver estado de mis providers</span>
+                            </button>
+                            <button class="chip" data-prompt="Crea un ejemplo rápido con Python">
+                                <svg class="ic" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                <span>Ejemplo rápido con Python</span>
                             </button>
                         </div>
                         <div class="model-note">
@@ -961,7 +1008,7 @@
 
                 <div class="input-shell">
                     <div class="composer">
-                        <textarea id="composer" rows="1" placeholder="Message Chusquis..." aria-label="Message Chusquis"></textarea>
+                        <textarea id="composer" rows="1" placeholder="Escríbele a Chusquis..." aria-label="Escríbele a Chusquis"></textarea>
                         <button class="icon-btn" id="mic-toggle" aria-label="Voice input" title="Voice input">
                             <svg class="ic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                         </button>
@@ -1119,6 +1166,12 @@
         paletteItems: [],
     };
     const THEMES = ['dark', 'light', 'minimal', 'ocean', 'forest'];
+    // ponytail: client-only counters, upgrade to /status history when server exposes it
+    const chatStats = { msgs: 0, tools: 0 };
+    function updateStats() {
+        ['stat-msgs', 'w-msgs'].forEach((id) => { const el = document.getElementById(id); if (el) el.textContent = chatStats.msgs; });
+        const t = document.getElementById('stat-tools'); if (t) t.textContent = chatStats.tools;
+    }
     const ACCENTS = ['amber', 'emerald', 'cyan', 'violet', 'rose', 'blue'];
     const FONTS = ['inter', 'mono', 'grotesk', 'system'];
 
@@ -1152,7 +1205,6 @@
     const moreMenu = $('more-menu'), menuBtn = $('menu-btn');
     const palette = $('palette'), paletteOverlay = $('palette-overlay');
     const paletteInput = $('palette-input'), paletteResults = $('palette-results');
-    const authBar = $('auth-bar'), authInput = $('auth-input'), authSubmit = $('auth-submit'), authHint = $('auth-hint');
     const toastEl = $('toast'), toastMsg = $('toast-msg');
 
     // ---------- helpers ----------
@@ -1229,42 +1281,14 @@
         closeOverlays();
     }
 
-    // ---------- auth ----------
-    function showAuthBar() {
-        authBar.classList.add('visible');
-        authHint.textContent = state.authHint || 'HELLOCHUSQUIS_API_KEY';
-        if (state.token) authInput.value = state.token;
-    }
-    function hideAuthBar() { authBar.classList.remove('visible'); }
+    // ---------- auth (local-first: sin prompt; token solo si existe para remoto) ----------
     async function initAuth() {
-        let j;
-        try { j = await fetchJson('/auth/check'); }
-        catch (e) { connPill.textContent = 'Offline'; connPill.classList.add('off'); toast('Server unreachable. Make sure hellochusquis web is running.'); return; }
-        state.authRequired = !!j.auth_required;
-        state.authHint = j.key_hint || '';
-        if (!state.authRequired) { loadStatus(); return; }
-        showApp();
-        showAuthBar();
-        if (state.token) {
-            try { await loadStatus(); hideAuthBar(); }
-            catch (e) {
-                if (e.status === 401) { state.token = ''; storage.del('hc_token'); authInput.value = ''; toast('Access key invalid'); }
-            }
-        } else {
-            setTimeout(() => authInput.focus(), 80);
+        try { await fetchJson('/auth/check'); } catch (e) {}
+        try { await loadStatus(); }
+        catch (e) {
+            connPill.textContent = 'Offline'; connPill.classList.add('off');
+            if (e && e.status !== 401) toast('Servidor no disponible. Revisa hellochusquis web.');
         }
-    }
-    async function submitAuth() {
-        const key = authInput.value.trim();
-        if (!key) return;
-        try {
-            await fetchJson('/auth/verify', { method: 'POST', body: { message: key } });
-            state.token = key;
-            storage.set('hc_token', key);
-            hideAuthBar();
-            toast('Unlocked');
-            loadStatus();
-        } catch (e) { toast('Invalid access key'); }
     }
 
     // ---------- status / providers ----------
@@ -1276,16 +1300,17 @@
     function renderProviders(list) {
         const host = $('provider-list');
         host.innerHTML = '';
-        if (!list.length) { host.innerHTML = '<div class="side-stat">No providers configured</div>'; return; }
+        const pc = document.getElementById('prov-count');
+        if (pc) pc.textContent = list.length ? list.length : '–';
+        if (!list.length) { host.innerHTML = '<div class="side-stat">Sin providers. Ejecuta: hellochusquis setup</div>'; return; }
         list.forEach((p) => {
             const card = document.createElement('div');
             card.className = 'provider-card';
-            const dotCls = ['ready', 'exhausted', 'plugin'].includes(p.status) ? p.status : '';
-            const hostname = (p.base_url || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+            const ok = p.status === 'ready';
             card.innerHTML =
-                '<div class="pc-head"><span class="dot ' + dotCls + '"></span><span class="pc-name">' + esc(p.name) + '</span></div>' +
-                '<div class="pc-model">' + esc(p.model || '') + '</div>' +
-                '<div class="pc-stats"><span>' + esc(hostname || p.status) + '</span></div>';
+                '<div class="pc-head"><span class="dot ' + (ok ? 'ready' : 'exhausted') + '"></span><span class="pc-name">' + esc(p.name) + '</span>' +
+                '<span class="pc-badge ' + (ok ? 'ok' : 'bad') + '">' + (ok ? 'listo' : esc(p.status)) + '</span></div>' +
+                '<div class="pc-model">' + esc(p.model || 'sin modelo') + '</div>';
             host.appendChild(card);
         });
     }
@@ -1346,7 +1371,7 @@
     }
     function updateWelcomeNote() {
         const p = state.provider, m = state.model;
-        welcomeModel.textContent = p ? ('Model: ' + p + (m ? ' / ' + m : '')) : 'No provider selected';
+        welcomeModel.textContent = p ? (p + (m ? ' · ' + m : '')) : 'Sin provider seleccionado';
     }
     async function loadStatus(refresh) {
         try {
@@ -1355,15 +1380,19 @@
             updateConn(j);
             renderProviders(j.providers || []);
             const mem = j.memory || {};
-            $('memory-stat').innerHTML = '<span>' + (mem.sessions || 0) + '</span> sessions saved' + (mem.summary ? '<br><span style="opacity:.7">' + esc(mem.summary.slice(0, 90)) + '...</span>' : '');
+            const readyCount = (j.providers || []).filter((p) => p.status === 'ready').length;
+            const sess = mem.sessions || 0;
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('stat-sessions', sess); set('w-sessions', sess);
+            set('stat-ready', readyCount + '/' + (j.providers || []).length); set('w-ready', readyCount);
+            $('memory-stat').innerHTML = '<span>' + sess + '</span> sesiones · ' + (mem.summary ? esc(mem.summary.slice(0, 80)) + '...' : 'sin resumen');
             const lr = j.learnings || {};
-            $('learnings-stat').innerHTML = '<span>' + (lr.patterns || 0) + '</span> patterns &nbsp; <span>' + (lr.improvements || 0) + '</span> improvements';
+            $('learnings-stat').innerHTML = '<span>' + (lr.patterns || 0) + '</span> patrones · <span>' + (lr.improvements || 0) + '</span> mejoras';
             populateProviders(j.providers || [], refresh);
         } catch (e) {
-            if (e.status === 401) { showAuthBar(); return; }
             connPill.textContent = 'Offline';
             connPill.classList.add('off');
-            toast('Failed to load status');
+            if (!e || e.status !== 401) toast('No se pudo cargar providers');
         }
     }
 
@@ -1586,6 +1615,7 @@
         sendBtn.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
         welcome.style.display = 'none';
         addMessage('user', text);
+        chatStats.msgs++; updateStats();
         composer.value = '';
         autoGrow();
         sendBtn.disabled = false;
@@ -1632,6 +1662,7 @@
                     if (ev.type === 'chunk') {
                         if (thinking) { thinking.remove(); thinking = null; }
                         assistant = assistant || ensureAssistant();
+                        if (!fullText) { chatStats.msgs++; updateStats(); }
                         fullText += ev.content;
                         assistant.querySelector('.message-bubble').innerHTML = renderMarkdown(fullText);
                         messages.scrollTop = messages.scrollHeight;
@@ -1644,6 +1675,7 @@
                         const args = ev.args ? Object.keys(ev.args).map((k) => k + '=' + (typeof ev.args[k] === 'object' ? JSON.stringify(ev.args[k]).slice(0, 40) : String(ev.args[k]).slice(0, 40))).join(' ') : '';
                         row.innerHTML = ICONS.tool + esc(ev.tool || 'tool') + (args ? ' <span style="opacity:.55">' + esc(args) + '</span>' : '');
                         tc.appendChild(row);
+                        chatStats.tools++; updateStats();
                         messages.scrollTop = messages.scrollHeight;
                     } else if (ev.type === 'approval_required') {
                         if (thinking) { thinking.remove(); thinking = null; }
@@ -1721,6 +1753,7 @@
     }
     function clearChat() {
         messages.querySelectorAll('.message, .thinking').forEach((n) => n.remove());
+        chatStats.msgs = 0; chatStats.tools = 0; updateStats();
         welcome.style.display = '';
         updateWelcomeNote();
         composer.focus();
@@ -1868,6 +1901,13 @@
         // size composer
         autoGrow();
 
+        // landing buttons (CSP: sin onclick inline)
+        const lt = $('launch-top'); if (lt) lt.addEventListener('click', showApp);
+        const lc = $('launch-cta'); if (lc) lc.addEventListener('click', showApp);
+        const ci = $('copy-install-btn'); if (ci) ci.addEventListener('click', copyInstall);
+        const icb = $('install-copy-btn'); if (icb) icb.addEventListener('click', copyInstall);
+        const bh = $('brand-home'); if (bh) bh.addEventListener('click', (e) => { e.preventDefault(); showLanding(); });
+
         // header buttons
         appearanceBtn.addEventListener('click', (e) => { e.stopPropagation(); appearancePanel.classList.toggle('visible'); voiceMenu.classList.remove('show'); moreMenu.classList.remove('show'); });
         voiceBtn.addEventListener('click', (e) => { e.stopPropagation(); voiceMenu.classList.toggle('show'); appearancePanel.classList.remove('visible'); moreMenu.classList.remove('show'); });
@@ -1937,10 +1977,6 @@
             storage.set('hc_model', state.model);
             updateWelcomeNote();
         });
-
-        // auth
-        authSubmit.addEventListener('click', submitAuth);
-        authInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAuth(); });
 
         // global keydown
         document.addEventListener('keydown', (e) => {

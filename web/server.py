@@ -129,6 +129,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not AUTH_ENABLED:
             return await call_next(request)
 
+        # Local loopback = trusted owner (hellochusquis web local). Remote keeps Bearer auth.
+        # ponytail: IP allowlist, upgrade to token-only when binding 0.0.0.0 publicly
+        client = request.client.host if request.client else ""
+        if client in ("127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost"):
+            request.state.principal = legacy_owner()
+            return await call_next(request)
+
         # Skip auth for static/login endpoints
         if request.method == "GET" and path == "/":
             return await call_next(request)
