@@ -346,7 +346,12 @@ class ProviderPool:
 
         # Split timeouts: blackhole connects fail in 5s instead of 15s.
         # ponytail: read/write unchanged; only the connect phase shortens.
-        timeout = httpx.Timeout(connect=5.0, read=float(self.timeout),
+        # Local servers are free and slow (small CPU models + big tool
+        # schemas), so they get a generous read budget instead of failing.
+        base = (provider.base_url or "").lower()
+        is_local = "localhost" in base or "127.0.0.1" in base
+        timeout = httpx.Timeout(connect=5.0,
+                                read=120.0 if is_local else float(self.timeout),
                                 write=10.0, pool=5.0)
         with httpx.Client(timeout=timeout) as client:
             response = client.post(

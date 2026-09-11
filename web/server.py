@@ -400,7 +400,7 @@ def chat(req: MessageRequest, http_request: Request):
             raise HTTPException(status_code=409, detail="This conversation is already processing another request")
         try:
             agent.clear_conversation()
-            return {"response": "Historial limpiado.", "tool_calls": []}
+            return {"response": "History cleared.", "tool_calls": []}
         finally:
             agent.release_turn()
 
@@ -466,7 +466,7 @@ def chat_stream(req: MessageRequest, http_request: Request):
             agent.clear_conversation()
         finally:
             agent.release_turn()
-        text = "Historial limpiado."
+        text = "History cleared."
         return StreamingResponse(
             iter([f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n",
                   f"data: {json.dumps({'type': 'done'})}\n\n"]),

@@ -22,14 +22,24 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 # ---------------------------------------------------------------------------
-# Optional tiktoken import
+# Optional tiktoken import (lazy: BPE ranks cost ~90ms at import)
 # ---------------------------------------------------------------------------
-try:
-    import tiktoken as _tiktoken
+_tiktoken = None
+_ENCODER = None
+_ENCODER_LOADED = False
 
-    _ENCODER = _tiktoken.get_encoding("cl100k_base")
-except ImportError:
-    _ENCODER = None  # type: ignore[assignment]
+
+def _get_encoder():
+    global _tiktoken, _ENCODER, _ENCODER_LOADED
+    if not _ENCODER_LOADED:
+        _ENCODER_LOADED = True
+        try:
+            import tiktoken as _mod
+            _tiktoken = _mod
+            _ENCODER = _mod.get_encoding("cl100k_base")
+        except ImportError:
+            _ENCODER = None
+    return _ENCODER
 
 
 # ===========================================================================
@@ -41,8 +51,9 @@ def estimate_tokens(text: str) -> int:
 
     Uses tiktoken when available, otherwise falls back to ``len(text) // 4``.
     """
-    if _ENCODER is not None:
-        return len(_ENCODER.encode(text))
+    encoder = _get_encoder()
+    if encoder is not None:
+        return len(encoder.encode(text))
     return max(1, len(text) // 4)
 
 

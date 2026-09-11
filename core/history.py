@@ -1,8 +1,18 @@
-try:
-    import tiktoken
-    _ENCODER = tiktoken.get_encoding("cl100k_base")
-except ImportError:
-    _ENCODER = None
+_ENCODER = None
+_ENCODER_LOADED = False
+
+
+def _get_encoder():
+    """Load tiktoken lazily: BPE ranks cost ~90ms, only needed for counts."""
+    global _ENCODER, _ENCODER_LOADED
+    if not _ENCODER_LOADED:
+        _ENCODER_LOADED = True
+        try:
+            import tiktoken
+            _ENCODER = tiktoken.get_encoding("cl100k_base")
+        except ImportError:
+            _ENCODER = None
+    return _ENCODER
 
 
 class History:
@@ -56,8 +66,9 @@ class History:
     def get_token_count(self, messages: list[dict]) -> int:
         """Approximate token count for a list of messages."""
         text = " ".join([msg.get("content", "") for msg in messages if msg.get("content")])
-        if self.encoder:
-            return len(self.encoder.encode(text))
+        encoder = self.encoder or _get_encoder()
+        if encoder:
+            return len(encoder.encode(text))
         return len(text) // 4
 
     def get_stats(self) -> dict:

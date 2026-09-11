@@ -102,11 +102,11 @@ def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
     action = str(tool_args.get("action", "")).strip().lower()
 
     if normalized in {"shell", "code"}:
-        return "Puede ejecutar código o comandos con efectos fuera del agente."
+        return "Can execute code or commands with effects outside the agent."
     if normalized == "terraform" and action in {"init", "apply", "destroy"}:
-        return f"La operación Terraform '{action}' puede descargar proveedores o modificar infraestructura."
+        return f"Terraform operation '{action}' may download providers or modify infrastructure."
     if normalized == "kubernetes" and action in {"apply", "delete", "scale"}:
-        return f"La operación Kubernetes '{action}' puede modificar recursos del clúster."
+        return f"Kubernetes operation '{action}' may modify cluster resources."
     if normalized == "files" and action in _MUTATING_FILE_ACTIONS:
         return f"La acción de archivos '{action}' modifica el sistema de archivos."
     if normalized == "browser" and action in _MUTATING_BROWSER_ACTIONS:
@@ -126,7 +126,7 @@ def approval_reason(tool_name: str, tool_args: dict[str, Any]) -> Optional[str]:
     if normalized == "postgresql" and action == "query" and _SQL_MUTATING_KEYWORDS.search(str(tool_args.get("sql", ""))):
         return "La consulta SQL contiene una operación que puede modificar datos de PostgreSQL."
     if action.startswith(_MUTATING_PREFIXES):
-        return f"La acción externa '{action}' puede modificar recursos o enviar datos."
+        return f"External action '{action}' may modify resources or send data."
     return None
 
 

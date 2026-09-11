@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you a full-screen TUI with chat, code execution, web search, and 150+ integrations — all from one terminal command.">
+    <meta name="description" content="Stop tab-switching between AI and your work. HelloChusquis gives you a full-screen TUI with chat, code execution, web search, and 120+ tools — all from one terminal command.">
     <meta property="og:title" content="HelloChusquis — Terminal AI Agent">
-    <meta property="og:description" content="Spin up an AI agent with one pip install. 54 providers, auto-fallback, 150+ tools.">
+    <meta property="og:description" content="Spin up an AI agent with one pip install. 70+ providers, auto-fallback, 120+ tools.">
     <meta property="og:url" content="https://aminoy77.github.io/HelloChusquis/">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg">
@@ -14,13 +14,13 @@
     <meta property="og:image:alt" content="HelloChusquis - Open source terminal AI agent">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="HelloChusquis — Terminal AI Agent">
-    <meta name="twitter:description" content="One pip install. 54 providers. 150+ tools. Auto-fallback.">
+    <meta name="twitter:description" content="One pip install. 70+ providers. 120+ tools. Auto-fallback.">
     <link rel="canonical" href="https://aminoy77.github.io/HelloChusquis/">
-    <link rel="icon" type="image/png" href="hc.png">
     <title>HelloChusquis — Terminal AI Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <noscript><style>.t-anim { opacity: 1 !important; transform: none !important; }</style></noscript>
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1124,7 +1124,7 @@
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "HelloChusquis",
-      "description": "Open source terminal AI agent with 54 AI providers, auto-fallback, 150+ integrations, SSE streaming, and browser automation.",
+      "description": "Open source terminal AI agent with 70+ AI providers, auto-fallback, 120+ tools, SSE streaming, and browser automation.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Linux, Windows",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -1144,7 +1144,7 @@
           "name": "What is HelloChusquis?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 54 AI providers, 150+ tool integrations, browser automation, SSE streaming, persistent memory, and a built-in reference knowledge base — all from one pip install."
+            "text": "HelloChusquis is an open source terminal AI agent. It runs in your terminal and gives you access to 70+ AI providers, 120+ tools, browser automation, SSE streaming, persistent memory, and a built-in reference knowledge base — all from one pip install."
           }
         },
         {
@@ -1160,7 +1160,7 @@
           "name": "What AI providers does HelloChusquis support?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "54 providers across 9 categories including OpenRouter, Groq, Ollama (local), OpenAI, Anthropic, Google Gemini, xAI, Perplexity, Mistral, DeepSeek, Cohere, Together AI, Azure OpenAI, AWS Bedrock, Cerebras, NVIDIA NIM, DeepInfra, SiliconFlow, and more. Automatic failover when a provider goes down."
+            "text": "70+ providers across 9 categories including OpenRouter, Groq, Ollama (local), OpenAI, Anthropic, Google Gemini, xAI, Perplexity, Mistral, DeepSeek, Cohere, Together AI, Azure OpenAI, AWS Bedrock, Cerebras, NVIDIA NIM, DeepInfra, SiliconFlow, and more. Automatic failover when a provider goes down."
           }
         },
         {
@@ -1181,14 +1181,13 @@
 
 <nav aria-label="Main navigation">
     <a href="#" class="nav-logo" aria-label="HelloChusquis home">
-        <img src="hc.png" alt="HelloChusquis logo" width="28" height="28" loading="lazy" decoding="async">
         HelloChusquis
     </a>
     <ul class="nav-links">
         <li><a href="#how">How It Works</a></li>
         <li><a href="#commands">Commands</a></li>
         <li><a href="#features">Features</a></li>
-        <li><a href="#demo">Demo</a></li>
+        <li><a href="#workflows">Workflows</a></li>
         <li><a href="#providers">Providers</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="#install">Install</a></li>
@@ -1200,13 +1199,14 @@
 
 <!-- HERO -->
 <div class="hero">
-    <div class="hero-badge">v5.0 — Open Source — MIT License</div>
+    <div class="hero-badge">v5.4 — Open Source — MIT License</div>
 
     <h1 class="hero-title">An AI agent that <span>runs from your terminal</span></h1>
 
     <p class="hero-desc">
         Deploy, debug, and automate from your terminal — without switching tabs between AI, docs, and your code.
-        Full-screen TUI. 54 providers. 150+ tools. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
+        GitHub, Docker, Slack, Notion, Postgres: 120+ tools behind one prompt.
+        Full-screen TUI. 70+ providers with auto-failover. One command. <a href="#commands" style="color:var(--amber);text-decoration:underline;text-underline-offset:3px;">See all commands →</a>
     </p>
 
     <div class="demo-wrapper">
@@ -1326,8 +1326,8 @@
 
 <!-- STATS -->
 <div class="stats-bar">
-    <div class="stat"><span class="stat-value">54</span><span class="stat-label">AI Providers</span></div>
-    <div class="stat"><span class="stat-value">150+</span><span class="stat-label">Integrations</span></div>
+    <div class="stat"><span class="stat-value">70+</span><span class="stat-label">AI Providers</span></div>
+    <div class="stat"><span class="stat-value">120+</span><span class="stat-label">Tools</span></div>
     <div class="stat"><span class="stat-value">100%</span><span class="stat-label">Open Source</span></div>
     <div class="stat"><span class="stat-value">0</span><span class="stat-label">Cloud Accounts</span></div>
 </div>
@@ -1372,7 +1372,7 @@
 <!-- COMMANDS -->
 <section id="commands">
     <p class="section-label">Commands Reference</p>
-    <h2 class="section-title">130+ tools. Zero browser tabs. All terminal.</h2>
+    <h2 class="section-title">120+ tools. Zero browser tabs. All terminal.</h2>
     <p class="section-desc">From install to advanced workflows — here's how to get things done fast.</p>
 
     <div class="commands-grid">
@@ -1462,73 +1462,74 @@
 
 <hr class="divider">
 
-<!-- TESTIMONIALS -->
-<section id="testimonials">
-    <p class="section-label">What people say</p>
-    <h2 class="section-title">The terminal-first crowd already gets it.</h2>
-    <p class="section-desc">Built by devs, for devs. Here's what they say after one pip install.</p>
+<!-- WORKFLOWS -->
+<section id="workflows">
+    <p class="section-label">Workflows</p>
+    <h2 class="section-title">Real commands. GitHub, Docker, Slack, Postgres.</h2>
+    <p class="section-desc">No slides — the exact prompts devs run, and what comes back.</p>
 
     <div class="testimonial-grid">
         <blockquote class="testimonial">
-            <p class="testimonial-quote">Replaced three different tools I was juggling. The auto-failover saved me during a Groq outage last week — switched to OpenRouter mid-task without me noticing.</p>
+            <p class="testimonial-quote"><code>$ hellochusquis "review PR #418 and post the findings as a GitHub comment"</code></p>
             <div class="testimonial-meta">
-                <div class="testimonial-avatar" aria-hidden="true">M</div>
+                <div class="testimonial-avatar" aria-hidden="true">⌁</div>
                 <div>
-                    <div>marco.d</div>
-                    <div class="testimonial-role">Backend engineer</div>
+                    <div>Code review → GitHub</div>
+                    <div class="testimonial-role">diff read, findings posted, zero tabs</div>
                 </div>
             </div>
         </blockquote>
 
         <blockquote class="testimonial">
-            <p class="testimonial-quote">The browser tool actually works on sites with anti-bot protection. Where my other browser scripts died on protected pages, this just handled it.</p>
+            <p class="testimonial-quote"><code>$ hellochusquis "my API is slow — check the Postgres slow log and the Docker stats"</code></p>
             <div class="testimonial-meta">
-                <div class="testimonial-avatar" aria-hidden="true">J</div>
+                <div class="testimonial-avatar" aria-hidden="true">◔</div>
                 <div>
-                    <div>jpark.dev</div>
-                    <div class="testimonial-role">QA automation lead</div>
+                    <div>Debug → Postgres + Docker</div>
+                    <div class="testimonial-role">slow query found, index suggested</div>
                 </div>
             </div>
         </blockquote>
 
         <blockquote class="testimonial">
-            <p class="testimonial-quote">I run Ollama locally for most things and Ollama + HelloChusquis beats paying for a monthly AI subscription. No code leaves my machine, ever.</p>
+            <p class="testimonial-quote"><code>$ hellochusquis "summarize today's deploys and post it to #eng on Slack"</code></p>
             <div class="testimonial-meta">
-                <div class="testimonial-avatar" aria-hidden="true">A</div>
+                <div class="testimonial-avatar" aria-hidden="true">✦</div>
                 <div>
-                    <div>ana_codes</div>
-                    <div class="testimonial-role">Privacy-focused dev</div>
+                    <div>Standup → Slack</div>
+                    <div class="testimonial-role">git log digested, message sent</div>
                 </div>
             </div>
         </blockquote>
     </div>
-</section>
 
-<hr class="divider">
+    <h3 class="sub-heading" style="margin-top:40px">Real terminal output. No cherry-picking.</h3>
 
-<!-- WHY TERMINAL -->
-<section id="why-terminal">
-    <p class="section-label">The pitch</p>
-    <h2 class="section-title">Why a terminal agent beats another browser tab.</h2>
-
-    <div class="why-grid">
-        <div class="why-item">
-            <div class="why-item-title">// No context switch</div>
-            <div class="why-item-desc">Your AI lives where you work. No alt-tabbing between a browser chat and your editor. Your hands never leave the keyboard.</div>
+    <div class="code-example">
+        <div class="code-example-header">
+            <div class="terminal-dot"></div>
+            <div class="terminal-dot"></div>
+            <div class="terminal-dot"></div>
+            <span>terminal — real session</span>
         </div>
-        <div class="why-item">
-            <div class="why-item-title">// Runs on your machine</div>
-            <div class="why-item-desc">Local-first. Sensitive code, proprietary data, customer info — nothing leaves your machine unless you choose a cloud provider.</div>
-        </div>
-        <div class="why-item">
-            <div class="why-item-title">// Provider freedom</div>
-            <div class="why-item-desc">Switch from OpenAI to Groq to local Ollama with one command. No vendor lock-in. If a provider goes down, the next one picks up.</div>
-        </div>
-        <div class="why-item">
-            <div class="why-item-title">// Scriptable</div>
-            <div class="why-item-desc">Pipe, redirect, chain. The agent is a CLI tool — combine it with cron, tmux, make, or any shell workflow you already use.</div>
+        <div class="code-example-body">
+            <div><span class="prompt">You:</span> <span class="cmd">find the best flight deals to Tokyo</span></div>
+            <div><span class="tool">→ web_search(query="cheap flights to Tokyo 2026")</span></div>
+            <div><span class="tool">→ browser_open(url="https://skyscanner.com")</span></div>
+            <div><span class="tool">→ browser_type(text="New York → Tokyo, Aug 15")</span></div>
+            <div><span class="tool">→ browser_click(text="Search")</span></div>
+            <div><span class="out">Found 47 flights. Best price: €420 on ANA.</span></div>
+            <div style="margin-top:12px"><span class="prompt">You:</span> <span class="cmd">write a Python script to track prices daily</span></div>
+            <div><span class="tool">→ code(code="import requests...")</span></div>
+            <div><span class="out">Created price_tracker.py. Runs daily via cron.</span></div>
+            <div style="margin-top:12px"><span class="prompt">You:</span> <span class="cmd">deploy the tracker to my VPS</span></div>
+            <div><span class="tool">→ shell("scp price_tracker.py user@vps:~/")</span></div>
+            <div><span class="tool">→ shell("ssh user@vps 'crontab -e'")</span></div>
+            <div><span class="out">Deployed. Price checks run at 9am daily.</span></div>
+            <div style="margin-top:12px"><span class="comment"># 3 tools, 3 systems, zero manual wiring.</span></div>
         </div>
     </div>
+
 </section>
 
 <hr class="divider">
@@ -1630,6 +1631,26 @@
         </div>
     </div>
 
+    <h3 class="sub-heading" style="margin-top:32px">Why a terminal agent beats another browser tab</h3>
+    <div class="why-grid">
+        <div class="why-item">
+            <div class="why-item-title">// No context switch</div>
+            <div class="why-item-desc">Your AI lives where you work. No alt-tabbing between a browser chat and your editor. Your hands never leave the keyboard.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Runs on your machine</div>
+            <div class="why-item-desc">Local-first. Sensitive code, proprietary data, customer info — nothing leaves your machine unless you choose a cloud provider.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Provider freedom</div>
+            <div class="why-item-desc">Switch from OpenAI to Groq to local Ollama with one command. No vendor lock-in. If a provider goes down, the next one picks up.</div>
+        </div>
+        <div class="why-item">
+            <div class="why-item-title">// Scriptable</div>
+            <div class="why-item-desc">Pipe, redirect, chain. The agent is a CLI tool — combine it with cron, tmux, make, or any shell workflow you already use.</div>
+        </div>
+    </div>
+
     <h3 class="sub-heading" style="margin-top:32px">Tools you can use right now</h3>
     <div class="tool-examples">
         <span class="tool-tag">shell</span>
@@ -1658,43 +1679,8 @@
         <span class="tool-tag">clickup</span>
         <span class="tool-tag">vercel</span>
         <span class="tool-tag">supabase</span>
-        <span class="tool-tag">+ 130 more</span>
+        <span class="tool-tag">+ 100 more</span>
     </div>
-</section>
-
-<hr class="divider">
-
-<!-- DEMO -->
-<section id="demo">
-    <p class="section-label">Demo</p>
-    <h2 class="section-title">How devs actually ship with HelloChusquis.</h2>
-    <p class="section-desc">Real terminal output. No cherry-picking.</p>
-
-    <div class="code-example">
-        <div class="code-example-header">
-            <div class="terminal-dot"></div>
-            <div class="terminal-dot"></div>
-            <div class="terminal-dot"></div>
-            <span>terminal — real session</span>
-        </div>
-        <div class="code-example-body">
-            <div><span class="prompt">You:</span> <span class="cmd">find the best flight deals to Tokyo</span></div>
-            <div><span class="tool">→ web_search(query="cheap flights to Tokyo 2026")</span></div>
-            <div><span class="tool">→ browser_open(url="https://skyscanner.com")</span></div>
-            <div><span class="tool">→ browser_type(text="New York → Tokyo, Aug 15")</span></div>
-            <div><span class="tool">→ browser_click(text="Search")</span></div>
-            <div><span class="out">Found 47 flights. Best price: €420 on ANA.</span></div>
-            <div style="margin-top:12px"><span class="prompt">You:</span> <span class="cmd">write a Python script to track prices daily</span></div>
-            <div><span class="tool">→ code(code="import requests...")</span></div>
-            <div><span class="out">Created price_tracker.py. Runs daily via cron.</span></div>
-            <div style="margin-top:12px"><span class="prompt">You:</span> <span class="cmd">deploy the tracker to my VPS</span></div>
-            <div><span class="tool">→ shell("scp price_tracker.py user@vps:~/")</span></div>
-            <div><span class="tool">→ shell("ssh user@vps 'crontab -e'")</span></div>
-            <div><span class="out">Deployed. Price checks run at 9am daily.</span></div>
-            <div style="margin-top:12px"><span class="comment"># 3 tools, 3 systems, zero manual wiring.</span></div>
-        </div>
-    </div>
-
 </section>
 
 <hr class="divider">
@@ -1775,7 +1761,7 @@
     <div class="faq-grid">
         <div class="faq-item">
             <div class="faq-q">What is HelloChusquis?</div>
-            <div class="faq-a">An open source terminal AI agent. One pip install, 54 providers, 150+ tools, browser automation, SSE streaming, persistent memory, built-in knowledge base. Runs locally on your machine.</div>
+            <div class="faq-a">An open source terminal AI agent. One pip install, 70+ providers, 120+ tools, browser automation, SSE streaming, persistent memory, built-in knowledge base. Runs locally on your machine.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">How does the built-in knowledge work?</div>
@@ -1791,7 +1777,7 @@
         </div>
         <div class="faq-item">
             <div class="faq-q">What can it actually do?</div>
-            <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 150+ APIs.</div>
+            <div class="faq-a">Run shell commands, execute Python code, manage files, search the web, automate browsers, send emails, manage Docker containers, query databases, and connect to 120+ tools.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">How does it compare to browser-based AI tools?</div>
@@ -1843,7 +1829,6 @@
 
 <footer>
     <div class="footer-logo">
-        <img src="hc.png" alt="HelloChusquis logo" width="24" height="24" loading="lazy" decoding="async">
         HelloChusquis
     </div>
     <ul class="footer-links">

@@ -1,6 +1,7 @@
 import yaml
 import httpx
 import os
+import time
 from pathlib import Path
 import tempfile
 from rich.console import Console
@@ -49,13 +50,14 @@ KNOWN_PROVIDERS = [
 
     # ============ European Providers ============
     {"name": "Mistral",            "base_url": "https://api.mistral.ai/v1",                    "docs": "console.mistral.ai/api-keys",              "category": "European", "requires_key": True, "models": ["mistral-large-latest", "mistral-small-latest", "mistral-medium-latest", "open-mistral-nemo", "codestral-latest", "pixtral-large-latest"]},
-    {"name": "DeepSeek",           "base_url": "https://api.deepseek.com/v1",                  "docs": "platform.deepseek.com/api_keys",            "category": "European", "requires_key": True, "models": ["deepseek-chat", "deepseek-reasoner"]},
     {"name": "Cohere",             "base_url": "https://api.cohere.com/v1",                    "docs": "dashboard.cohere.com/api-keys",             "category": "European", "requires_key": True, "models": ["command-r-plus", "command-r", "command-r7b-02-2025", "command-a"]},
     {"name": "Aleph Alpha",        "base_url": "https://api.aleph-alpha.com/v1",               "docs": "aleph-alpha.com",                          "category": "European", "requires_key": True, "models": ["luminous-supreme-control", "luminous-base-control"]},
     {"name": "Writer",             "base_url": "https://api.writer.com/v1",                    "docs": "writer.com",                               "category": "European", "requires_key": True, "models": ["palmyra-x-004", "palmyra-medical-70b-004", "palmyra-fin-70b-004"]},
 
     # ============ Chinese Providers ============
     {"name": "Qwen / Alibaba",     "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "docs": "dashscope.aliyuncs.com",      "category": "Chinese", "requires_key": True, "models": ["qwen-max", "qwen-plus", "qwen-turbo", "qwen2.5-72b-instruct", "qwen2.5-32b-instruct", "qwen2.5-7b-instruct", "qwen2.5-coder-32b-instruct"]},
+    {"name": "DeepSeek",           "base_url": "https://api.deepseek.com/v1",                  "docs": "platform.deepseek.com/api_keys",            "category": "Chinese", "requires_key": True, "models": ["deepseek-chat", "deepseek-reasoner"]},
+    {"name": "Z.AI",               "base_url": "https://api.z.ai/api/coding/paas/v4",          "docs": "docs.z.ai — GLM coding plan endpoint",    "category": "Chinese", "requires_key": True, "models": ["glm-4.7", "glm-4.6", "glm-4.5", "glm-4.5-air"]},
     {"name": "MiniMax",            "base_url": "https://api.minimax.chat/v1",                  "docs": "platform.minimax.io",                      "category": "Chinese", "requires_key": True, "models": ["MiniMax-Text-01", "abab6.5s-chat", "abab6.5-chat", "MiniMax-M1"]},
     {"name": "Baichuan",           "base_url": "https://api.baichuan-ai.com/v1",               "docs": "platform.baichuan-ai.com",                  "category": "Chinese", "requires_key": True, "models": ["Baichuan4", "Baichuan3-Turbo", "Baichuan2-Turbo"]},
     {"name": "Zhipu (ChatGLM)",    "base_url": "https://open.bigmodel.cn/api/paas/v4",         "docs": "open.bigmodel.cn",                         "category": "Chinese", "requires_key": True, "models": ["glm-4-plus", "glm-4-air", "glm-4-flash", "glm-4-long", "glm-4-0520", "glm-4v-plus", "glm-4v-flash"]},
@@ -80,6 +82,17 @@ KNOWN_PROVIDERS = [
     {"name": "Jina AI",            "base_url": "https://api.jina.ai/v1",                       "docs": "jina.ai",                                  "category": "AI Platforms", "requires_key": True, "models": ["jina-chat-v3", "jina-embeddings-v3", "reader-latest"]},
     {"name": "Baseten",            "base_url": "https://model-{id}.api.baseten.co/v1",         "docs": "baseten.co",                               "category": "AI Platforms", "requires_key": True, "models": ["meta-llama-3.3-70b-instruct", "deepseek-r1"]},
     {"name": "Modal",              "base_url": "https://api.modal.com/v1",                     "docs": "modal.com",                                "category": "AI Platforms", "requires_key": True, "models": ["meta-llama/Llama-3.3-70B-Instruct", "deepseek-ai/DeepSeek-R1"]},
+    {"name": "302.AI",             "base_url": "https://api.302.ai/v1",                        "docs": "302.ai — one key, pay-as-you-go aggregator", "category": "AI Platforms", "requires_key": True, "models": ["gpt-4o-mini", "claude-sonnet-4", "gemini-2.5-flash"]},
+    {"name": "Cloudflare AI Gateway", "base_url": "https://gateway.ai.cloudflare.com/v1/{account_id}/default/compat", "docs": "developers.cloudflare.com/ai-gateway — replace {account_id}", "category": "AI Platforms", "requires_key": True, "models": ["openai/gpt-4o-mini", "anthropic/claude-sonnet-4"]},
+    {"name": "Córtecs",            "base_url": "https://api.cortecs.ai/v1",                    "docs": "docs.cortecs.ai — EU gateway, GDPR-native", "category": "AI Platforms", "requires_key": True, "models": ["gpt-4o", "llama-3.3-70b", "hermes-4-405b"]},
+    {"name": "FrogBot",            "base_url": "https://frogapi.app/v1",                       "docs": "frogapi.app/docs — single key gateway",     "category": "AI Platforms", "requires_key": True, "models": ["gpt-5.6-sol", "claude-sonnet-4"]},
+    {"name": "Helicone",           "base_url": "https://ai-gateway.helicone.ai",               "docs": "docs.helicone.ai/gateway — 0% markup gateway", "category": "AI Platforms", "requires_key": True, "models": ["gpt-4o-mini", "claude-sonnet-4"]},
+    {"name": "IO.NET",             "base_url": "https://api.intelligence.io.solutions/api/v1", "docs": "io.net/docs — open-model inference",        "category": "AI Platforms", "requires_key": True, "models": ["meta-llama/Llama-3.3-70B-Instruct", "moonshotai/Kimi-K2.6", "deepseek-ai/DeepSeek-V4-Pro"]},
+    {"name": "Nebius Token Factory", "base_url": "https://api.tokenfactory.nebius.com/v1",     "docs": "docs.tokenfactory.nebius.com",              "category": "AI Platforms", "requires_key": True, "models": ["meta-llama/Meta-Llama-3.1-70B-Instruct", "deepseek-ai/DeepSeek-R1-0528"]},
+    {"name": "OpenCode Zen",       "base_url": "https://opencode.ai/zen/v1",                   "docs": "opencode.ai/docs/zen — chat-completions models only", "category": "AI Platforms", "requires_key": True, "models": ["deepseek-v4-pro", "minimax-m3", "glm-5.2", "kimi-k2.5"]},
+    {"name": "Venice AI",          "base_url": "https://api.venice.ai/api/v1",                 "docs": "docs.venice.ai — private, zero retention",  "category": "AI Platforms", "requires_key": True, "models": ["venice-uncensored", "zai-org-glm-5-1", "kimi-k2-5"]},
+    {"name": "Vercel AI Gateway",  "base_url": "https://ai-gateway.vercel.sh/v1",              "docs": "vercel.com/docs/ai-gateway",               "category": "AI Platforms", "requires_key": True, "models": ["openai/gpt-5.4-mini", "anthropic/claude-sonnet-4.6", "xai/grok-4.3"]},
+    {"name": "ZenMux",             "base_url": "https://zenmux.ai/api/v1",                     "docs": "zenmux.ai/docs — unified API, 100+ models", "category": "AI Platforms", "requires_key": True, "models": ["openai/gpt-5", "anthropic/claude-opus-4", "google/gemini-3-flash"]},
 
     # ============ Open Source Focused ============
     {"name": "Blackbox AI",        "base_url": "https://api.blackbox.ai/v1",                   "docs": "blackbox.ai",                              "category": "Open Source", "requires_key": True, "models": ["blackbox-pro", "blackbox-mini", "llama-3.1-70b"]},
@@ -96,16 +109,24 @@ KNOWN_PROVIDERS = [
     {"name": "Jan (local)",        "base_url": "http://localhost:1337/v1",                     "docs": "jan.ai — local, no API key needed",         "category": "Local", "requires_key": False, "models": ["local-model"]},
     {"name": "TextGen WebUI (local)", "base_url": "http://localhost:5000/v1",                  "docs": "github.com/oobabooga/text-generation-webui — local", "category": "Local", "requires_key": False, "models": ["local-model"]},
     {"name": "LocalAI (local)",    "base_url": "http://localhost:8080/v1",                     "docs": "localai.io — local, no API key needed",     "category": "Local", "requires_key": False, "models": ["local-model"]},
+    {"name": "llama.cpp (local)",  "base_url": "http://localhost:8080/v1",                     "docs": "llama.cpp server — local, change port if LocalAI uses 8080", "category": "Local", "requires_key": False, "models": ["local-model"]},
+    {"name": "Atomic Chat (local)", "base_url": "http://localhost:1337/v1",                    "docs": "atomic.chat — local app + API server, no key", "category": "Local", "requires_key": False, "models": ["local-model"]},
+    {"name": "Ollama Cloud",       "base_url": "https://ollama.com/v1",                        "docs": "docs.ollama.com/cloud — hosted models, key required", "category": "AI Platforms", "requires_key": True, "models": ["gpt-oss:120b", "gpt-oss:20b", "deepseek-r1"]},
 
     # ============ Enterprise ============
     {"name": "Azure OpenAI",       "base_url": "https://YOUR_RESOURCE.openai.azure.com/openai/v1", "docs": "azure.com",                            "category": "Enterprise", "requires_key": True, "models": ["gpt-4o", "gpt-4o-mini", "gpt-35-turbo"]},
     {"name": "AWS Bedrock",        "base_url": "https://bedrock-runtime.{region}.amazonaws.com", "docs": "aws.amazon.com/bedrock",                "category": "Enterprise", "requires_key": True, "models": ["anthropic.claude-v2", "meta.llama3-70b-instruct-v1", "amazon.titan-text-express-v1"]},
     {"name": "Vertex AI",          "base_url": "https://{location}-aiplatform.googleapis.com/v1", "docs": "cloud.google.com/vertex-ai",             "category": "Enterprise", "requires_key": True, "models": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro"]},
+    {"name": "Azure AI Services",  "base_url": "https://YOUR-RESOURCE.services.ai.azure.com/openai/v1", "docs": "learn.microsoft.com — Foundry Models v1, replace YOUR-RESOURCE", "category": "Enterprise", "requires_key": True, "models": ["gpt-4o", "gpt-4o-mini", "DeepSeek-R1"]},
+    {"name": "STACKIT",            "base_url": "https://api.openai-compat.model-serving.eu01.onstackit.cloud/v1", "docs": "docs.stackit.cloud — EU sovereign, GDPR", "category": "European", "requires_key": True, "models": ["cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic", "openai/gpt-oss-20b"]},
+    {"name": "OVHcloud AI Endpoints", "base_url": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1", "docs": "docs.ovhcloud.com — serverless, free tier", "category": "European", "requires_key": True, "models": ["gpt-oss-20b", "gpt-oss-120b", "Meta-Llama-3_3-70B-Instruct"]},
+    {"name": "Scaleway",           "base_url": "https://api.scaleway.ai/v1",                   "docs": "scaleway.com/en/generative-apis — EU hosted", "category": "European", "requires_key": True, "models": ["mistral-small-3.2-24b-instruct-2506", "gpt-oss-120b"]},
 
     # ============ Specialized ============
     {"name": "Nomic",              "base_url": "https://api-atlas.nomic.ai/v1",                "docs": "nomic.ai",                               "category": "Specialized", "requires_key": True, "models": ["nomic-embed-text-v1.5", "nomic-embed-text-v1"]},
     {"name": "AI21 (Jamba)",       "base_url": "https://api.ai21.com/studio/v1",               "docs": "ai21.com",                               "category": "Specialized", "requires_key": True, "models": ["jamba-1.5-large", "jamba-1.5-mini", "jamba-instruct-preview"]},
     {"name": "TextCortex",         "base_url": "https://api.textcortex.com/v1",                "docs": "textcortex.com",                         "category": "Specialized", "requires_key": True, "models": ["sophos-2", "hermes-2-pro"]},
+    {"name": "GitHub Copilot",     "base_url": "https://api.githubcopilot.com",               "docs": "Copilot OAuth/PAT token required; may need Copilot-Integration-Id header", "category": "Specialized", "requires_key": True, "models": ["gpt-4o", "gpt-4o-mini", "claude-sonnet-4", "gemini-2.5-pro", "o3-mini"]},
 
     # ============ Custom ============
     {"name": "Custom / Other",     "base_url": "",                                             "docs": "",                                       "category": "Custom", "requires_key": True, "models": []},
@@ -286,6 +307,10 @@ def fetch_available_models(base_url: str, api_key: str, provider_name: str = "")
         live = []
 
     # Merge: known first (stable defaults), then live models not already present.
+    # Local servers are the exception: only live models are installed, so
+    # catalog defaults (usually NOT pulled) must not be shown.
+    if _is_local_url(base):
+        return live
     seen = set(known)
     merged = list(known)
     for m in live:
@@ -337,12 +362,77 @@ def pick_provider() -> dict:
     selected = rows[num - 1][1]
 
     if selected["name"] == "Custom / Other":
-        base_url = Prompt.ask("  Base URL")
+        base_url = _normalize_custom_base_url(Prompt.ask("  Base URL").strip())
     else:
         base_url = selected["base_url"]
         console.print(f"  [dim]Get your API key at: {selected['docs']}[/dim]")
 
     return {"name": selected["name"], "base_url": base_url, "requires_key": selected.get("requires_key", True), "models": selected.get("models", [])}
+
+
+def live_check_provider(provider: dict, timeout: float = 5.0) -> tuple:
+    """Ping one provider's /models endpoint. Returns (ok, detail, ms)."""
+    base = (provider.get("base_url") or "").rstrip("/")
+    name = provider.get("name", "Unknown")
+    if not base:
+        return False, "no base URL", 0.0
+    headers = {}
+    if (provider.get("api_key") or "").strip():
+        headers = {"Authorization": f"Bearer {provider['api_key'].strip()}"}
+    start = time.time()
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            status = client.get(f"{base}/models", headers=headers).status_code
+    except Exception as exc:
+        return False, f"{type(exc).__name__}: {exc}"[:120], (time.time() - start) * 1000
+    ms = (time.time() - start) * 1000
+    if status < 400:
+        return True, f"HTTP {status}", ms
+    return False, f"HTTP {status}", ms
+
+
+def find_config_shadows() -> tuple:
+    """Return (active_path_or_None, [shadowed_paths]) across known locations."""
+    candidates = [
+        Path.home() / ".hellochusquis" / "config.yaml",
+        Path.home() / "config.yaml",
+        Path("config.yaml"),
+    ]
+    existing = [p for p in candidates if p.exists()]
+    if not existing:
+        return None, []
+    return existing[0], existing[1:]
+
+
+def _is_local_url(url: str) -> bool:
+    """True for loopback base URLs (local servers need no key, e.g. Ollama)."""
+    return "localhost" in url.lower() or "127.0.0.1" in url
+
+
+def _normalize_custom_base_url(base_url: str) -> str:
+    """Probe a hand-typed base URL; append /v1 when only the /v1/models endpoint answers.
+
+    Catches the classic Ollama mistake: http://localhost:11434 instead of
+    http://localhost:11434/v1 (without it every chat call 404s).
+    """
+    base = base_url.rstrip("/")
+    if not base:
+        return base_url
+    import httpx
+
+    def _ok(url: str) -> bool:
+        try:
+            with httpx.Client(timeout=5) as client:
+                return client.get(f"{url}/models").status_code < 400
+        except Exception:
+            return False
+
+    if _ok(base):
+        return base
+    if _ok(base + "/v1"):
+        console.print("  [dim]✓ Detected OpenAI-compatible API — using /v1 endpoint.[/dim]")
+        return base + "/v1"
+    return base
 
 
 def pick_model(base_url: str, api_key: str, provider_name: str = "", known_models: list = None) -> str:
@@ -389,6 +479,17 @@ def pick_model(base_url: str, api_key: str, provider_name: str = "", known_model
                 console.print("[red]No matching model. Try again.[/red]")
 
 
+def _pick_model_auto(base_url: str, api_key: str, provider_name: str = "", known_models: list = None) -> str:
+    """Local providers: first live model, else first known. No prompts — localhost just works."""
+    try:
+        models = fetch_available_models(base_url, api_key, provider_name=provider_name)
+    except Exception:
+        models = []
+    model = (models or list(known_models or []) or ["local-model"])[0]
+    console.print(f"  [dim]✓ Using model: {model} (change later with: hellochusquis config)[/dim]")
+    return model
+
+
 def _validate_api_key(api_key: str) -> bool:
     """Return True if api_key is non-empty after stripping whitespace."""
     return bool(api_key and api_key.strip())
@@ -397,8 +498,8 @@ def _validate_api_key(api_key: str) -> bool:
 def _prompt_api_key(provider_name: str, existing_key: str = "") -> str:
     """Prompt for API key with validation loop. Keeps existing key if user blanks out."""
     while True:
-        f"  API Key [{existing_key[:4]}***]" if existing_key else "  API Key"
-        api_key = Prompt.ask(f"[bold]Paste your API key for {provider_name}[/bold]", password=True)
+        hint = f" [dim](current: {existing_key[:4]}***)[/dim]" if existing_key else ""
+        api_key = Prompt.ask(f"[bold]Paste your API key for {provider_name}[/bold]{hint}", password=True)
         if not api_key or not api_key.strip():
             if existing_key:
                 console.print("  [dim]Keeping existing key.[/dim]")
@@ -408,18 +509,21 @@ def _prompt_api_key(provider_name: str, existing_key: str = "") -> str:
         return api_key.strip()
 
 
+def _is_local_provider(provider: dict) -> bool:
+    """Localhost providers work without keys (Ollama uses 'ollama' as placeholder)."""
+    base = provider.get("base_url", "").lower()
+    return "localhost" in base or "127.0.0.1" in base or provider.get("api_key") == "ollama"
+
+
 def _check_providers_valid(config: dict) -> None:
     """Warn if config has no valid providers configured."""
     providers = config.get("providers", [])
-    has_ollama = any(
-        "ollama" in p.get("base_url", "").lower() or p.get("api_key") == "ollama"
-        for p in providers
-    )
+    has_local = any(_is_local_provider(p) for p in providers)
     has_valid_key = any(
         p.get("api_key") and p["api_key"] != "ollama" and len(p["api_key"].strip()) > 0
         for p in providers
     )
-    if not has_ollama and not has_valid_key:
+    if not has_local and not has_valid_key:
         console.print("\n[bold yellow]⚠ No valid providers configured.[/bold yellow]")
         console.print("[yellow]Chat will fail until you add an API key.[/yellow]")
         console.print("[dim]Run: hellochusquis config[/dim]\n")
@@ -441,17 +545,25 @@ def run_setup():
     while True:
         console.print(f"\n[bold]Provider #{priority}[/bold]")
         provider_info = pick_provider()
-        if provider_info.get("requires_key"):
+        if provider_info.get("requires_key") and not _is_local_url(provider_info["base_url"]):
             api_key = _prompt_api_key(provider_info["name"])
         else:
             api_key = "ollama" if "ollama" in provider_info["name"].lower() else ""
             console.print(f"  [dim]✓ {provider_info['name']} runs locally — no API key needed.[/dim]")
-        model = pick_model(
-            provider_info["base_url"],
-            api_key,
-            provider_name=provider_info["name"],
-            known_models=provider_info.get("models", []),
-        )
+        if provider_info.get("requires_key"):
+            model = pick_model(
+                provider_info["base_url"],
+                api_key,
+                provider_name=provider_info["name"],
+                known_models=provider_info.get("models", []),
+            )
+        else:
+            model = _pick_model_auto(
+                provider_info["base_url"],
+                api_key,
+                provider_name=provider_info["name"],
+                known_models=provider_info.get("models", []),
+            )
 
         providers.append({
             "name": f"{provider_info['name']}-{priority}",
@@ -525,19 +637,27 @@ def run_quick_setup() -> dict:
     provider_info = pick_provider()
 
     # Step 2: local providers skip the key; others must have one
-    if not provider_info["requires_key"]:
+    if not provider_info["requires_key"] or _is_local_url(provider_info["base_url"]):
         api_key = "ollama" if "ollama" in provider_info["name"].lower() else ""
         console.print(f"  [dim]✓ {provider_info['name']} runs locally — no API key needed.[/dim]")
     else:
         api_key = _prompt_api_key(provider_info["name"])
 
-    # Step 3: pick a model from ALL available models
-    model = pick_model(
-        provider_info["base_url"],
-        api_key,
-        provider_name=provider_info["name"],
-        known_models=provider_info.get("models", []),
-    )
+    # Step 3: local providers auto-pick; others choose from ALL available models
+    if provider_info["requires_key"]:
+        model = pick_model(
+            provider_info["base_url"],
+            api_key,
+            provider_name=provider_info["name"],
+            known_models=provider_info.get("models", []),
+        )
+    else:
+        model = _pick_model_auto(
+            provider_info["base_url"],
+            api_key,
+            provider_name=provider_info["name"],
+            known_models=provider_info.get("models", []),
+        )
 
     config = {
         "providers": [{
@@ -592,19 +712,21 @@ def ensure_config(
     missing configuration becomes a recoverable readiness state rather than an
     input prompt that blocks process startup.
     """
-    # Busca config en varias ubicaciones posibles
+    # Managed home config first: setup always SAVES there, so it must win
+    # on load — otherwise new saves are invisible behind stale files.
     possible_paths = [
-        Path("config.yaml"),
-        Path.home() / "config.yaml",
         Path.home() / ".hellochusquis" / "config.yaml",
+        Path.home() / "config.yaml",
+        Path("config.yaml"),
     ]
 
     for path in possible_paths:
         if path.exists():
             _repair_config_permissions(path)
+            console.print(f"[dim]Using config: {path}[/dim]")
             with open(path, encoding="utf-8") as f:
                 config = yaml.safe_load(f) or {}
-            # Actualiza system prompt si es viejo
+            # Refresh outdated system prompts
             if "agent" not in config:
                 config["agent"] = {"system_prompt": SYSTEM_PROMPT}
             elif len(config["agent"].get("system_prompt", "")) < 100:

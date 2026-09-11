@@ -43,6 +43,18 @@ class TestMemoryAutolog(unittest.TestCase):
         self.assertEqual(parse_memory_command("forget my pin")[0], "forget")
         self.assertIsNone(parse_memory_command("what did I ask before?"))
 
+    def test_parse_fenced_tool_call(self):
+        from core.agent import parse_fenced_tool_call, with_fenced_tools
+        self.assertEqual(
+            parse_fenced_tool_call('```json\n{"name": "shell", "arguments": {"command": "echo hi"}}\n```'),
+            ("shell", {"command": "echo hi"}))
+        self.assertIsNone(parse_fenced_tool_call("plain text, no fences"))
+        self.assertIsNone(parse_fenced_tool_call('```json\n{"foo": 1}\n```'))
+        kept = {"content": "x", "tool_calls": [{"id": "1"}]}
+        self.assertIs(with_fenced_tools(kept)["tool_calls"], kept["tool_calls"])
+        wrapped = with_fenced_tools({"content": '```json {"name": "shell", "arguments": {}} ```'})
+        self.assertEqual(wrapped["tool_calls"][0]["function"]["name"], "shell")
+
 
 if __name__ == "__main__":
     unittest.main()

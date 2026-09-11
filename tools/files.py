@@ -54,10 +54,14 @@ class FilesTool(BaseTool):
                 if not p.exists():
                     return ToolResult(success=False, output="", error=f"Directory not found: {p}")
                 entries = sorted(p.iterdir(), key=lambda x: (x.is_file(), x.name))
+                total = len(entries)
+                entries = entries[:500]  # ponytail: cap listings; full dumps flood context
                 lines = [
                     f"{'DIR ' if e.is_dir() else 'FILE'} {e.name}"
                     for e in entries
                 ]
+                if total > len(entries):
+                    lines.append(f"... and {total - len(entries)} more entries (list a subdirectory)")
                 return ToolResult(success=True, output="\n".join(lines))
 
             elif action == "create_dir":

@@ -81,7 +81,7 @@ def _search_ddg_lite(query: str, num_results: int, region: str, time_filter: str
         url,
         data=data,
         headers=_HEADERS,
-        timeout=10,
+        timeout=7,
         allow_redirects=False,
         stream=True,
     )
@@ -125,7 +125,7 @@ def _search_ddg_html(query: str, num_results: int, region: str, time_filter: str
         url,
         data=data,
         headers=_HEADERS,
-        timeout=10,
+        timeout=7,
         allow_redirects=False,
         stream=True,
     )

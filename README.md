@@ -58,6 +58,7 @@ Search the web for the latest Python release and summarize what changed.
 | **Terminal** | `hellochusquis` | Interactive work, planning, tools, and fast feedback |
 | **Web interface** | `hellochusquis web` | A visual chat workspace with streaming, voice, themes, and export |
 | **REST API** | `hellochusquis api --port 8080` | Applications, automation, isolated sessions, and service integrations |
+| **Telegram** | `hellochusquis telegram --allow <chat-id>` | Chat from Telegram, allowlisted chats only |
 
 ## What it can do
 
@@ -113,6 +114,22 @@ HELLOCHUSQUIS_AUTH=0 hellochusquis web
 ```
 
 The web workspace includes provider/model selection, streaming chat, voice input controls, conversation export, feedback, appearance settings, command palette actions, approvals, and a landing page that links back to the application.
+
+## Telegram
+
+Chat with the same agent from Telegram. Create a bot with [@BotFather](https://t.me/BotFather), then start the bridge with your chat ID allowlisted (find it via [@userinfobot](https://t.me/userinfobot)):
+
+```bash
+hellochusquis telegram --token <bot-token> --allow <your-chat-id>
+```
+
+Or via environment (same values as flags):
+
+```bash
+HELLOCHUSQUIS_TELEGRAM_TOKEN=... HELLOCHUSQUIS_TELEGRAM_ALLOW=123,456 hellochusquis telegram
+```
+
+Only allowlisted chats get replies; everyone else is ignored. Each chat keeps its own conversation. No new dependencies — long-polling over the standard library.
 
 ## REST API
 

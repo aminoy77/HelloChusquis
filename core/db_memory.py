@@ -643,19 +643,25 @@ class MemoryStore:
         except (TypeError, ValueError):
             bounded_limit = 20
         tokens_json = json.dumps(tokens, ensure_ascii=False)
+        # Two-phase ranking: cheap SQL prefilter (importance order), then
+        # exact match-count ranking in Python over a bounded candidate set.
+        # A correlated COUNT subquery per row scans the whole table at scale.
+        prefetch = min(max(bounded_limit * 10, 10), 100)
         rows = self.conn.execute(
             "SELECT id, session_id, key, value, tags, category, importance, created_at, updated_at "
             "FROM memory_entries WHERE EXISTS ("
             "SELECT 1 FROM json_each(?) AS token "
             "WHERE LOWER(memory_entries.key) LIKE '%' || token.value || '%' "
             "OR LOWER(memory_entries.value) LIKE '%' || token.value || '%'"
-            ") ORDER BY (SELECT COUNT(*) FROM json_each(?) AS token "
-            "WHERE LOWER(memory_entries.key) LIKE '%' || token.value || '%' "
-            "OR LOWER(memory_entries.value) LIKE '%' || token.value || '%') DESC, "
-            "importance DESC, created_at DESC LIMIT ?",
-            (tokens_json, tokens_json, bounded_limit),
+            ") ORDER BY importance DESC, created_at DESC LIMIT ?",
+            (tokens_json, prefetch),
         ).fetchall()
-        return [self._row_to_entry(row) for row in rows]
+        entries = [self._row_to_entry(row) for row in rows]
+        entries.sort(key=lambda e: (
+            -sum(1 for t in tokens if t in ((e.key or "") + " " + (e.value or "")).lower()),
+            -(e.importance or 0),
+        ))
+        return entries[:bounded_limit]
 
     @_locked
     def get_entry_count(self) -> int:
@@ -1239,6 +1245,9 @@ KNOWLEDGE_DIR_NAME = "MDknowledge"
 USER_KNOWLEDGE_DIR = Path.home() / ".hellochusquis" / "knowledge"
 _KB_SKIP_FILES = {"README.md"}
 _KB_IMPORTANCE = 5
+# (mtime_ns, size) -> sha cache so repeat inits skip re-hashing files.
+# DB kb_sources remains the cross-process source of truth.
+_KB_SEEN: Dict[str, tuple] = {}
 
 
 def _default_repo_kb() -> Path:
@@ -1254,13 +1263,30 @@ def collect_knowledge_files(
     user = Path(user_dir).expanduser() if user_dir else USER_KNOWLEDGE_DIR
     found: Dict[str, Path] = {}
     for root in (repo, user):
-        if not root.is_dir():
-            continue
-        for path in sorted(root.rglob("*.md")):
-            if path.name in _KB_SKIP_FILES or path.name.startswith("_"):
-                continue
-            found[path.relative_to(root).as_posix()] = path
+        for rel, path in _walk_kb_dir(root):
+            found[rel] = path  # user dir walked last, so it wins ties
     return sorted(found.items())
+
+
+_KB_WALK: Dict[str, tuple] = {}
+
+
+def _walk_kb_dir(root: Path) -> List[Tuple[str, Path]]:
+    """List (rel, path) under root, cached until the directory changes."""
+    try:
+        mtime = root.stat().st_mtime_ns
+    except OSError:
+        return []
+    cached = _KB_WALK.get(str(root))
+    if cached and cached[0] == mtime:
+        return cached[1]
+    found: List[Tuple[str, Path]] = []
+    for path in sorted(root.rglob("*.md")):
+        if path.name in _KB_SKIP_FILES or path.name.startswith("_"):
+            continue
+        found.append((path.relative_to(root).as_posix(), path))
+    _KB_WALK[str(root)] = (mtime, found)
+    return found
 
 
 def _kb_bullets(content: str) -> List[str]:
@@ -1291,16 +1317,25 @@ def load_knowledge(
     except Exception:
         return 0
     total = 0
+    try:
+        known = {r[0]: r[1] for r in store.conn.execute(
+            "SELECT path, sha256 FROM kb_sources").fetchall()}
+    except Exception:
+        known = {}
     for rel, path in collect_knowledge_files(repo_dir, user_dir):
         try:
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            st = path.stat()
+            key = str(path)
+            cached = _KB_SEEN.get(key)
+            if cached and cached[0] == (st.st_mtime_ns, st.st_size):
+                digest = cached[1]
+            else:
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                _KB_SEEN[key] = ((st.st_mtime_ns, st.st_size), digest)
         except OSError:
             continue
         try:
-            row = store.conn.execute(
-                "SELECT sha256 FROM kb_sources WHERE path=?", (rel,)
-            ).fetchone()
-            if row and row[0] == digest:
+            if known.get(rel) == digest:
                 continue
             bullets = _kb_bullets(path.read_text(encoding="utf-8"))
             store.conn.execute("DELETE FROM memory_entries WHERE category='kb' AND key=?", (rel,))
@@ -1345,27 +1380,27 @@ def _get_store() -> MemoryStore:
 
 
 def init_db() -> None:
-    """Inicializa la base de datos SQLite y crea tablas necesarias."""
+    """Initialize the SQLite database and create needed tables."""
     _get_store()
 
 
 def save_session(messages: List[Dict[str, Any]]) -> None:
-    """Guarda una sesión completa en la base de datos."""
+    """Save a full session to the database."""
     _get_store().save_session(messages)
 
 
 def load_last_session() -> List[Dict[str, Any]]:
-    """Carga la última sesión guardada."""
+    """Load the most recently saved session."""
     return _get_store().load_last_session()
 
 
 def save_summary(summary: str) -> None:
-    """Guarda o actualiza el resumen de sesiones pasadas."""
+    """Save or update the past-sessions summary."""
     _get_store().save_summary(summary)
 
 
 def load_summary() -> str:
-    """Carga el último resumen guardado."""
+    """Load the most recently saved summary."""
     return _get_store().load_summary()
 
 
@@ -1395,6 +1430,8 @@ def save_turn(user_text: str, assistant_text: str) -> None:
             value=f"User: {user}\nAssistant: {assistant}"[: AUTOLOG_TURN_CHARS * 2],
             category="turn",
             importance=3,
+            # ponytail: no per-turn embedding — recall is keyword-only.
+            auto_embed=False,
         )
     except Exception:
         pass

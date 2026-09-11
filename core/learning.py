@@ -113,7 +113,7 @@ def add_feedback(feedback_type: str, context: str) -> None:
         save_learnings(learnings)
 
 
-def analyze_and_learn(messages: list[dict], pool) -> None:
+def analyze_and_learn(messages: list[dict], pool, max_retries: int = 3) -> None:
     if not messages or len(messages) < 2:
         return
 
@@ -142,7 +142,7 @@ def analyze_and_learn(messages: list[dict], pool) -> None:
                 "role": "user",
                 "content": f"Analyze this conversation:\n\n{conversation}",
             },
-        ])
+        ], max_retries=max_retries)
 
         choices = response.get("choices", [])
         if not choices:

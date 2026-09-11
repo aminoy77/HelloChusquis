@@ -82,6 +82,7 @@ import tools.pipedream as pipedream_module
 import tools.retool as retool_module
 import tools.workato as workato_module
 import tools.make as make_module
+from core.subagents import SUBAGENT_TOOL_SCHEMA, handle_subagent_tool, subagents_prompt_section
 
 
 def _build_tools_schema(plugins: list) -> list:
@@ -1012,6 +1013,7 @@ def _build_tools_schema(plugins: list) -> list:
     ]
     for plugin in plugins:
         schema.append(plugin["schema"])
+    schema.append(SUBAGENT_TOOL_SCHEMA)
     return schema
 
 
@@ -1040,6 +1042,68 @@ def parse_memory_command(text: str) -> tuple[str, str] | None:
     if lowered.startswith("forget ") and stripped[7:].strip():
         return ("forget", stripped[7:].strip()[:120])
     return None
+
+
+def parse_fenced_tool_call(content: str) -> tuple[str, dict] | None:
+    """Small models often emit ```json {"name": ..., "arguments": ...} text
+    instead of a tool_calls payload. Return (name, args) or None."""
+    if not content:
+        return None
+    stripped = content.strip()
+    if stripped.startswith("{"):
+        # Bare JSON object as the whole message (no fences at all).
+        try:
+            data, _ = json.JSONDecoder().raw_decode(stripped)
+            if isinstance(data, dict) and isinstance(data.get("name"), str) and data.get("name"):
+                args = data.get("arguments", {})
+                if isinstance(args, str):
+                    args = json.loads(args)
+                if isinstance(args, dict):
+                    return data["name"], args
+        except ValueError:
+            pass
+    if "```" not in content:
+        return None
+    start = content.find("```")
+    fence = content[start:]
+    newline = fence.find("\n")
+    body = fence[newline + 1:] if newline != -1 else fence[3:]
+    end = body.find("```")
+    candidate = body[:end] if end != -1 else body
+    candidate = candidate.strip()
+    if candidate[:4].lower() == "json" and not candidate.startswith("{"):
+        candidate = candidate[4:].strip()
+    try:
+        data, _ = json.JSONDecoder().raw_decode(candidate)
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    name = data.get("name")
+    args = data.get("arguments", {})
+    if not isinstance(name, str) or not name:
+        return None
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except ValueError:
+            return None
+    if not isinstance(args, dict):
+        return None
+    return name, args
+
+
+def with_fenced_tools(message: dict) -> dict:
+    """Inject synthetic tool_calls when content carries fenced tool JSON."""
+    if not message.get("tool_calls"):
+        fenced = parse_fenced_tool_call(message.get("content") or "")
+        if fenced:
+            fname, fargs = fenced
+            return dict(message, tool_calls=[{
+                "id": "fenced-%d" % abs(hash((fname, message.get("content", "")))),
+                "function": {"name": fname, "arguments": json.dumps(fargs)},
+            }])
+    return message
 
 
 class Agent:
@@ -1145,6 +1209,8 @@ class Agent:
                 f"\n\nInstalled plugins available as tools: {plugin_names}. "
                 "Use them directly without asking the user to install anything."
             )
+
+        self.system_prompt += "\n\n" + subagents_prompt_section()
 
         # Available integrations list for proposing new tools
         
@@ -1360,6 +1426,9 @@ class Agent:
         def safe_tool_failure(tool_name: str, exc: Exception) -> ToolResult:
             logger.error("%s tool failed (%s)", tool_name, type(exc).__name__)
             return safe_tool_result_failure(tool_name)
+
+        if name == "subagent":
+            return handle_subagent_tool(self, args)
 
         if name == "shell":
             cmd = args.get("command", "")
@@ -1712,6 +1781,7 @@ class Agent:
             if not choices:
                 return "Error: No response from AI provider"
             message = choices[0].get("message", {})
+            message = with_fenced_tools(message)
 
             if not message.get("tool_calls"):
                 content = message.get("content") or ""
@@ -1867,6 +1937,7 @@ class Agent:
                 yield {"type": "done"}
                 return
             message = choices[0].get("message", {})
+            message = with_fenced_tools(message)
 
             if not message.get("tool_calls"):
                 content = message.get("content") or ""
@@ -1990,6 +2061,12 @@ class Agent:
             return
 
         memory.save_session(messages)
+        if len(messages) < 2:
+            try:
+                self.session_manager.close_session(self._session_id)
+            except Exception:
+                pass
+            return
 
         summary_prompt = (
             "Summarize the key facts, tasks completed, and important context "
@@ -1997,20 +2074,25 @@ class Agent:
             + "\n".join(f"{m['role']}: {m['content'][:200]}" for m in messages)
         )
 
+        # Learnings run alongside summarization (independent stores) halve exit cost.
+        learn_thread = threading.Thread(
+            target=lambda: learning.analyze_and_learn(messages, self.pool, max_retries=1),
+            daemon=True,
+        )
+        learn_thread.start()
         try:
+            # ponytail: single attempt — shutdown must not hang on LLM retries.
             response = self.pool.chat_with_retry([
                 {"role": "user", "content": summary_prompt}
-            ])
+            ], max_retries=1)
             choices = response.get("choices", [])
-            if not choices:
-                return
-            summary = choices[0].get("message", {}).get("content", "")
-            memory.save_summary(summary)
+            if choices:
+                summary = choices[0].get("message", {}).get("content", "")
+                memory.save_summary(summary)
         except Exception:
             pass
-
-        learning.analyze_and_learn(messages, self.pool)
-        # Ya no limpiamos viejos porque SQLite permite gestionarlo mejor internamente
+        finally:
+            learn_thread.join(timeout=90)
 
         # Close session
         try:

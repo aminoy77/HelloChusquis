@@ -50,10 +50,22 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 30  # seconds
 DEFAULT_MAX_OUTPUT_BYTES = 1024 * 1024  # 1 MB
+# Foreground results feed the model context: cap tightly, keep session buffers full.
+FOREGROUND_MAX_OUTPUT_CHARS = 24_000
+
+
+def _trim_foreground(text: str, session_id: str = "") -> str:
+    """Head+tail trim for model-bound output; full log stays in the session."""
+    if len(text) <= FOREGROUND_MAX_OUTPUT_CHARS:
+        return text
+    half = FOREGROUND_MAX_OUTPUT_CHARS // 2
+    hint = f"\n[... output trimmed to {FOREGROUND_MAX_OUTPUT_CHARS} chars"
+    hint += f"; full log via shell poll/log session={session_id} ...]\n" if session_id else " ...]\n"
+    return text[:half] + hint + text[-half:]
 DEFAULT_QUEUE_CAPACITY = 100
 DEFAULT_MAX_CONCURRENT = 4
 DEFAULT_KILL_GRACE_MS = 2000
-POLL_INTERVAL_MS = 100
+POLL_INTERVAL_MS = 10  # tight quantum: short commands dominate; long ones don't care
 DEFAULT_LOG_TAIL_LINES = 200
 DEFAULT_MAX_FINISHED_SESSIONS = 100
 OUTPUT_TRUNCATION_MARKER = "[output truncated]\n"
@@ -692,9 +704,39 @@ class ProcessManager:
                 if session.exit_code == 0
                 else ProcessStatus.FAILED
             )
+            self._drain_pipes(session)
             self._finalize(session_id)
 
         return new_output if new_output else None
+
+    def _drain_pipes(self, session: ProcessSession) -> None:
+        """Read pipe leftovers to EOF after exit; the wait loop may stop early."""
+        import select
+
+        proc = session.process
+        for attr, name in (("stdout", "stdout_buffer"), ("stderr", "stderr_buffer")):
+            stream = getattr(proc, attr, None)
+            if not stream or not hasattr(stream, "fileno"):
+                continue
+            try:
+                fd = stream.fileno()
+            except (ValueError, OSError):
+                continue
+            for _ in range(256):  # bounded: 256 x 64KB max
+                try:
+                    if not select.select([fd], [], [], 0.2)[0]:
+                        break
+                    chunk = os.read(fd, 65536)
+                except (BlockingIOError, ValueError, OSError):
+                    break
+                if not chunk:
+                    break
+                text = chunk.decode("utf-8", errors="replace")
+                if name == "stderr_buffer":
+                    self._append_output(session, name, text)
+                else:
+                    session.stdout_buffer += text
+                    self._append_output(session, "aggregated", text)
 
     def poll_until_exit(
         self, session_id: str, timeout: Optional[float] = None
@@ -1163,7 +1205,7 @@ class ShellTool(BaseTool):
         if session.status == ProcessStatus.TIMEOUT:
             return ToolResult(
                 success=False,
-                output=session.stdout_buffer,
+                output=_trim_foreground(session.stdout_buffer, session.id),
                 error=f"Command timed out after {effective_timeout}s",
             )
 
@@ -1184,17 +1226,17 @@ class ShellTool(BaseTool):
         if session.status == ProcessStatus.KILLED:
             return ToolResult(
                 success=False,
-                output=stdout,
+                output=_trim_foreground(stdout, session.id),
                 error=f"Process killed: {stderr}" if stderr else "Process killed",
             )
 
         if session.exit_code == 0:
-            output = stdout
+            output = _trim_foreground(stdout, session.id)
             if review and review.suggestions:
                 output += f"\n\n[Suggestions] {'; '.join(review.suggestions)}"
             return ToolResult(success=True, output=output)
 
-        return ToolResult(success=False, output=stdout, error=stderr)
+        return ToolResult(success=False, output=_trim_foreground(stdout, session.id), error=stderr)
 
     def _exec_background(
         self, command: str, *, workdir: Optional[str] = None, env: Optional[Dict[str, str]] = None,

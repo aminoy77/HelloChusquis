@@ -16,7 +16,25 @@ All notable changes to HelloChusquis. Older per-release notes previously lived i
   usuario (badge listo + contador), Resumen Sesiones/Mensajes/Listos/Tools y
   welcome con stats de chats. Sin endpoints nuevos.
 
-## Unreleased
+## 5.4 — 2026-09-11
+
+### Added
+- Subagent system: main agent invokes unlimited specialists via one `subagent`
+  tool (`list`/`run`/`fanout`/`custom`, incl. inline custom types). 12 builtins
+  in `agents/<name>/AGENT.md`, isolated contexts, harness-enforced tool
+  allowlists, hard budgets (12 steps / 12k tokens / 180s, 8 concurrent max),
+  fanout outputs truncated to protect parent context.
+- Subagent iteration 2: per-call `model`/`provider` routing, `isolated:true`
+  writers in throwaway git worktrees (shell/code disabled, files
+  path-contained, diff appended), harness-enforced flat hierarchy
+  (subagents cannot spawn subagents).
+- Telegram bridge: `hellochusquis telegram` chats from Telegram with
+  allowlisted chat IDs, per-chat conversations, stdlib long-polling, no new deps.
+- TUI: right info rail (session stats + live plan), centered command palette,
+  multiline wrapping input with fixed dock layout (no more hidden rows).
+- Landing (`docs/index.html`): unified numbers (120+ tools, 70+ providers),
+  9→7 H2s, workflows replace testimonials, demo merged, fonts display=swap,
+  no-JS fallback for the hero demo.
 
 ### Fixed
 - `secret_scanner` raised `UnboundLocalError` on every action because `os` was re-imported

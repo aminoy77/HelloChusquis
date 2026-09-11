@@ -5,7 +5,7 @@ import asyncio
 import time
 from typing import Optional
 
-from textual import on, work
+from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -13,10 +13,10 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import (
     Footer,
-    Input,
     Label,
     RichLog,
     Static,
+    TextArea,
 )
 
 from rich.markup import escape
@@ -42,6 +42,7 @@ BORDER = "#1e1d1a"
 TUI_CSS = """
 Screen {
     background: #050504;
+    align-horizontal: center;
 }
 
 #top-bar {
@@ -64,23 +65,41 @@ Screen {
     background: #050504;
 }
 
-#input-area {
-    height: 3;
+#bottom {
+    height: auto;
     dock: bottom;
+}
+
+#input-area {
+    height: 4;
     background: #0c0c0a;
     border-top: tall #1e1d1a;
     padding: 0 1;
 }
 
-#input-area Input {
+#input-area ChatInput {
     background: #0c0c0a;
     border: none;
     color: #e8e3d8;
+    height: 3;
+}
+
+#main {
+    height: 1fr;
+}
+
+#sidebar {
+    width: 34;
+    min-width: 28;
+    background: #0c0c0a;
+    border-left: tall #1e1d1a;
+    padding: 0 1;
+    overflow-y: auto;
+    scrollbar-size: 0 0;
 }
 
 #status-bar {
     height: 1;
-    dock: bottom;
     background: #0c0c0a;
     color: #7e7a70;
     padding: 0 1;
@@ -88,16 +107,14 @@ Screen {
 
 #command-palette {
     layer: overlay;
-    width: 60;
+    width: 78;
     height: auto;
-    max-height: 30;
+    max-height: 36;
     background: #0c0c0a;
-    border: tall #1e1d1a;
-    padding: 1 0;
+    border: tall #f5a623;
+    padding: 1 2;
     display: none;
-    dock: top;
-    margin-top: 5;
-    margin-left: 5;
+    margin-top: 4;
 }
 
 #command-palette.visible {
@@ -114,7 +131,7 @@ Screen {
 #palette-list {
     background: #0c0c0a;
     height: auto;
-    max-height: 20;
+    max-height: 24;
     overflow-y: auto;
 }
 
@@ -173,7 +190,6 @@ class StatusBar(Widget):
     CSS = """
     StatusBar {
         height: 1;
-        dock: bottom;
         background: #0c0c0a;
         color: #7e7a70;
         padding: 0 1;
@@ -192,21 +208,59 @@ class StatusBar(Widget):
         return t
 
 
+class SideBar(Widget):
+    """Right info rail: session stats on top, live plan below."""
+    _provider = reactive("–")
+    _model = reactive("–")
+    _msgs = reactive(0)
+    _tokens = reactive("–")
+    _tools = reactive(0)
+    _plan_task = reactive("")
+    _plan_steps = reactive(tuple())
+
+    def render(self) -> Text:
+        t = Text()
+        t.append(" session\n", style=f"bold {AMBER}")
+        t.append(" ───────────────\n", style="dim")
+        t.append(" provider  ", style="dim")
+        t.append(f"{self._provider}\n", style=f"bold {GREEN}")
+        t.append(" model     ", style="dim")
+        t.append(f"{self._model}\n")
+        t.append(" msgs      ", style="dim")
+        t.append(f"{self._msgs}\n", style="bold")
+        t.append(" tokens    ", style="dim")
+        t.append(f"{self._tokens}\n", style="bold")
+        t.append(" tools     ", style="dim")
+        t.append(f"{self._tools}\n", style="bold")
+        t.append("\n plan\n", style=f"bold {AMBER}")
+        t.append(" ───────────────\n", style="dim")
+        if not self._plan_steps:
+            t.append(" No plan yet.\n", style="dim")
+            t.append(" /plan <task>\n", style="dim")
+        else:
+            t.append(f" {self._plan_task[:28]}\n", style=f"bold {AMBER}")
+            for i, step in enumerate(self._plan_steps, 1):
+                t.append(f" {i}. {step[:30]}\n", style="dim")
+        return t
+
+    def set_plan(self, task: str, steps: list[str]) -> None:
+        self._plan_task = task or ""
+        self._plan_steps = tuple(steps or [])
+
+
 class CommandPalette(Widget):
     """Command palette overlay like opencode."""
     CSS = """
     CommandPalette {
         layer: overlay;
-        width: 60;
+        width: 78;
         height: auto;
-        max-height: 30;
+        max-height: 36;
         background: #0c0c0a;
-        border: tall #1e1d1a;
-        padding: 1 0;
+        border: tall #f5a623;
+        padding: 1 2;
         display: none;
-        dock: top;
-        margin-top: 5;
-        margin-left: 5;
+        margin-top: 4;
     }
     CommandPalette.visible {
         display: block;
@@ -304,12 +358,41 @@ class MessageLog(VerticalScroll):
         yield RichLog(id="log", markup=True, wrap=True, highlight=False)
 
 
+class ChatInput(TextArea):
+    """Multiline chat box: wraps + scrolls, Enter sends, Shift+Enter newline."""
+    # NOTE: Binding alone can't beat TextArea._on_key (it stop()s Enter),
+    # so Enter is intercepted in _on_key below.
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            "",
+            show_line_numbers=False,
+            soft_wrap=True,
+            placeholder="Type a message...  (Enter send · Shift+Enter newline · Ctrl+P commands)",
+            **kwargs,
+        )
+
+    async def _on_key(self, event) -> None:
+        if event.key == "enter":
+            event.stop()
+            event.prevent_default()
+            submit = getattr(self.app, "submit_chat_text", None)
+            if callable(submit):
+                submit(self.text)
+            return
+        if event.key == "shift+enter":
+            event.stop()
+            event.prevent_default()
+            self.insert("\n")
+            return
+        await super()._on_key(event)
+
+
 class InputArea(Widget):
-    """Bottom input area."""
+    """Bottom input area — bigger box."""
     CSS = """
     InputArea {
-        height: 3;
-        dock: bottom;
+        height: 4;
         background: #0c0c0a;
         border-top: tall #1e1d1a;
         padding: 0 1;
@@ -317,7 +400,7 @@ class InputArea(Widget):
     """
 
     def compose(self) -> ComposeResult:
-        yield Input(placeholder="Type a message...", id="input")
+        yield ChatInput(id="input")
 
 
 class HelloChusquisTUI(App):
@@ -345,10 +428,13 @@ class HelloChusquisTUI(App):
 
     def compose(self) -> ComposeResult:
         yield TopBar(id="top-bar")
-        yield MessageLog(id="messages")
-        yield InputArea(id="input-area")
-        yield StatusBar(id="status-bar")
         yield CommandPalette(id="command-palette")
+        with Horizontal(id="main"):
+            yield MessageLog(id="messages")
+            yield SideBar(id="sidebar")
+        with Vertical(id="bottom"):
+            yield InputArea(id="input-area")
+            yield StatusBar(id="status-bar")
 
     def on_mount(self) -> None:
         self.query_one("#input").focus()
@@ -363,14 +449,30 @@ class HelloChusquisTUI(App):
         bar._msgs = self._msg_count
         bar._tools = self._tool_count
         bar._processing = self._processing
+        provider, model, tokens = "", "", "–"
         if self.agent:
             try:
                 statuses = self.agent.pool.status()
-                active = next((s for s in statuses if s["status"] == "ready"), None)
+                active = next((s for s in statuses if s["status"] == "ready"), None) or (statuses[0] if statuses else None)
                 if active:
-                    bar._provider = f"{active['name']} · {active['model']}"
+                    provider, model = active["name"], active["model"]
+                    bar._provider = f"{provider} · {model}"
             except Exception:
                 pass
+            try:
+                n = self.agent.history.get_token_count(self.agent.history.messages)
+                tokens = f"{n / 1000:.1f}k" if n >= 1000 else str(n)
+            except Exception:
+                pass
+        try:
+            side = self.query_one("#sidebar", SideBar)
+            side._provider = provider or "–"
+            side._model = model or "–"
+            side._msgs = self._msg_count
+            side._tokens = tokens
+            side._tools = self._tool_count
+        except Exception:
+            pass
 
     def _add_user_msg(self, text: str):
         log = self.query_one("#log", RichLog)
@@ -478,13 +580,14 @@ class HelloChusquisTUI(App):
         log.write(t)
 
     def _add_plan(self, steps: list[str], task: str):
+        try:
+            self.query_one("#sidebar", SideBar).set_plan(task, steps)
+        except Exception:
+            pass
         log = self.query_one("#log", RichLog)
         t = Text()
-        t.append(f" │ plan ", style=f"bold {AMBER}")
-        t.append(task, style=f"bold {AMBER}")
-        t.append("\n")
-        for i, step in enumerate(steps, 1):
-            t.append(f" │  {i}. {step}\n", style="dim")
+        t.append(" │ plan ", style=f"bold {AMBER}")
+        t.append(f"{task} → sidebar ({len(steps)} steps)", style="dim")
         log.write(t)
         self._msg_count += 1
         self._update_topbar()
@@ -531,11 +634,13 @@ class HelloChusquisTUI(App):
         elif cmd_id == "feedback-":
             self._add_system_msg("👎 Feedback noted.")
 
-    # ─── Input Handling ───
-    @on(Input.Submitted, "#input")
-    def handle_input(self, event: Input.Submitted) -> None:
-        text = event.value.strip()
-        event.control.value = ""
+    # ─── Input Handling (Enter sends, Shift+Enter newline via ChatInput) ───
+    def submit_chat_text(self, raw: str) -> None:
+        text = (raw or "").strip()
+        try:
+            self.query_one("#input", ChatInput).clear()
+        except Exception:
+            pass
 
         if not text:
             return
@@ -647,7 +752,7 @@ class HelloChusquisTUI(App):
             inp.placeholder = "Processing..."
         else:
             inp.disabled = False
-            inp.placeholder = "Type a message..."
+            inp.placeholder = "Type a message...  (Enter send · Ctrl+P commands)"
             inp.focus()
         self._update_topbar()
 

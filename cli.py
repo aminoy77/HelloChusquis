@@ -8,7 +8,18 @@ import socket
 # Add project to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "users", "version", "help"}
+KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "users", "version", "help", "telegram"}
+
+
+def _open_browser(host: str, port: int) -> None:
+    """Open the web UI in the default browser (best-effort, never fails)."""
+    import webbrowser
+
+    shown = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    try:
+        webbrowser.open(f"http://{shown}:{port}")
+    except Exception:
+        pass
 
 
 def pick_free_port(host="127.0.0.1"):
@@ -89,6 +100,7 @@ Usage:
   hellochusquis                  Start chat REPL (default)
   hellochusquis web              Launch web UI
   hellochusquis api              Launch REST API
+  hellochusquis telegram         Chat from Telegram (needs bot token)
   hellochusquis config           Edit configuration
   hellochusquis setup            Run setup wizard
   hellochusquis status           Show local readiness summary
@@ -108,11 +120,16 @@ Flags:
   --port PORT        Port for web/api (default: 8080 api / 7272 web)
   --host HOST        Host for web/api (default: 127.0.0.1)
   --contracts        Verify bundled integration contracts offline (with doctor)
+  --live             Ping each provider endpoint (with doctor)
   --role ROLE        Role for 'users add': viewer, operator or owner (default: operator)
+  --token TOKEN      Telegram bot token (or HELLOCHUSQUIS_TELEGRAM_TOKEN)
+  --allow IDS        Telegram chat IDs, comma-separated (or HELLOCHUSQUIS_TELEGRAM_ALLOW)
 
 Examples:
   hellochusquis setup --quick       Quick first-time setup
   hellochusquis web --port 3000     Web UI on port 3000
+  hellochusquis telegram --allow 123456789
+                            Telegram bridge for your chat
   hellochusquis config --show       View masked config
   hellochusquis status              Check local readiness
   hellochusquis api --host 0.0.0.0  API on all interfaces
@@ -131,7 +148,10 @@ def main():
     parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 7272 web)")
     parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 127.0.0.1)")
     parser.add_argument("--contracts", action="store_true", help="Verify integration contracts offline (with doctor)")
+    parser.add_argument("--live", action="store_true", help="Ping each provider endpoint (with doctor)")
     parser.add_argument("--role", type=str, default="operator", help="Role for 'users add' (viewer, operator, owner)")
+    parser.add_argument("--token", type=str, default=None, help="Telegram bot token")
+    parser.add_argument("--allow", type=str, default=None, help="Telegram chat IDs, comma-separated")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
     args = parser.parse_args()
 
@@ -251,7 +271,56 @@ def main():
                 print(f"Port 7272 unavailable; using random port {port}")
 
         print(f"Starting HelloChusquis web interface on http://{host}:{port}")
+        _open_browser(host, port)
         start(host=host, port=port)
+        return
+
+    if args.command == "telegram":
+        from core.telegram_bridge import TelegramAPI, TelegramBridge
+        token = args.token or os.environ.get("HELLOCHUSQUIS_TELEGRAM_TOKEN", "")
+        allow = args.allow or os.environ.get("HELLOCHUSQUIS_TELEGRAM_ALLOW", "")
+        if not token:
+            print("Missing bot token. Talk to @BotFather, then:")
+            print("  hellochusquis telegram --token <token> --allow <your-chat-id>")
+            print("  (or set HELLOCHUSQUIS_TELEGRAM_TOKEN / HELLOCHUSQUIS_TELEGRAM_ALLOW)")
+            return 1
+        try:
+            allow_ids = {int(x) for x in str(allow).split(",") if x.strip()}
+        except ValueError:
+            print("Invalid --allow value. Use comma-separated Telegram chat IDs.")
+            return 1
+        if not allow_ids:
+            print("Refusing to start an open bot. Pass --allow <your-chat-id> first.")
+            print("Tip: message @userinfobot to learn your chat ID.")
+            return 1
+        from core.setup import ensure_config
+        from core.agent import Agent
+        config = ensure_config()
+        agents = {}
+
+        def handle(chat_id, text):
+            agent = agents.get(chat_id)
+            if agent is None:
+                agent = Agent(config, session_key=f"telegram:{chat_id}")
+                agents[chat_id] = agent
+            if not agent.try_acquire_turn():
+                return "Busy with your previous message, try again in a moment."
+            try:
+                if text == "/clear":
+                    agent.clear_conversation()
+                    return "History cleared."
+                return agent.run(text)
+            except RuntimeError:
+                return "The request could not be completed. Check server logs."
+            finally:
+                agent.release_turn()
+
+        bridge = TelegramBridge(TelegramAPI(token).call, handle, allow_ids)
+        print(f"Telegram bridge listening for {len(allow_ids)} chat(s). Ctrl+C to stop.")
+        try:
+            bridge.run_forever()
+        except KeyboardInterrupt:
+            print("\nStopped.")
         return
 
     if args.command == "api":
@@ -266,7 +335,7 @@ def main():
     if args.command == "doctor":
         if args.contracts:
             return _print_contract_summary()
-        from core.setup import ensure_config, console
+        from core.setup import ensure_config, console, find_config_shadows, live_check_provider
         from rich.panel import Panel
         try:
             config = ensure_config(interactive=False)
@@ -280,6 +349,10 @@ def main():
             "[bold #f5a623]Doctor Check[/bold #f5a623]",
             expand=False
         ))
+
+        _, shadowed = find_config_shadows()
+        for extra in shadowed:
+            console.print(f"[yellow]![/yellow] [yellow]Shadowed config ignored: {extra} (delete if stale)[/yellow]")
 
         if not providers:
             console.print("[red]No providers configured.[/red]")
@@ -296,13 +369,19 @@ def main():
                 console.print(f"  [yellow]?[/yellow] {name} — [yellow]Ollama (check if running)[/yellow]")
             else:
                 console.print(f"  [green]✓[/green] {name} — key configured")
+            if args.live:
+                ok, detail, ms = live_check_provider(p)
+                if ok:
+                    console.print(f"    [green]✓[/green] [dim]live {ms:.0f}ms ({detail})[/dim]")
+                else:
+                    console.print(f"    [red]✗[/red] [red]unreachable: {detail}[/red]")
 
         console.print("\n[dim]Edit config: hellochusquis config[/dim]")
         return
 
     # Validate unknown commands
     if args.command is not None:
-        print(f"Unknown command '{args.command}'. Try: web, api, config, setup, status, or nothing for chat.")
+        print(f"Unknown command '{args.command}'. Try: web, api, telegram, config, setup, status, or nothing for chat.")
         print("Run 'hellochusquis help' for full usage.")
         sys.exit(1)
 
