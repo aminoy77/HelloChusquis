@@ -7,13 +7,13 @@ from api import main as api_main
 
 
 class _AgentWithTerminalEvent:
-    def stream_run(self, message):
+    def stream_run(self, message, provider=None, model=None):
         yield {"type": "chunk", "content": message}
         yield {"type": "done"}
 
 
 class _FailingAgent:
-    def stream_run(self, message):
+    def stream_run(self, message, provider=None, model=None):
         raise RuntimeError("provider unavailable")
         yield  # Make this a generator for the protocol helper.
 

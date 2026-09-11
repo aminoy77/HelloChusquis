@@ -6,7 +6,7 @@ from core.doc_parser import DocParser
 
 
 class _AgentFailsAfterDone:
-    def stream_run(self, message):
+    def stream_run(self, message, provider=None, model=None):
         yield {"type": "done"}
         raise RuntimeError("late provider failure")
 

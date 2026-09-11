@@ -26,7 +26,7 @@ def _cleanup(agent, retention_days):
     console.print("[dim]Goodbye.[/dim]")
 
 
-# Palabras que siempre son tareas complejas — sin llamar al LLM
+# Keywords that always mean complex tasks — no LLM call needed
 FORCE_PLAN_KEYWORDS = [
     "informe", "report", "analiza", "analyze", "investiga", "research",
     "crea un pdf", "crea un word", "crea un documento", "haz un estudio",
@@ -34,7 +34,7 @@ FORCE_PLAN_KEYWORDS = [
     "paso a paso", "step by step", "lista de", "plan de"
 ]
 
-# Palabras que siempre son simples — sin llamar al LLM
+# Keywords that are always simple — no LLM call needed
 FORCE_SIMPLE_KEYWORDS = [
     "hola", "hello", "hi", "hey", "gracias", "thanks", "ok", "vale",
     "sí", "no", "adios", "bye", "qué tal", "cómo estás", "buenas"
@@ -42,7 +42,7 @@ FORCE_SIMPLE_KEYWORDS = [
 
 
 def is_complex(text: str) -> bool:
-    """Detecta complejidad SIN llamar al LLM — instant."""
+    """Detect complexity WITHOUT calling the LLM — instant."""
     lower = text.lower().strip()
 
     if lower in FORCE_SIMPLE_KEYWORDS:

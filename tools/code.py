@@ -58,6 +58,13 @@ class CodeTool(BaseTool):
                 output="",
                 error=f"Code exceeds the {self.MAX_CODE_CHARS}-character limit",
             )
+        try:
+            compile(code, "<code-tool>", "exec")
+        except SyntaxError as exc:
+            return ToolResult(
+                success=False, output="",
+                error=f"SyntaxError on line {exc.lineno}: {exc.msg}",
+            )
 
         tmp_path: str | None = None
         process: subprocess.Popen | None = None

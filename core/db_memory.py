@@ -1437,6 +1437,28 @@ def save_turn(user_text: str, assistant_text: str) -> None:
         pass
 
 
+def kb_ingested_count() -> int:
+    """How many KB source files are currently ingested (0 on fresh/error)."""
+    try:
+        row = _get_store().conn.execute("SELECT COUNT(*) FROM kb_sources").fetchone()
+        return row[0] if row else 0
+    except Exception:
+        return 0
+
+
+def prune_sessions_older_than(days: int) -> int:
+    """Delete sessions older than N days. Returns rows removed."""
+    from datetime import datetime, timedelta
+    try:
+        cutoff = (datetime.now() - timedelta(days=max(0, int(days)))).isoformat()
+        cur = _get_store().conn.execute(
+            "DELETE FROM sessions WHERE timestamp < ?", (cutoff,))
+        _get_store().conn.commit()
+        return cur.rowcount or 0
+    except Exception:
+        return 0
+
+
 def recall_context(query: str, limit: int = RECALL_TOP_K, max_chars: int = RECALL_MAX_CHARS) -> str:
     """Return a small 'Past context' block of relevant past turns/facts."""
     try:

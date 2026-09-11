@@ -554,6 +554,8 @@ class HelloChusquisTUI(App):
         t.append(" │ /status    Provider status\n", style="dim")
         t.append(" │ /clear     Clear history\n", style="dim")
         t.append(" │ /plan      Force plan: /plan <task>\n", style="dim")
+        t.append(" │ remember … Save a fact: remember my editor is vim\n", style="dim")
+        t.append(" │ forget …   Drop memories matching a key\n", style="dim")
         t.append(" │ exit       Exit\n", style="dim")
         log.write(t)
 

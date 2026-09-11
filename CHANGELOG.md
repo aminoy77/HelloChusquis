@@ -16,6 +16,13 @@ All notable changes to HelloChusquis. Older per-release notes previously lived i
   usuario (badge listo + contador), Resumen Sesiones/Mensajes/Listos/Tools y
   welcome con stats de chats. Sin endpoints nuevos.
 
+## Unreleased
+
+### Added
+- Subagent events (`run_start`/`tool_call`/`run_finish` callback plumbing for
+  future streaming) and opt-in result cache: pure-reasoning outputs reused by
+  TTL, tool runs always re-execute, 128-entry LRU ≈ 1 MB max.
+
 ## 5.4 — 2026-09-11
 
 ### Added
@@ -30,6 +37,10 @@ All notable changes to HelloChusquis. Older per-release notes previously lived i
   (subagents cannot spawn subagents).
 - Telegram bridge: `hellochusquis telegram` chats from Telegram with
   allowlisted chat IDs, per-chat conversations, stdlib long-polling, no new deps.
+- Subagent `chain` action: sequential pipelines where each step sees prior
+  outputs (worker → reviewer); halts on first failure.
+- Subagent `fail_fast` flag for fanout plus per-run `duration_s` timing and a
+  fanout totals footer for observability.
 - TUI: right info rail (session stats + live plan), centered command palette,
   multiline wrapping input with fixed dock layout (no more hidden rows).
 - Landing (`docs/index.html`): unified numbers (120+ tools, 70+ providers),

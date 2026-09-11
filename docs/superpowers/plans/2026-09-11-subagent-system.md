@@ -79,3 +79,16 @@
 - [ ] Flat guard: `subagent` tool calls inside `run_one` blocked in harness; test asserts never dispatched.
 - [ ] Isolation: `git_worktree` ctx manager + `scoped_dispatch` path guard (shell/code blocked); `isolated` flag on defs/calls; diff appended; tests cover guard + real worktree create/clean.
 - [ ] Docs: schema properties, prompt lines, AGENT.md model/isolation lines, changelog.
+
+---
+
+### Task 7 (iteration 3): chain pipelines + observability + fail_fast
+
+- [ ] `chain()`: sequential jobs with prior-output threading (capped), halt on
+  first failure; `chain` action in handler + schema + prompt.
+- [ ] `duration_s` on every result; fanout totals footer in handler.
+- [ ] `fail_fast`: shared flag checked at job start (deterministic, no
+  cancel-race); skipped jobs filtered, never dispatched.
+- [ ] Deliberately skipped: skills injection (skills are approval-gated local
+  shell workflows — wrong fit for non-interactive subagents), nested
+  subagents (anti-pattern), auto model tiers (needs provider inventory).

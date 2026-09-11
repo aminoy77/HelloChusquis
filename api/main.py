@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Literal
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 import uvicorn
@@ -134,6 +134,7 @@ _chat_limiter = RateLimiter(requests_per_minute=30)
 _feedback_limiter = RateLimiter(requests_per_minute=10)
 _reload_limiter = RateLimiter(requests_per_minute=3)
 _users_limiter = RateLimiter(requests_per_minute=10)
+_models_limiter = RateLimiter(requests_per_minute=30)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -192,6 +193,8 @@ def _require_agent(http_request: Request | None = None):
 class ChatRequest(BaseModel):
     message: str
     stream: bool = True
+    provider: str | None = Field(default=None, max_length=200)
+    model: str | None = Field(default=None, max_length=256)
 
     @field_validator("message")
     @classmethod
@@ -271,13 +274,35 @@ def get_status():
             "error": "Runtime unavailable",
         }
     agent = _require_agent()
+    try:
+        import core.db_memory as db_memory
+        summary = db_memory.load_summary()
+        sessions = db_memory._get_store().get_session_count()
+    except Exception:
+        summary, sessions = "", 0
     return {
         "agent_ready": True,
         "active_sessions": runtime.session_count,
         "providers": agent.pool.status(),
         "plugins": [plugin["name"] for plugin in agent.plugins],
-        "memory": {"sessions": "N/A", "summary": "Available"},
+        "memory": {"sessions": sessions, "summary": summary[:200] if summary else ""},
     }
+
+
+@app.get("/models")
+def list_models(http_request: Request, provider: str = "", refresh: bool = False):
+    """Available models for a configured provider."""
+    require_permission(http_request, Permission.READ_STATE)
+    _require_administrative_rate_limit(_models_limiter, http_request, "/models")
+    agent = _require_agent(http_request)
+    known_names = {provider_status["name"] for provider_status in agent.pool.status()}
+    if provider not in known_names:
+        raise HTTPException(status_code=404, detail=f"Provider '{provider}' not found")
+    try:
+        return {"provider": provider, "models": agent.pool.list_models(provider, refresh=refresh)}
+    except Exception:
+        logger.exception("models fetch failed")
+        raise HTTPException(status_code=500, detail="Failed to fetch models")
 
 
 @app.get("/approvals")
@@ -359,13 +384,25 @@ def chat(request: ChatRequest, http_request: Request):
 
     if request.stream:
         return StreamingResponse(
-            _sse_generator(agent, request.message, release_turn=True),
+            _sse_generator(agent, request.message, release_turn=True,
+                           provider=request.provider, model=request.model),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
     try:
-        response = agent.run(request.message)
+        tool_calls_log = []
+
+        def record_tool_call(name, args, result):
+            tool_calls_log.append({
+                "tool": name,
+                "args": args,
+                "success": result.success,
+                "output": result.output[:200],
+            })
+
+        response = agent.run(request.message, provider=request.provider, model=request.model,
+                             tool_result_callback=record_tool_call)
     except ValueError as e:
         logger.warning("Chat validation error: %s", e)
         raise HTTPException(status_code=400, detail="Invalid chat request")
@@ -377,7 +414,7 @@ def chat(request: ChatRequest, http_request: Request):
 
     return {
         "response": response,
-        "tool_calls": []
+        "tool_calls": tool_calls_log
     }
 
 
@@ -397,17 +434,19 @@ def chat_stream(request: ChatRequest, http_request: Request):
     if not agent.try_acquire_turn():
         raise HTTPException(status_code=409, detail="This conversation is already processing another request")
     return StreamingResponse(
-        _sse_generator(agent, request.message, release_turn=True),
+        _sse_generator(agent, request.message, release_turn=True,
+                       provider=request.provider, model=request.model),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
-def _sse_generator(agent, message: str, release_turn: bool = False):
+def _sse_generator(agent, message: str, release_turn: bool = False,
+                   provider: str | None = None, model: str | None = None):
     """Yield one terminal SSE event and optionally release the session turn."""
     terminal_emitted = False
     try:
-        for event in agent.stream_run(message):
+        for event in agent.stream_run(message, provider=provider, model=model):
             if event.get("type") == "done":
                 terminal_emitted = True
             yield f"data: {json.dumps(event)}\n\n"

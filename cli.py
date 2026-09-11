@@ -105,6 +105,9 @@ Usage:
   hellochusquis setup            Run setup wizard
   hellochusquis status           Show local readiness summary
   hellochusquis doctor           Check providers & dependencies
+  hellochusquis models           List configured providers and models
+  hellochusquis memory [QUERY]   Memory stats, search, or remember|forget FACT
+  hellochusquis knowledge        Knowledge base stats (--reingest to refresh)
   hellochusquis users list       List HTTP users and their roles
   hellochusquis users add NAME   Create a user and print its token once
   hellochusquis users revoke NAME  Revoke a user's token
@@ -121,6 +124,7 @@ Flags:
   --host HOST        Host for web/api (default: 127.0.0.1)
   --contracts        Verify bundled integration contracts offline (with doctor)
   --live             Ping each provider endpoint (with doctor)
+  --no-browser       Don't auto-open the browser (with web)
   --role ROLE        Role for 'users add': viewer, operator or owner (default: operator)
   --token TOKEN      Telegram bot token (or HELLOCHUSQUIS_TELEGRAM_TOKEN)
   --allow IDS        Telegram chat IDs, comma-separated (or HELLOCHUSQUIS_TELEGRAM_ALLOW)
@@ -149,15 +153,27 @@ def main():
     parser.add_argument("--host", type=str, default=None, help="Host for api/web commands (default: 127.0.0.1)")
     parser.add_argument("--contracts", action="store_true", help="Verify integration contracts offline (with doctor)")
     parser.add_argument("--live", action="store_true", help="Ping each provider endpoint (with doctor)")
+    parser.add_argument("--no-browser", action="store_true", help="Don't auto-open the browser (with web)")
+    parser.add_argument("--reingest", action="store_true", help="Force knowledge reingest (with knowledge)")
     parser.add_argument("--role", type=str, default="operator", help="Role for 'users add' (viewer, operator, owner)")
     parser.add_argument("--token", type=str, default=None, help="Telegram bot token")
     parser.add_argument("--allow", type=str, default=None, help="Telegram chat IDs, comma-separated")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
+    parser.add_argument("--version", action="store_true", help="Show version and exit")
     args = parser.parse_args()
 
     # Handle --help
     if args.show_help:
         _print_help()
+        return
+
+    # Handle --version
+    if args.version:
+        try:
+            from core.version import __version__
+            print(f"hellochusquis {__version__}")
+        except ImportError:
+            print("hellochusquis (version unknown)")
         return
 
     # Handle --quick flag directly (no command needed)
@@ -247,6 +263,21 @@ def main():
                 f"Status: {configured}/{len(providers)} provider(s) configured. "
                 "Run 'hellochusquis doctor' for provider details."
             )
+            from core.setup import find_config_shadows
+            active, _ = find_config_shadows()
+            if active:
+                print(f"Config: {active}")
+            try:
+                import core.db_memory as db_memory
+                store = db_memory._get_store()
+                print(
+                    f"Memory: {store.get_session_count()} sessions, "
+                    f"{store.get_entry_count()} entries, "
+                    f"{db_memory.kb_ingested_count()} KB sources."
+                )
+            except Exception:
+                pass
+
         if args.contracts:
             _print_contract_summary()
         return
@@ -271,7 +302,10 @@ def main():
                 print(f"Port 7272 unavailable; using random port {port}")
 
         print(f"Starting HelloChusquis web interface on http://{host}:{port}")
-        _open_browser(host, port)
+        if host in ("0.0.0.0", "::"):
+            print("Open http://127.0.0.1:%d in your browser." % port)
+        if not args.no_browser:
+            _open_browser(host, port)
         start(host=host, port=port)
         return
 
@@ -328,7 +362,17 @@ def main():
         import uvicorn
         host = args.host or "127.0.0.1"
         port = args.port or 8080
+        if port == 8080:
+            probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                probe.bind((host, 8080))
+                probe.close()
+            except OSError:
+                port = pick_free_port(host)
+                print(f"Port 8080 unavailable; using random port {port}")
         print(f"Starting HelloChusquis API on http://{host}:{port}")
+        if host in ("0.0.0.0", "::"):
+            print("Send requests to http://127.0.0.1:%d from this machine." % port)
         uvicorn.run(app, host=host, port=port)
         return
 
@@ -336,6 +380,8 @@ def main():
         if args.contracts:
             return _print_contract_summary()
         from core.setup import ensure_config, console, find_config_shadows, live_check_provider
+        from core.setup import find_duplicate_providers, check_workspace_dirs, count_kb_files
+        from core.setup import check_ports_free, check_browser_ready, _is_local_url
         from rich.panel import Panel
         try:
             config = ensure_config(interactive=False)
@@ -365,8 +411,12 @@ def main():
             base_url = p.get("base_url", "")
             if not api_key or len(api_key.strip()) == 0:
                 console.print(f"  [red]✗[/red] {name} — [red]empty API key[/red]")
-            elif "localhost" in base_url and api_key == "ollama":
-                console.print(f"  [yellow]?[/yellow] {name} — [yellow]Ollama (check if running)[/yellow]")
+            elif _is_local_url(base_url):
+                ok, _, ms = live_check_provider(p, timeout=1.0)
+                if ok:
+                    console.print(f"  [green]✓[/green] {name} — [green]local, responding ({ms:.0f}ms)[/green]")
+                else:
+                    console.print(f"  [red]✗[/red] {name} — [red]local server not running at {base_url}[/red]")
             else:
                 console.print(f"  [green]✓[/green] {name} — key configured")
             if args.live:
@@ -377,10 +427,117 @@ def main():
                     console.print(f"    [red]✗[/red] [red]unreachable: {detail}[/red]")
 
         console.print("\n[dim]Edit config: hellochusquis config[/dim]")
+
+        for dup in find_duplicate_providers(providers):
+            console.print(f"[yellow]![/yellow] [yellow]Duplicate provider: {dup} (remove one in config)[/yellow]")
+        _active_cfg, _ = find_config_shadows()
+        if _active_cfg:
+            console.print(f"[dim]Active config: {_active_cfg}[/dim]")
+        for path, exists in check_workspace_dirs(config.get("settings", {}).get("workspace_dirs", [])):
+            if not exists:
+                console.print(f"[yellow]![/yellow] [yellow]Workspace missing: {path}[/yellow]")
+        console.print(f"[dim]Knowledge base: {count_kb_files()} files[/dim]")
+        from core import db_memory as _dbm
+        if count_kb_files() > 0 and _dbm.kb_ingested_count() == 0:
+            console.print("[yellow]![/yellow] [yellow]Knowledge not ingested yet (starts on next chat/web session)[/yellow]")
+        elif _dbm.kb_ingested_count() < count_kb_files():
+            console.print("[dim]Knowledge: reingest pending (new files since last load)[/dim]")
+        for port, free in check_ports_free([7272, 8080]).items():
+            if not free:
+                console.print(f"[yellow]![/yellow] [yellow]Port {port} in use[/yellow]")
+        ok, hint = check_browser_ready()
+        console.print(f"[dim]Browser automation: {'ready' if ok else hint}[/dim]")
+        return
+
+    if args.command == "models":
+        from core.setup import ensure_config
+        try:
+            config = ensure_config(interactive=False)
+        except FileNotFoundError:
+            print("No providers configured. Run: hellochusquis setup")
+            return
+        needle = " ".join(args.args).strip().lower()
+        for p in config.get("providers", []):
+            if needle and needle not in p.get("name", "").lower():
+                continue
+            key_tag = "" if (p.get("api_key") or "").strip() else " (no key)"
+            print(f"{p.get('name', 'Unknown')}{key_tag} — {p.get('model', 'no model')} [{p.get('base_url', '')}]")
+        return
+
+    if args.command == "memory":
+        import core.db_memory as db_memory
+        rest = args.args
+        if rest and rest[0] == "remember" and len(rest) > 1:
+            fact = " ".join(rest[1:])
+            db_memory._get_store().add_entry(key="note", value=fact, category="fact", importance=6)
+            print(f"Remembered: {fact}")
+        elif rest and rest[0] == "forget" and len(rest) > 1:
+            n = db_memory.forget_matching(" ".join(rest[1:]))
+            print(f"Forgot {n} memories.")
+        elif rest and rest[0] == "sessions":
+            for s in db_memory._get_store().load_sessions(limit=10):
+                msgs = s.get("data", [])
+                print(f"{s.get('timestamp', '?')}  {len(msgs)} messages")
+        elif rest and rest[0] == "prune" and len(rest) > 1:
+            try:
+                days = int(rest[1])
+            except ValueError:
+                print("Usage: hellochusquis memory prune <days>")
+                return
+            print(f"Pruned {db_memory.prune_sessions_older_than(days)} old sessions.")
+        elif rest and rest[0] == "export" and len(rest) > 1:
+            from pathlib import Path as _Path
+            dest = _Path(rest[1]).expanduser()
+            lines = ["# HelloChusquis memory export", ""]
+            for s in db_memory._get_store().load_sessions(limit=1000):
+                lines.append(f"## {s.get('timestamp', '?')}")
+                for m in s.get("data", []):
+                    lines.append(f"- **{m.get('role', '?')}:** {m.get('content', '')}")
+                lines.append("")
+            for e in db_memory._get_store().list_entries(limit=1000):
+                lines.append(f"- [{e.category or 'fact'}] {e.key}: {e.value}")
+            dest.write_text("\n".join(lines), encoding="utf-8")
+            print(f"Exported to {dest}")
+        elif rest:
+            query = " ".join(rest)
+            entries = db_memory._get_store().search_entries_keyword(query, limit=5)
+            if not entries:
+                print("No matching memories.")
+            for e in entries:
+                when = (e.created_at or "")[:10]
+                print(f"[{when} {e.category or 'memory'}] {e.key}: {e.value[:160]}".replace("\n", " "))
+        else:
+            store = db_memory._get_store()
+            print(f"sessions: {store.get_session_count()}  entries: {store.get_entry_count()}")
+            summary = db_memory.load_summary()
+            print(f"summary: {(summary[:120] + '...') if len(summary) > 120 else summary or '(none)'}")
+            try:
+                from core.learning import load_learnings
+                learnings = load_learnings()
+                print(f"learnings: {len(learnings.get('tool_patterns', {}))} patterns, "
+                      f"{len(learnings.get('system_prompt_improvements', []))} improvements")
+            except Exception:
+                pass
+        return
+
+    if args.command == "knowledge":
+        import core.db_memory as db_memory
+        from core.setup import count_kb_files
+        if args.reingest:
+            store = db_memory._get_store()
+            store.conn.execute("DELETE FROM kb_sources")
+            store.conn.commit()
+            n = db_memory.load_knowledge()
+            print(f"Reingested {n} facts.")
+        else:
+            print(f"files: {count_kb_files()}  ingested sources: {db_memory.kb_ingested_count()}")
         return
 
     # Validate unknown commands
-    if args.command is not None:
+    if args.command is not None and args.command not in {
+        "web", "api", "telegram", "config", "setup", "status", "users",
+        "doctor", "version", "help", "models", "memory", "knowledge",
+    }:
         print(f"Unknown command '{args.command}'. Try: web, api, telegram, config, setup, status, or nothing for chat.")
         print("Run 'hellochusquis help' for full usage.")
         sys.exit(1)

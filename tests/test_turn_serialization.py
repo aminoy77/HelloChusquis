@@ -12,7 +12,7 @@ class _StreamingAgent:
     def __init__(self):
         self.releases = 0
 
-    def stream_run(self, message):
+    def stream_run(self, message, provider=None, model=None):
         yield {"type": "done"}
 
     def release_turn(self):

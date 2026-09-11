@@ -23,7 +23,9 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, field
@@ -80,6 +82,8 @@ class SubAgentResult:
     transcript_chars: int = 0
     truncated: bool = False
     ok: bool = True
+    duration_s: float = 0.0
+    cached: bool = False
 
 
 def _def(name, description, instructions, tools=(), **kw):
@@ -189,6 +193,59 @@ def _transcript_len(messages: list) -> int:
     return sum(len(json.dumps(m, default=str)) for m in messages)
 
 
+# Opt-in result cache: pure-reasoning outputs only (tool runs always re-execute,
+# their output reflects world state). Bounded: 128 entries, 8 KB each ≈ 1 MB max.
+_CACHE_MAX_ENTRIES = 128
+_CACHE_MAX_CHARS = 8000
+_RESULT_CACHE: OrderedDict = OrderedDict()
+_CACHE_LOCK = threading.Lock()
+
+
+def cache_clear() -> int:
+    """Drop all cached subagent results. Returns entries removed."""
+    with _CACHE_LOCK:
+        n = len(_RESULT_CACHE)
+        _RESULT_CACHE.clear()
+        return n
+
+
+def _cache_key(subdef: SubAgentDef, task: str, model, provider) -> str:
+    tools = "ALL" if subdef.tools is None else ",".join(sorted(subdef.tools))
+    return json.dumps([subdef.name, task, model, provider, tools])
+
+
+def _cache_get(key: str):
+    with _CACHE_LOCK:
+        entry = _RESULT_CACHE.get(key)
+        if entry is None:
+            return None
+        if entry["expires_at"] < time.time():
+            del _RESULT_CACHE[key]
+            return None
+        _RESULT_CACHE.move_to_end(key)
+        return entry
+
+
+def _cache_put(key: str, result: SubAgentResult, ttl_s: float) -> None:
+    if len(result.output) > _CACHE_MAX_CHARS:
+        return
+    with _CACHE_LOCK:
+        _RESULT_CACHE[key] = {"output": result.output, "steps": result.steps_used,
+                              "expires_at": time.time() + ttl_s}
+        _RESULT_CACHE.move_to_end(key)
+        while len(_RESULT_CACHE) > _CACHE_MAX_ENTRIES:
+            _RESULT_CACHE.popitem(last=False)
+
+
+def _emit(on_event, payload: dict) -> None:
+    if on_event is None:
+        return
+    try:
+        on_event(payload)
+    except Exception:
+        pass
+
+
 # Tools that cannot be contained to a directory: always blocked when isolated.
 _UNSCOPABLE = frozenset({"shell", "code"})
 _PATH_KEYS = ("path", "file", "filename", "filepath", "dir", "directory",
@@ -263,8 +320,11 @@ def run_one(pool, tools_schema: list, dispatch_fn: Callable,
             model: Optional[str] = None,
             provider: Optional[str] = None,
             isolated: bool = False,
-            repo=None) -> SubAgentResult:
+            repo=None,
+            on_event=None,
+            cache_ttl_s: float = 0) -> SubAgentResult:
     """Run one subagent synchronously with hard budgets. Never raises."""
+    t0 = time.perf_counter()
     steps = min(max(max_steps or subdef.max_steps, 1), 50)
     token_budget = min(max(max_tokens or subdef.max_tokens, 500), 100000)
     deadline = time.monotonic() + min(max(timeout_s or subdef.timeout_s, 10), 1800)
@@ -272,6 +332,20 @@ def run_one(pool, tools_schema: list, dispatch_fn: Callable,
     model = model or subdef.model
     provider = provider or subdef.provider
     isolated = bool(isolated or subdef.isolated)
+    ttl = max(float(cache_ttl_s or 0), 0)
+
+    if ttl > 0:
+        hit = _cache_get(_cache_key(subdef, task, model, provider))
+        if hit is not None:
+            res = SubAgentResult(name=subdef.name, task=task, output=hit["output"],
+                                 steps_used=hit["steps"], cached=True,
+                                 duration_s=time.perf_counter() - t0)
+            _emit(on_event, {"type": "run_start", "name": subdef.name,
+                             "task": task[:200], "cached": True})
+            _emit(on_event, {"type": "run_finish", "name": subdef.name, "ok": True,
+                             "truncated": False, "cached": True,
+                             "duration_s": res.duration_s})
+            return res
 
     allowed = set(subdef.tools) if subdef.tools is not None else None
     filtered = [s for s in (tools_schema or [])
@@ -294,6 +368,8 @@ def run_one(pool, tools_schema: list, dispatch_fn: Callable,
                        f"shell/code tools are disabled; use files.")
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": task}]
+    _emit(on_event, {"type": "run_start", "name": subdef.name,
+                     "task": task[:200], "cached": False})
     try:
         while res.steps_used < steps:
             if time.monotonic() > deadline:
@@ -341,6 +417,8 @@ def run_one(pool, tools_schema: list, dispatch_fn: Callable,
                     except Exception as exc:  # never let a tool kill the subagent
                         out, success = f"ERROR: {type(exc).__name__}: {exc}", False
                 res.tool_calls += 1
+                _emit(on_event, {"type": "tool_call", "name": subdef.name,
+                                 "tool": tname, "ok": success})
                 messages.append({"role": "tool", "tool_call_id": tc.get("id", ""),
                                  "content": out})
             res.transcript_chars = _transcript_len(messages)
@@ -361,6 +439,12 @@ def run_one(pool, tools_schema: list, dispatch_fn: Callable,
         notes.append(_worktree_summary(wt))
     if notes:
         res.output = (res.output + "\n\n" + "\n".join(notes)).strip()
+    res.duration_s = time.perf_counter() - t0
+    if ttl > 0 and res.ok and not res.truncated and res.tool_calls == 0:
+        _cache_put(_cache_key(subdef, task, model, provider), res, ttl)
+    _emit(on_event, {"type": "run_finish", "name": subdef.name, "ok": res.ok,
+                     "truncated": res.truncated, "cached": False,
+                     "duration_s": res.duration_s})
     return res
 
 
@@ -368,6 +452,8 @@ def fanout(pool, tools_schema: list, dispatch_fn: Callable,
            default_def: Optional[SubAgentDef] = None,
            jobs: list | tuple = (),
            max_concurrent: int = DEFAULT_MAX_CONCURRENT,
+           fail_fast: bool = False,
+           on_event=None,
            repo=None) -> list:
     """Run many subagents concurrently (order preserved). Count unbounded, concurrency capped."""
     cap = min(max(int(max_concurrent or DEFAULT_MAX_CONCURRENT), 1), MAX_CONCURRENT_HARD)
@@ -376,23 +462,73 @@ def fanout(pool, tools_schema: list, dispatch_fn: Callable,
         return []
 
     def _one(job):
+        if fail_fast and failed.is_set():
+            return None  # skipped: an earlier job already failed
         name = job.get("name") or (default_def.name if default_def else "")
         subdef = BUILTIN_MAP.get(name, default_def)
         if subdef is None:
             return SubAgentResult(name=name, task=job.get("task", ""),
                                   output=f"ERROR: unknown subagent '{name}'", ok=False)
-        return run_one(pool, tools_schema, dispatch_fn, subdef, job.get("task", ""),
-                       max_steps=job.get("max_steps"), max_tokens=job.get("max_tokens"),
-                       timeout_s=job.get("timeout_s"), model=job.get("model"),
-                       provider=job.get("provider"),
-                       isolated=job.get("isolated", False), repo=repo)
+        r = run_one(pool, tools_schema, dispatch_fn, subdef, job.get("task", ""),
+                    max_steps=job.get("max_steps"), max_tokens=job.get("max_tokens"),
+                    timeout_s=job.get("timeout_s"), model=job.get("model"),
+                    provider=job.get("provider"),
+                    isolated=job.get("isolated", False), repo=repo,
+                    on_event=on_event, cache_ttl_s=job.get("cache_ttl_s", 0))
+        if fail_fast and not r.ok:
+            failed.set()
+        return r
 
+    failed = threading.Event()
+    results: list = []
     with ThreadPoolExecutor(max_workers=min(cap, len(jobs)),
                             thread_name_prefix="chusqui-sub") as ex:
-        results = list(ex.map(_one, jobs))
+        futures = [ex.submit(_one, job) for job in jobs]
+        for i, fut in enumerate(futures):
+            try:
+                r = fut.result()
+            except Exception as exc:
+                name = jobs[i].get("name", "?")
+                r = SubAgentResult(name=name, task=jobs[i].get("task", ""),
+                                   output=f"ERROR: {type(exc).__name__}: {exc}",
+                                   ok=False)
+            if r is not None:
+                results.append(r)
     for r in results:  # protect parent context no matter the fanout size
         if len(r.output) > FANOUT_ITEM_CHARS:
             r.output = r.output[:FANOUT_ITEM_CHARS] + f"…[cut {len(r.output) - FANOUT_ITEM_CHARS} chars]"
+    return results
+
+
+def chain(pool, tools_schema: list, dispatch_fn: Callable,
+          jobs: list | tuple = (),
+          on_event=None,
+          repo=None) -> list:
+    """Sequential pipeline: each job sees prior outputs. Halts on first failure."""
+    results: list = []
+    prior: list = []
+    for job in (jobs or []):
+        name = job.get("name", "")
+        subdef = BUILTIN_MAP.get(name)
+        if subdef is None:
+            results.append(SubAgentResult(name=name, task=job.get("task", ""),
+                                          output=f"ERROR: unknown subagent '{name}'", ok=False))
+            break
+        task = job.get("task", "")
+        if prior:
+            context = "\n\n".join(f"Previous step [{n}]:\n{o}"[:FANOUT_ITEM_CHARS]
+                                  for n, o in prior)
+            task = f"{task}\n\nContext from previous steps:\n{context}"
+        r = run_one(pool, tools_schema, dispatch_fn, subdef, task,
+                    max_steps=job.get("max_steps"), max_tokens=job.get("max_tokens"),
+                    timeout_s=job.get("timeout_s"), model=job.get("model"),
+                    provider=job.get("provider"),
+                    isolated=job.get("isolated", False), repo=repo,
+                    on_event=on_event, cache_ttl_s=job.get("cache_ttl_s", 0))
+        results.append(r)
+        if not r.ok:
+            break
+        prior.append((r.name, r.output))
     return results
 
 
@@ -401,11 +537,14 @@ def subagents_prompt_section() -> str:
              "in parallel batches. Each runs in its own isolated context with only the "
              "tools it needs, and returns a distilled summary. Delegate freely; fan out "
              "3-8 independent subtasks at once, then synthesize. Use the `subagent` tool: "
-             "`list` (catalog), `run` (one), `fanout` (many in parallel), `custom` "
+             "`list` (catalog), `run` (one), `fanout` (many in parallel), `chain` "
+             "(sequential pipeline where each step sees prior outputs — worker → "
+             "reviewer), `custom` "
              "(define a brand-new subagent type inline and run it — unlimited new types). "
              "Per call you may set model/provider to route cheap work to a smaller model, "
              "and isolated:true to run writers in a throwaway git worktree (shell/code "
              "disabled there, files path-contained, diff appended). "
+             "cache_ttl_s reuses pure-reasoning results; tool runs always re-execute. "
              "Every subagent has hard budgets (steps/tokens/time); flat hierarchy only, "
              "subagents cannot spawn subagents.",
              "", "Available subagents:"]
@@ -426,14 +565,18 @@ SUBAGENT_TOOL_SCHEMA = {
             "type": "object",
             "properties": {
                 "action": {"type": "string",
-                           "enum": ["list", "run", "fanout", "custom"]},
+                           "enum": ["list", "run", "fanout", "chain", "custom"]},
                 "name": {"type": "string",
                          "description": "Builtin subagent name for run"},
                 "task": {"type": "string",
                          "description": "Focused task for the subagent"},
                 "jobs": {"type": "array",
-                         "description": "Fanout jobs: [{name, task}]",
+                         "description": "Fanout/chain jobs: [{name, task, model?, provider?, isolated?}]",
                          "items": {"type": "object"}},
+                "fail_fast": {"type": "boolean",
+                              "description": "Fanout: stop dispatching after first failure"},
+                "cache_ttl_s": {"type": "number",
+                                "description": "Cache pure-reasoning results this many seconds (tool runs never cache)"},
                 "definition": {"type": "object",
                                "description": "Inline {name, description, instructions, tools?, model?, provider?, isolated?} for custom"},
                 "max_steps": {"type": "integer"},
@@ -472,7 +615,8 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
                         max_steps=args.get("max_steps"), max_tokens=args.get("max_tokens"),
                         timeout_s=args.get("timeout_s"), model=args.get("model"),
                         provider=args.get("provider"),
-                        isolated=args.get("isolated", False), repo=os.getcwd())
+                        isolated=args.get("isolated", False), repo=os.getcwd(),
+                        cache_ttl_s=args.get("cache_ttl_s", 0))
             tag = " [truncated]" if r.truncated else ""
             return ToolResult(success=r.ok, output=f"[{r.name}]{tag} {r.output}",
                               error="" if r.ok else r.output)
@@ -480,13 +624,28 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
             jobs = args.get("jobs") or []
             if not isinstance(jobs, list) or not jobs:
                 return ToolResult(success=False, output="", error="jobs (non-empty list) is required")
+            t0 = time.perf_counter()
             results = fanout(agent.pool, agent.tools_schema, agent._dispatch_tool,
                              None, jobs,
                              max_concurrent=args.get("max_concurrent") or DEFAULT_MAX_CONCURRENT,
+                             fail_fast=bool(args.get("fail_fast", False)),
                              repo=os.getcwd())
             out = "\n\n".join(f"[{r.name}] {r.output}" for r in results)
+            ok = all(r.ok for r in results) and len(results) == len(jobs)
+            footer = (f"[fanout: {sum(r.ok for r in results)} ok / {len(jobs)} jobs, "
+                      f"{time.perf_counter() - t0:.1f}s wall"
+                      f"{'' if len(results) == len(jobs) else ', halted early'}]")
+            return ToolResult(success=ok, output=out + "\n\n" + footer,
+                              error="" if ok else "some subagents failed")
+        if action == "chain":
+            jobs = args.get("jobs") or []
+            if not isinstance(jobs, list) or not jobs:
+                return ToolResult(success=False, output="", error="jobs (non-empty list) is required")
+            results = chain(agent.pool, agent.tools_schema, agent._dispatch_tool,
+                            jobs, repo=os.getcwd())
+            out = "\n\n".join(f"[{r.name}] {r.output}" for r in results)
             ok = all(r.ok for r in results)
-            return ToolResult(success=ok, output=out, error="" if ok else "some subagents failed")
+            return ToolResult(success=ok, output=out, error="" if ok else "chain halted on failure")
         if action == "custom":
             try:
                 subdef = parse_custom(args.get("definition") or {})
@@ -499,7 +658,8 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
                         max_steps=args.get("max_steps"), max_tokens=args.get("max_tokens"),
                         timeout_s=args.get("timeout_s"), model=args.get("model"),
                         provider=args.get("provider"),
-                        isolated=args.get("isolated", False), repo=os.getcwd())
+                        isolated=args.get("isolated", False), repo=os.getcwd(),
+                        cache_ttl_s=args.get("cache_ttl_s", 0))
             return ToolResult(success=r.ok, output=f"[{r.name}] {r.output}",
                               error="" if r.ok else r.output)
         return ToolResult(success=False, output="", error=f"Unknown action '{action}'")
@@ -508,5 +668,6 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
 
 
 __all__ = ["BUILTIN_DEFS", "BUILTIN_MAP", "KNOWN_TOOLS", "SubAgentDef", "SubAgentResult",
-           "SUBAGENT_TOOL_SCHEMA", "fanout", "git_worktree", "handle_subagent_tool",
-           "parse_custom", "run_one", "scoped_dispatch", "subagents_prompt_section"]
+           "SUBAGENT_TOOL_SCHEMA", "cache_clear", "chain", "fanout", "git_worktree",
+           "handle_subagent_tool", "parse_custom", "run_one", "scoped_dispatch",
+           "subagents_prompt_section"]

@@ -25,6 +25,7 @@ class FakePool:
             self._active += 1
             self.peak = max(self.peak, self._active)
             self.last_kwargs = {"provider_name": provider_name, "model": model}
+            self.last_messages = list(messages)
         try:
             time.sleep(0.02)
             self.calls += 1
@@ -226,3 +227,120 @@ def test_agent_md_files_match_registry():
         assert md.is_file(), f"missing {md}"
         text = md.read_text()
         assert d.name in text and "tools" in text.lower()
+
+
+def test_chain_threads_prior_output_in_order():
+    from core import subagents
+    pool = FakePool([_final("answer1"), _final("answer2")])
+    jobs = [{"name": "planner", "task": "break it down"},
+            {"name": "reviewer", "task": "critique it"}]
+    results = subagents.chain(pool, [], _ok_dispatch, jobs)
+    assert [r.output for r in results] == ["answer1", "answer2"]
+    assert pool.calls == 2
+    user_texts = [m["content"] for m in pool.last_messages if m["role"] == "user"]
+    assert any("answer1" in t for t in user_texts)
+
+
+def test_chain_halts_on_first_failure():
+    from core import subagents
+    pool = FakePool([_final("ok1"), {"choices": []}])
+    jobs = [{"name": "planner", "task": "t1"},
+            {"name": "reviewer", "task": "t2"},
+            {"name": "reviewer", "task": "t3"}]
+    results = subagents.chain(pool, [], _ok_dispatch, jobs)
+    assert len(results) == 2
+    assert results[0].ok and not results[1].ok
+    assert pool.calls == 2
+
+
+def test_result_carries_duration():
+    from core import subagents
+    pool = FakePool([_final("ok")])
+    d = next(d for d in subagents.BUILTIN_DEFS if d.name == "planner")
+    res = subagents.run_one(pool, [], _ok_dispatch, d, "t")
+    assert res.duration_s >= 0
+
+
+def test_fanout_fail_fast_skips_rest():
+    from core import subagents
+    pool = FakePool([_final("ok"), {"choices": []}, _final("never")])
+    jobs = [{"name": "reviewer", "task": f"t{i}"} for i in range(3)]
+    results = subagents.fanout(pool, [], _ok_dispatch, None, jobs,
+                               max_concurrent=1, fail_fast=True)
+    assert [r.ok for r in results] == [True, False]
+    assert pool.calls == 2
+
+
+def test_fanout_without_fail_fast_runs_all():
+    from core import subagents
+    pool = FakePool([_final("ok"), {"choices": []}, _final("ok3")])
+    jobs = [{"name": "reviewer", "task": f"t{i}"} for i in range(3)]
+    results = subagents.fanout(pool, [], _ok_dispatch, None, jobs,
+                               max_concurrent=1)
+    assert len(results) == 3
+    assert pool.calls == 3
+
+
+def test_events_sequence_on_run_with_tool():
+    import threading
+    from core import subagents
+    pool = FakePool([_tool_call("web_search", {"query": "x"}), _final("done")])
+    d = next(d for d in subagents.BUILTIN_DEFS if d.name == "researcher")
+    events, lock = [], threading.Lock()
+
+    def on_event(ev):
+        with lock:
+            events.append(ev)
+
+    res = subagents.run_one(pool, [], _ok_dispatch, d, "t", on_event=on_event)
+    assert [e["type"] for e in events] == ["run_start", "tool_call", "run_finish"]
+    assert events[1]["tool"] == "web_search" and events[1]["ok"] is True
+    assert events[2]["ok"] is True and res.ok
+
+
+def test_cache_hit_skips_second_call():
+    from core import subagents
+    subagents.cache_clear()
+    pool = FakePool([_final("same answer"), _final("must not run")])
+    d = next(d for d in subagents.BUILTIN_DEFS if d.name == "planner")
+    r1 = subagents.run_one(pool, [], _ok_dispatch, d, "cache-me-task", cache_ttl_s=3600)
+    r2 = subagents.run_one(pool, [], _ok_dispatch, d, "cache-me-task", cache_ttl_s=3600)
+    assert pool.calls == 1
+    assert r1.cached is False and r2.cached is True
+    assert r2.output == "same answer"
+
+
+def test_cache_miss_on_different_task():
+    from core import subagents
+    subagents.cache_clear()
+    pool = FakePool([_final("a"), _final("b")])
+    d = next(d for d in subagents.BUILTIN_DEFS if d.name == "planner")
+    subagents.run_one(pool, [], _ok_dispatch, d, "task-alpha", cache_ttl_s=3600)
+    subagents.run_one(pool, [], _ok_dispatch, d, "task-beta", cache_ttl_s=3600)
+    assert pool.calls == 2
+
+
+def test_cache_never_stores_tool_runs():
+    from core import subagents
+    subagents.cache_clear()
+    script = [_tool_call("web_search", {"query": "x"}), _final("live"),
+              _tool_call("web_search", {"query": "x"}), _final("live2")]
+    pool = FakePool(script)
+    d = next(d for d in subagents.BUILTIN_DEFS if d.name == "researcher")
+    r1 = subagents.run_one(pool, [], _ok_dispatch, d, "fresh-task", cache_ttl_s=3600)
+    r2 = subagents.run_one(pool, [], _ok_dispatch, d, "fresh-task", cache_ttl_s=3600)
+    assert pool.calls == 4  # tool output reflects world state: always re-run
+    assert r1.cached is False and r2.cached is False
+
+
+def test_cache_entry_expires():
+    import time
+    from core import subagents
+    subagents.cache_clear()
+    pool = FakePool([_final("v1"), _final("v2")])
+    d = next(d for d in subagents.BUILTIN_DEFS if d.name == "planner")
+    subagents.run_one(pool, [], _ok_dispatch, d, "aging-task", cache_ttl_s=3600)
+    for entry in subagents._RESULT_CACHE.values():
+        entry["expires_at"] = time.time() - 1
+    r2 = subagents.run_one(pool, [], _ok_dispatch, d, "aging-task", cache_ttl_s=3600)
+    assert pool.calls == 2 and r2.output == "v2" and r2.cached is False

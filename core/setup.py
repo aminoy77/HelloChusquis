@@ -19,6 +19,14 @@ def _save_config_securely(config: dict) -> Path:
     config_dir.mkdir(parents=True, exist_ok=True)
     os.chmod(config_dir, 0o700)
     config_path = config_dir / "config.yaml"
+    if config_path.exists():
+        backup = config_dir / "config.yaml.bak"
+        try:
+            import shutil
+            shutil.copy2(config_path, backup)
+            os.chmod(backup, 0o600)
+        except OSError:
+            pass
     descriptor, temporary_path = tempfile.mkstemp(
         prefix=".config.", suffix=".tmp", dir=config_dir
     )
@@ -349,15 +357,23 @@ def pick_provider() -> dict:
     console.print(table)
 
     while True:
-        choice = Prompt.ask("  Pick a provider (number)", default="1")
+        choice = Prompt.ask("  Pick a provider (number or type to search)", default="1")
         try:
             num = int(choice)
+            if 1 <= num <= len(rows):
+                break
+            console.print(f"[red]Number must be between 1 and {len(rows)}.[/red]")
         except ValueError:
-            console.print("[red]Enter a valid number.[/red]")
-            continue
-        if 1 <= num <= len(rows):
-            break
-        console.print(f"[red]Number must be between 1 and {len(rows)}.[/red]")
+            matches = [(n, p) for n, p in rows if choice.strip().lower() in p["name"].lower()]
+            if len(matches) == 1:
+                num = matches[0][0]
+                break
+            elif len(matches) > 1:
+                console.print("  [dim]Multiple matches:[/dim]")
+                for n, p in matches:
+                    console.print(f"    [cyan]{n}[/cyan] {p['name']}")
+            else:
+                console.print("[red]No matching provider. Try again.[/red]")
 
     selected = rows[num - 1][1]
 
@@ -402,6 +418,69 @@ def find_config_shadows() -> tuple:
     if not existing:
         return None, []
     return existing[0], existing[1:]
+
+
+def find_duplicate_providers(providers: list) -> list:
+    """Provider names configured more than once (wasteful failover)."""
+    seen, dupes = set(), []
+    for p in providers or []:
+        name = p.get("name", "Unknown")
+        if name in seen and name not in dupes:
+            dupes.append(name)
+        seen.add(name)
+    return dupes
+
+
+def check_workspace_dirs(dirs: list) -> list:
+    """Return [(dir, exists)] for each configured workspace directory."""
+    return [(d, Path(d).expanduser().exists()) for d in (dirs or [])]
+
+
+def count_kb_files(root=None) -> int:
+    """Count ingestible markdown files under a knowledge root."""
+    from core.db_memory import KNOWLEDGE_DIR_NAME, _KB_SKIP_FILES
+    base = Path(root).expanduser() if root else (
+        Path(__file__).resolve().parent.parent / KNOWLEDGE_DIR_NAME)
+    if not base.is_dir():
+        return 0
+    return sum(1 for p in base.rglob("*.md")
+               if p.name not in _KB_SKIP_FILES and not p.name.startswith("_"))
+
+
+def check_ports_free(ports: list, host: str = "127.0.0.1") -> dict:
+    """Return {port: True/False} without holding the socket."""
+    import socket
+    result = {}
+    for port in ports or []:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            probe.bind((host, port))
+            result[port] = True
+        except OSError:
+            result[port] = False
+        finally:
+            probe.close()
+    return result
+
+
+def check_browser_ready(cache_dir=None) -> tuple:
+    """True when a playwright chromium executable exists locally."""
+    if cache_dir is not None:
+        roots = [Path(cache_dir).expanduser()]
+    else:
+        roots = [Path.home() / ".cache" / "ms-playwright",
+                 Path.home() / "Library" / "Caches" / "ms-playwright"]
+        if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+            roots.insert(0, Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"]).expanduser())
+    for base in roots:
+        if not base.is_dir():
+            continue
+        found = any(p.is_file() and os.access(p, os.X_OK)
+                    for p in base.rglob("*")
+                    if "chrome" in p.name.lower() or "headless_shell" in p.name.lower())
+        if found:
+            return True, "chromium executable present"
+    return False, "no browser found. Run: playwright install chromium"
 
 
 def _is_local_url(url: str) -> bool:
@@ -629,7 +708,7 @@ def run_quick_setup() -> dict:
 
     console.print(Panel(
         "[bold #f5a623]Welcome to HelloChusquis![/bold #f5a623]\n"
-        "[dim]One-time setup — pick any provider, add your key, choose a model.[/dim]",
+        "[dim]One-time setup — pick any provider. Local servers just work, no key, no model hunt.[/dim]",
         expand=False,
     ))
 
@@ -888,6 +967,6 @@ def show_config():
     console.print("\n[bold cyan]Settings:[/bold cyan]")
     console.print(f"  • Reset after: {settings.get('provider_reset_hours', 1)} hours")
     console.print(f"  • Memory retention: {settings.get('memory_retention_days', 30)} days")
-    workspace_dirs = settings.get("workspace_dirs") or ["N/A"]
-    console.print(f"  • Workspace: {workspace_dirs[0]}")
-    console.print(f"  • Timeout: {settings.get('timeout_seconds', 15)} seconds")
+    console.print(f"  • Request timeout: {settings.get('timeout_seconds', 15)}s")
+    for workspace in settings.get("workspace_dirs", []) or ["N/A"]:
+        console.print(f"  • Workspace: {workspace}")
