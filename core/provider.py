@@ -251,7 +251,7 @@ class ProviderPool:
         RuntimeError
             If no providers are ready or all attempts error.
         """
-        available = self._available(tools)
+        available = self._available(None if provider_name else tools)
         if not available:
             raise RuntimeError("All providers exhausted. Try again later.")
 
@@ -306,12 +306,12 @@ class ProviderPool:
         except Exception:
             error_msg = ""
 
-        if status in (429, 402, 403, 401, 400, 500, 502, 503, 504):
+        if status in (429, 402, 403, 401, 500, 502, 503, 504):
             # Mark as exhausted silently - no user-visible output
             provider.exhausted = True
             provider.exhausted_at = time.time()
-        elif status == 404:
-            # No exhausted — the provider works, just the model doesn't exist
+        elif status in (400, 404):
+            # Bad request / model not found — provider is healthy, don't penalize
             pass
         else:
             # Mark other errors as exhausted silently
