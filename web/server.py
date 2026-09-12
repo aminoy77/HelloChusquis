@@ -170,7 +170,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add defensive headers to every web response, including auth failures."""
 
     async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            # Let Starlette's error handler deal with it, but don't swallow as None
+            raise
+        if response is None:
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
