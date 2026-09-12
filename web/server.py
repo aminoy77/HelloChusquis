@@ -190,13 +190,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 app = FastAPI()
-app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(AuthMiddleware)
-# RequestBodyLimitMiddleware is raw ASGI and breaks BaseHTTPMiddleware chain
-# ("No response returned" on random-port fallback). Disabled for web UI;
-# body limits are still enforced at the provider layer. Re-enable only as
-# BaseHTTPMiddleware if needed.
-# app.add_middleware(RequestBodyLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 # Keep the web server alive before initial setup; agent-dependent routes return
 # a clear 503 until a provider is configured.
 runtime = AgentRuntime()
