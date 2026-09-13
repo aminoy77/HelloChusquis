@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=1920, height=1080"/>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#090a0c}
+body{font-family:'Inter',system-ui,sans-serif}
+#root{width:1920px;height:1080px;position:relative;overflow:hidden;background:#0a0a0c}
+.clip{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px}
+h1{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-0.03em;line-height:0.95}
+.eyebrow{font-family:'Space Grotesk',sans-serif;font-size:18px;letter-spacing:0.14em;text-transform:uppercase;color:#f5a623;font-weight:600}
+.big{font-size:92px;color:#f1efe9;text-transform:uppercase}
+.big em{font-style:normal;color:#f5a623}
+.sub{font-size:26px;color:#a3a0b0;max-width:1100px;text-align:center;line-height:1.5;margin-top:18px}
+.pill{font-family:'Space Grotesk',sans-serif;font-size:18px;letter-spacing:0.08em;text-transform:uppercase;border:1px solid #26262e;background:#121216;color:#a3a0b0;padding:14px 28px;border-radius:999px}
+.grid3{display:flex;gap:28px;margin-top:28px}
+.card{background:#121216;border:1px solid #26262e;border-radius:18px;padding:28px 36px;min-width:280px;text-align:center}
+.card b{font-size:64px;color:#f1efe9;display:block;line-height:1}
+.card span{font-family:'Space Grotesk',sans-serif;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#8a8799}
+.accent{color:#f5a623}
+.mono{font-family:'JetBrains Mono',monospace;font-size:22px;color:#8a8799;background:#121216;border:1px solid #26262e;padding:14px 28px;border-radius:12px}
+.cta{font-family:'JetBrains Mono',monospace;font-size:42px;color:#0a0a0c;background:#f5a623;padding:18px 42px;border-radius:12px}
+.dim{color:#8a8799;font-size:18px;margin-top:14px;letter-spacing:0.06em;text-transform:uppercase}
+.row{display:flex;gap:18px;margin-top:26px;justify-content:center;flex-wrap:wrap;max-width:1400px}
+.shot{position:absolute;inset:0;width:1920px;height:1080px;object-fit:cover;opacity:.55}
+.scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,12,.72),rgba(10,10,12,.86))}
+.clip>div[id]{position:relative;z-index:1;text-align:center}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-duration="60" data-width="1920" data-height="1080" style="width:1920px;height:1080px">
+  <!-- 1: Terminal 0-7 -->
+  <div class="clip" data-start="0" data-duration="7" style="background:#0a0a0c">
+    <img class="shot" src="capture/screenshots/scroll-000.png" alt="HelloChusquis hero with live terminal session"/><div class="scrim"></div>
+    <div id="c1" style="text-align:center"><div class="eyebrow">HelloChusquis · Terminal</div><h1 class="big" style="margin-top:12px">Make the terminal<br><em>your command center.</em></h1><div class="mono" style="margin-top:26px">hellochusquis &nbsp;·&nbsp; local session &nbsp;·&nbsp; <span style="color:#34d399">● ready</span></div></div>
+  </div>
+  <!-- 2: Web chat 7-15 -->
+  <div class="clip" data-start="7" data-duration="8" style="background:#0a0a0c">
+    <img class="shot" src="capture/screenshots/scroll-022.png" alt="Workflow section from intent to useful work"/><div class="scrim"></div>
+    <div id="c2" style="text-align:center"><div class="eyebrow">Web UI · localhost:7272</div><h1 class="big" style="font-size:64px;margin-top:14px">Hello, Chusquis.</h1><div class="sub">Your local AI agent — visual chat, same agent as the terminal. “Inspect this repo and find the riskiest test gap.” → planning a focused review.</div><div class="row"><span class="pill">Sessions</span><span class="pill">Model picker</span><span class="pill">Cmd K palette</span></div></div>
+  </div>
+  <!-- 3: Providers 15-23 -->
+  <div class="clip" data-start="15" data-duration="8" style="background:#0a0a0c">
+    <img class="shot" src="capture/screenshots/scroll-044.png" alt="Toolkit cards including switch providers freely"/><div class="scrim"></div>
+    <div id="c3" style="text-align:center"><div class="eyebrow">Providers · one config flow</div><div class="grid3" style="justify-content:center"><div class="card"><b>70+</b><span>Providers</span><div style="font-size:14px;color:#a3a0b0;margin-top:8px">groq · OpenRouter · Ollama local …</div></div><div class="card"><b class="accent">local</b><span>qwen2.5-coder:3b ready</span><div style="font-size:14px;color:#a3a0b0;margin-top:8px">llama-3.3-70b · mixtral · gemma2 …</div></div></div><div class="sub">Hosted, local, enterprise and specialized — switch freely with automatic failover.</div></div>
+  </div>
+  <!-- 4: Toolkit 23-31 -->
+  <div class="clip" data-start="23" data-duration="8" style="background:#0a0a0c">
+    <img class="shot" src="capture/screenshots/scroll-088.png" alt="Ecosystem grid of integrations in the same room"/><div class="scrim"></div>
+    <div id="c4" style="text-align:center"><div class="eyebrow">The toolkit · skills & integrations</div><h1 class="big" style="font-size:62px">Your tools, <em>same room.</em></h1><div class="row"><span class="pill">GitHub</span><span class="pill">Slack</span><span class="pill">Docker</span><span class="pill">Notion</span><span class="pill">AWS</span><span class="pill">PostgreSQL</span><span class="pill">Linear</span><span class="pill">K8s</span></div><div class="sub">Core loop — shell, files, code, search — plus the integrations that already hold your context.</div></div>
+  </div>
+  <!-- 5: Control layer 31-39 -->
+  <div class="clip" data-start="31" data-duration="8" style="background:#0a0a0c">
+    <img class="shot" src="capture/screenshots/scroll-066.png" alt="Control layer with approval gate and isolated sessions"/><div class="scrim"></div>
+    <div id="c5" style="text-align:center"><div class="eyebrow">Control layer · automation with lights on</div><h1 class="big" style="font-size:62px">Search · Browse · Files · Code</h1><div class="sub">Real browser automation, web search, streaming REST API. Isolated sessions, bounded requests — high-impact actions pause for a human.</div><div class="mono" style="margin-top:18px">approval gate → <span style="color:#f5a623">Approve</span> / Reject</div></div>
+  </div>
+  <!-- 6: Memory 39-48 -->
+  <div class="clip" data-start="39" data-duration="9" style="background:#0a0a0c">
+    <img class="shot" src="capture/screenshots/scroll-100.png" alt="Start local section with install to capable workspace"/><div class="scrim"></div>
+    <div id="c6" style="text-align:center"><div class="eyebrow">Memory · remember the right things</div><div class="grid3" style="justify-content:center"><div class="card"><b>4/4</b><span>Sessions ready</span></div><div class="card"><b class="accent">local</b><span>Memory + summaries</span></div></div><div class="sub">Bounded history, compression, sessions and local persistence — the useful parts stay close for the next turn.</div><div class="dim">Memory, audit and config remain on your machine</div></div>
+  </div>
+  <!-- 7: CTA 48-60 -->
+  <div class="clip" data-start="48" data-duration="12" style="background:#0a0a0c">
+    <img class="shot" src="capture/screenshots/contact-sheet.jpg" alt="" aria-hidden="true"/><div class="scrim"></div>
+    <div id="c7" style="text-align:center"><h1 class="big" style="font-size:72px">HelloChusquis</h1><div class="cta" style="margin-top:22px">python -m pip install hellochusquis</div><div class="dim" style="margin-top:16px">Terminal · Web · API · Memory · Python 3.10+ · MIT</div></div>
+  </div>
+</div>
+<script>
+const tl = gsap.timeline({paused:true});
+window.__timelines = window.__timelines || {};
+window.__timelines["main"] = tl;
+function add(id, start, dur){
+  tl.fromTo("#"+id, {autoAlpha:0, y:24}, {autoAlpha:1, y:0, duration:0.6, ease:"power3.out"}, start);
+  tl.to("#"+id, {autoAlpha:0, y:-12, duration:0.4, ease:"power2.in"}, start+dur-0.5);
+}
+add("c1",0,7);
+add("c2",7,8);
+add("c3",15,8);
+add("c4",23,8);
+add("c5",31,8);
+add("c6",39,9);
+add("c7",48,12);
+tl.set("#c7", {autoAlpha:1}, 59.5);
+</script>
+</body>
+</html>

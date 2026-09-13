@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=1920, height=1080"/>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#090a0c}
+body{font-family:'Inter',system-ui,sans-serif}
+#root{width:1920px;height:1080px;position:relative;overflow:hidden;background:#0a0a0c}
+.clip{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px}
+h1{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-0.03em;line-height:0.95}
+.eyebrow{font-family:'Space Grotesk',sans-serif;font-size:18px;letter-spacing:0.14em;text-transform:uppercase;color:#f5a623;font-weight:600}
+.big{font-size:92px;color:#f1efe9;text-transform:uppercase}
+.big em{font-style:normal;color:#f5a623}
+.sub{font-size:26px;color:#a3a0b0;max-width:1100px;text-align:center;line-height:1.5;margin-top:18px}
+.pill{font-family:'Space Grotesk',sans-serif;font-size:18px;letter-spacing:0.08em;text-transform:uppercase;border:1px solid #26262e;background:#121216;color:#a3a0b0;padding:14px 28px;border-radius:999px}
+.grid3{display:flex;gap:28px;margin-top:28px}
+.card{background:#121216;border:1px solid #26262e;border-radius:18px;padding:28px 36px;min-width:280px;text-align:center}
+.card b{font-size:64px;color:#f1efe9;display:block;line-height:1}
+.card span{font-family:'Space Grotesk',sans-serif;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#6b6878}
+.accent{color:#f5a623}
+.mono{font-family:'JetBrains Mono',monospace;font-size:22px;color:#6b6878;background:#121216;border:1px solid #26262e;padding:14px 28px;border-radius:12px}
+.cta{font-family:'JetBrains Mono',monospace;font-size:42px;color:#0a0a0c;background:#f5a623;padding:18px 42px;border-radius:12px}
+.dim{color:#6b6878;font-size:18px;margin-top:14px;letter-spacing:0.06em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="hellochusquis-launch" data-duration="30" data-width="1920" data-height="1080" style="width:1920px;height:1080px">
+  <!-- Frame 1: Hook 0-3.5 -->
+  <div class="clip" data-start="0" data-duration="3.5" style="background:#0a0a0c">
+    <div id="f1a" style="text-align:center"><div class="eyebrow">HelloChusquis</div><h1 class="big" style="margin-top:12px">Your terminal<br><em>— upgraded.</em></h1><div class="mono" style="margin-top:26px">pip install hellochusquis</div></div>
+  </div>
+  <!-- Frame 2: Surfaces 3.5-9 -->
+  <div class="clip" data-start="3.5" data-duration="5.5" style="background:#0a0a0c">
+    <div id="f2a" style="text-align:center"><div class="eyebrow">One agent — three surfaces</div><h1 class="big" style="font-size:64px;margin-top:14px">Terminal · Web · API</h1><div style="display:flex;gap:18px;margin-top:26px;justify-content:center"><span class="pill">TUI — hellochusquis</span><span class="pill">Web — localhost:7272</span><span class="pill">REST API — /chat/stream · SSE</span></div></div>
+  </div>
+  <!-- Frame 3: Providers 9-15 -->
+  <div class="clip" data-start="9" data-duration="6" style="background:#0a0a0c">
+    <div id="f3a" style="text-align:center"><div class="grid3" style="justify-content:center"><div class="card"><b>74</b><span>Providers</span><div style="font-size:14px;color:#a3a0b0;margin-top:8px">OpenAI · Groq · Ollama · DeepSeek · Together …</div></div><div class="card"><b>150+</b><span>Tools & Integrations</span><div style="font-size:14px;color:#a3a0b0;margin-top:8px">shell · files · browser · code · search</div></div></div><div class="sub">Automatic failover. Your workflow never stops.</div></div>
+  </div>
+  <!-- Frame 4: Tools 15-20.5 -->
+  <div class="clip" data-start="15" data-duration="5.5" style="background:#0a0a0c">
+    <div id="f4a" style="text-align:center"><h1 class="big" style="font-size:62px">Search · Browse · Files · Code</h1><div class="sub">Drive a real browser. Read, write and edit files. Run code safely — with approvals for risky bits.</div><div class="mono" style="margin-top:18px">High-impact → <span style="color:#f5a623">Approve</span> / Reject</div></div>
+  </div>
+  <!-- Frame 5: Memory 20.5-26 -->
+  <div class="clip" data-start="20.5" data-duration="5.5" style="background:#0a0a0c">
+    <div id="f5a" style="text-align:center"><div class="grid3" style="justify-content:center"><div class="card"><b>1249</b><span>Knowledge files</span></div><div class="card"><b class="accent">86% → 100%</b><span>Accuracy (3B local)</span></div></div><div class="sub">Persistent memory + recall every turn. Small local models answer like far bigger ones.</div><div class="dim">~/.hellochusquis/knowledge/ overrides repo — your facts win</div></div>
+  </div>
+  <!-- Frame 6: CTA 26-30 -->
+  <div class="clip" data-start="26" data-duration="4" style="background:#0a0a0c">
+    <div id="f6a" style="text-align:center"><h1 class="big" style="font-size:72px">HelloChusquis</h1><div class="cta" style="margin-top:22px">pip install hellochusquis</div><div class="dim" style="margin-top:16px">Terminal · Web · API · Memory · github.com/aminoy77/HelloChusquis</div></div>
+  </div>
+</div>
+<script>
+const tl = gsap.timeline({paused:true});
+window.__timelines = window.__timelines || {};
+window.__timelines["hellochusquis-launch"] = tl;
+function add(id, start){
+  tl.fromTo("#"+id, {autoAlpha:0, y:24}, {autoAlpha:1, y:0, duration:0.6, ease:"power3.out"}, start);
+  tl.to("#"+id, {autoAlpha:0, y:-12, duration:0.35, ease:"power2.in"}, start+2.9);
+}
+add("f1a",0);
+add("f2a",3.5);
+add("f3a",9);
+add("f4a",15);
+add("f5a",20.5);
+add("f6a",26);
+// hold CTA end frame
+tl.set("#f6a", {autoAlpha:1}, 29.6);
+</script>
+</body>
+</html>
