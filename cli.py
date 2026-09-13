@@ -8,7 +8,7 @@ import socket
 # Add project to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "users", "version", "help", "telegram"}
+KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "users", "version", "help", "telegram", "skills"}
 
 
 def _open_browser(host: str, port: int) -> None:
@@ -108,6 +108,8 @@ Usage:
   hellochusquis models           List configured providers and models
   hellochusquis memory [QUERY]   Memory stats, search, or remember|forget FACT
   hellochusquis knowledge        Knowledge base stats (--reingest to refresh)
+  hellochusquis skills list      List installed SKILL.md skills
+  hellochusquis skills show NAME Show a skill body
   hellochusquis users list       List HTTP users and their roles
   hellochusquis users add NAME   Create a user and print its token once
   hellochusquis users revoke NAME  Revoke a user's token
@@ -533,10 +535,38 @@ def main():
             print(f"files: {count_kb_files()}  ingested sources: {db_memory.kb_ingested_count()}")
         return
 
+    if args.command == "skills":
+        from pathlib import Path as _Path
+        from core import skills as _skills
+        sub = args.args[0] if args.args else "list"
+        reg = _skills.SkillRegistry(skills_dir=str(_Path.home() / ".hellochusquis" / "skills-json"))
+        reg.discover_skill_md([
+            str(_Path.home() / ".hellochusquis" / "skills"),
+            str(_Path(__file__).resolve().parent / ".agents" / "skills"),
+        ])
+        if sub == "list":
+            items = reg.list_skills()
+            if not items:
+                print("No skills installed. Drop SKILL.md folders in ~/.hellochusquis/skills/<name>/SKILL.md.")
+            else:
+                for item in items:
+                    print(f"{item['name']}: {item.get('description', '')}")
+        elif sub == "show":
+            name = args.args[1] if len(args.args) > 1 else ""
+            skill = reg.skills.get(name)
+            if skill is None or not skill.prompt_template:
+                print(f"Skill not found: {name}")
+                return 1
+            print(skill.prompt_template[:8000])
+        else:
+            print(f"Unknown skills subcommand '{sub}'. Try: list, show <name>.")
+            return 1
+        return
+
     # Validate unknown commands
     if args.command is not None and args.command not in {
         "web", "api", "telegram", "config", "setup", "status", "users",
-        "doctor", "version", "help", "models", "memory", "knowledge",
+        "doctor", "version", "help", "models", "memory", "knowledge", "skills",
     }:
         print(f"Unknown command '{args.command}'. Try: web, api, telegram, config, setup, status, or nothing for chat.")
         print("Run 'hellochusquis help' for full usage.")

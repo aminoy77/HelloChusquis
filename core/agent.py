@@ -83,6 +83,7 @@ import tools.retool as retool_module
 import tools.workato as workato_module
 import tools.make as make_module
 from core.subagents import SUBAGENT_TOOL_SCHEMA, handle_subagent_tool, subagents_prompt_section
+from core import skills as skills_module
 
 
 def _build_tools_schema(plugins: list) -> list:
@@ -1014,6 +1015,7 @@ def _build_tools_schema(plugins: list) -> list:
     for plugin in plugins:
         schema.append(plugin["schema"])
     schema.append(SUBAGENT_TOOL_SCHEMA)
+    schema.append(skills_module.SKILL_TOOL_SCHEMA)
     return schema
 
 
@@ -1147,6 +1149,20 @@ class Agent:
             memory.load_knowledge()
         except Exception:
             pass
+
+        # Universal SKILL.md skills (Fase 2, best-effort, prompt-only list/show)
+        try:
+            self.skills = skills_module.get_registry()
+            skills_module.discover_skill_md(
+                [
+                    str(Path.home() / ".hellochusquis" / "skills"),
+                    str(Path(__file__).resolve().parent.parent / ".agents" / "skills"),
+                ],
+                registry=self.skills,
+            )
+        except Exception:
+            self.skills = skills_module.get_registry()
+        self.system_prompt += "\n\n" + self.skills.skills_prompt_section()
 
         # Plugins — schema se construye una vez aquí, no se modifica una lista global
         self.plugins = load_plugins()
@@ -1429,6 +1445,9 @@ class Agent:
 
         if name == "subagent":
             return handle_subagent_tool(self, args)
+
+        if name == "skill":
+            return skills_module.handle_skill_tool(self, args)
 
         if name == "shell":
             cmd = args.get("command", "")

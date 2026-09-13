@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import subprocess
@@ -158,6 +159,52 @@ class SkillRegistry:
             template = template.replace(f"{{{key}}}", str(value))
         return template
 
+    def discover_skill_md(self, dirs: list[str | Path]) -> int:
+        """Discover standard SKILL.md files (one level deep) into the registry."""
+        loaded = 0
+        scanned = 0
+        for entry in dirs or []:
+            base = Path(entry).expanduser()
+            if not base.is_dir():
+                continue
+            try:
+                base_resolved = base.resolve()
+            except OSError:
+                continue
+            try:
+                candidates = sorted(base.glob("*/SKILL.md"))
+            except OSError:
+                continue
+            for path in candidates:
+                if scanned >= SKILL_MD_MAX_FILES:
+                    return loaded
+                scanned += 1
+                try:
+                    if path.is_symlink():
+                        continue
+                    if not path.resolve().is_relative_to(base_resolved):
+                        continue
+                    if not path.parent.resolve().is_relative_to(base_resolved):
+                        continue
+                    text = path.read_text(encoding="utf-8", errors="ignore")
+                except (OSError, ValueError):
+                    continue
+                skill = parse_skill_md(text, source=str(path))
+                if skill is None or skill.name in self.skills:
+                    continue
+                self.skills[skill.name] = skill
+                loaded += 1
+        return loaded
+
+    def skills_prompt_section(self) -> str:
+        """Render installed prompt skills for system-prompt injection."""
+        items = [s for s in self.skills.values() if s.prompt_template]
+        if not items:
+            return "No skills installed. Drop SKILL.md folders in ~/.hellochusquis/skills/<name>/SKILL.md."
+        lines = ["Available skills (use the `skill` tool: `list`, `show`):"]
+        lines.extend(f"- {s.name}: {s.description}" for s in items)
+        return "\n".join(lines)
+
 
 def create_skill(name: str, description: str, triggers: list[str], actions: list[dict[str, Any]]) -> Skill:
     """Create a skill definition."""
@@ -218,3 +265,98 @@ EXAMPLE_SKILL = {
     ],
     "requires_approval": True,
 }
+
+
+SKILL_MD_MAX_CHARS = 32768
+SKILL_MD_MAX_FILES = 200
+
+
+def parse_skill_md(text: str, source: str = "<memory>") -> Skill | None:
+    """Parse estándar SKILL.md: frontmatter name/description + body. None si inválido."""
+    _ = source
+    if not isinstance(text, str) or not text.startswith("---\n"):
+        return None
+    match = re.match(r"\A---\n(.*?)\n---\n?", text, re.DOTALL)
+    if not match:
+        return None
+    name: str | None = None
+    description: str | None = None
+    lines = match.group(1).splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        key = "name:" if line.startswith("name:") and name is None else (
+            "description:" if line.startswith("description:") and description is None else None
+        )
+        if key is None:
+            i += 1
+            continue
+        value = line.split(":", 1)[1].strip()
+        if value in (">", "|", ">-", "|-"):
+            j = i + 1
+            cont = []
+            while j < len(lines) and lines[j][:1] in (" ", "\t"):
+                cont.append(lines[j].strip())
+                j += 1
+            value = " ".join(cont) if value.startswith(">") else "\n".join(cont)
+            i = j
+        else:
+            i += 1
+        if key == "name:":
+            name = value
+        else:
+            description = value
+    if name is None or description is None:
+        return None
+    name = re.sub(r"[^A-Za-z0-9_-]", "-", name).strip("-")
+    if not name or not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+        return None
+    if not description:
+        return None
+    description = description[:500]
+    body = text[match.end():].strip()[:SKILL_MD_MAX_CHARS]
+    return Skill(name=name, description=description, prompt_template=body, actions=[], requires_approval=True)
+
+
+def discover_skill_md(dirs: list[str | Path], registry: SkillRegistry | None = None) -> int:
+    """Compat wrapper: discover into given registry (or process singleton)."""
+    reg = registry if registry is not None else get_registry()
+    return reg.discover_skill_md(dirs)
+
+
+def skills_prompt_section(registry: SkillRegistry | None = None) -> str:
+    """Compat wrapper: prompt section from given registry (or process singleton)."""
+    reg = registry if registry is not None else get_registry()
+    return reg.skills_prompt_section()
+
+
+SKILL_TOOL_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "skill",
+        "description": "List and read installed SKILL.md skills. list: catalog (no bodies). show: full skill body by name.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": ["list", "show"]},
+                "name": {"type": "string", "description": "Skill name for show"},
+            },
+            "required": ["action"],
+        },
+    },
+}
+
+
+def handle_skill_tool(agent, args: dict):
+    from tools.base import ToolResult
+    action = ((args or {}).get("action") or "list").lower()
+    if action == "list":
+        items = agent.skills.list_skills()
+        lines = [f"- {s['name']}: {s.get('description', '')}" for s in items] or ["(no skills installed)"]
+        return ToolResult(success=True, output="\n".join(lines))
+    if action == "show":
+        skill = agent.skills.skills.get((args or {}).get("name", ""))
+        if skill is None or not skill.prompt_template:
+            return ToolResult(success=False, output="", error=f"Skill not found: {(args or {}).get('name', '')}")
+        return ToolResult(success=True, output=skill.prompt_template[:8000])
+    return ToolResult(success=False, output="", error=f"Unknown skill action: {action}")

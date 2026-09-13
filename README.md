@@ -91,6 +91,17 @@ The `MDknowledge/` folder ships 1200+ curated markdown files (~9900 facts: progr
 ![Factual accuracy: bare model vs + MDknowledge](docs/assets/kb-accuracy.svg)
 ![v5.2 latency wins](docs/assets/v52-latency.svg)
 
+### Skills (SKILL.md)
+
+Drop any standard `SKILL.md` folder as `~/.hellochusquis/skills/<name>/SKILL.md`
+(copy from `examples/skills/`). The agent lists them in its prompt and reads
+them via the `skill` tool (`list` for catalog, `show` for body, prompt-only).
+
+```bash
+hellochusquis skills list
+hellochusquis skills show code-review
+```
+
 ### Use the web and API safely
 
 The web interface and REST API support streaming responses, readiness checks, request limits, isolated HTTP sessions, persistent approval audit records, and principal-based roles. Sessions are scoped to their caller rather than shared globally.
