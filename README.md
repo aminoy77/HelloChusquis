@@ -333,7 +333,7 @@ When contributing, keep changes focused, add regression coverage for behavior ch
 
 ## Project links
 
-- [Landing page](https://hellochusquis.dev)
+- [Landing page](https://aminoy77.github.io/HelloChusquis/)
 - [Source code](https://github.com/aminoy77/HelloChusquis)
 - [Issue tracker](https://github.com/aminoy77/HelloChusquis/issues)
 - [Changelog](CHANGELOG.md)
