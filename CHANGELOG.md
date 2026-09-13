@@ -3,26 +3,6 @@
 All notable changes to HelloChusquis. Older per-release notes previously lived in
 `RELEASE_v*.md` files and are consolidated here.
 
-## 5.3 — 2026-09-11
-
-### Fixed
-- `hellochusquis web`: el botón Launch app no hacía nada porque el CSP con
-  `nonce` bloquea los `onclick` inline; ahora usa `addEventListener`.
-- `hellochusquis web`: ya no pide access key en local; el loopback
-  (127.0.0.1/::1) entra como owner y el remoto sigue exigiendo Bearer.
-
-### Changed
-- Web app minimal en español con la misma paleta: sidebar con providers del
-  usuario (badge listo + contador), Resumen Sesiones/Mensajes/Listos/Tools y
-  welcome con stats de chats. Sin endpoints nuevos.
-
-## Unreleased
-
-### Added
-- Subagent events (`run_start`/`tool_call`/`run_finish` callback plumbing for
-  future streaming) and opt-in result cache: pure-reasoning outputs reused by
-  TTL, tool runs always re-execute, 128-entry LRU ≈ 1 MB max.
-
 ## 5.4 — 2026-09-11
 
 ### Added
@@ -77,6 +57,26 @@ All notable changes to HelloChusquis. Older per-release notes previously lived i
 ### Removed
 - `core/watchdog.py`, which was marked deprecated, unused, and pulled in an undeclared dependency.
 - Committed build artifacts under `dist/` (stale 1.4.2 wheel and sdist).
+
+## 5.3 — 2026-09-11
+
+### Fixed
+- `hellochusquis web`: el botón Launch app no hacía nada porque el CSP con
+  `nonce` bloquea los `onclick` inline; ahora usa `addEventListener`.
+- `hellochusquis web`: ya no pide access key en local; el loopback
+  (127.0.0.1/::1) entra como owner y el remoto sigue exigiendo Bearer.
+
+### Changed
+- Web app minimal en español con la misma paleta: sidebar con providers del
+  usuario (badge listo + contador), Resumen Sesiones/Mensajes/Listos/Tools y
+  welcome con stats de chats. Sin endpoints nuevos.
+
+## Unreleased
+
+### Added
+- Subagent events (`run_start`/`tool_call`/`run_finish` callback plumbing for
+  future streaming) and opt-in result cache: pure-reasoning outputs reused by
+  TTL, tool runs always re-execute, 128-entry LRU ≈ 1 MB max.
 
 ## 5.0 — 2026-08-05
 

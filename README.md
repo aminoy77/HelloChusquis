@@ -4,13 +4,16 @@
   <img src="github-readme-banner.png" alt="HelloChusquis — local-first AI for your workflow" width="100%">
 </p>
 
+![Demo: 60s UI tour](docs/assets/demo.gif)
+
 > **A local-first AI agent for the terminal, the browser, and the systems around your work.**
 
 HelloChusquis brings conversation, tools, memory, web access, code execution, and integrations into one developer-controlled workspace. Run it interactively in the terminal, expose it through the authenticated web interface, or use the REST API from your own workflows.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-f5a623.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-35d39a.svg)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-399%20passing-35d39a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-421%20passing-35d39a.svg)](tests/)
+[![PyPI](https://img.shields.io/pypi/v/hellochusquis.svg)](https://pypi.org/project/hellochusquis/)
 [![GitHub](https://img.shields.io/badge/source-GitHub-17191e.svg)](https://github.com/aminoy77/HelloChusquis)
 
 <p align="center">
