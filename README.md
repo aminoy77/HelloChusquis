@@ -10,7 +10,7 @@ HelloChusquis brings conversation, tools, memory, web access, code execution, an
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-f5a623.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-35d39a.svg)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-359%20passing-35d39a.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-399%20passing-35d39a.svg)](tests/)
 [![GitHub](https://img.shields.io/badge/source-GitHub-17191e.svg)](https://github.com/aminoy77/HelloChusquis)
 
 <p align="center">
