@@ -4,7 +4,6 @@
   <img src="github-readme-banner.png" alt="HelloChusquis — local-first AI for your workflow" width="100%">
 </p>
 
-![Demo: 60s UI tour](docs/assets/demo.gif)
 
 > **A local-first AI agent for the terminal, the browser, and the systems around your work.**
 
