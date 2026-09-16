@@ -1,0 +1,77 @@
+config.yaml
+__pycache__/
+*.pyc
+*.egg-info/
+.DS_Store
+.openmanolo/
+
+# Flutter/Android/MacOS (not HelloChusquis)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+android/
+lib/
+macos/
+build/
+pubspec.lock
+pubspec.yaml
+l10n.yaml
+.metadata
+analysis_options.yaml
+study_flow.iml
+.idea/
+.cli.py
+# Local virtualenvs
+.venv/
+venv/
+
+# Local runtime state (credentials, SQLite stores, sessions) — never commit
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+api_key.txt
+memory.json
+sessions/
+.hellochusquis/
+nohup.out
+.agents/
+skills-lock.json
+
+# Secrets / env — never commit
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.p12
+*.token
+
+# Logs
+*.log
+
+# Caches / coverage
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build / dist
+dist/
+*.whl
+*.tar.gz
+
+# Node (composiciones HyperFrames)
+node_modules/
+
+# Editor
+.vscode/
+
+# Estado local agente
+.superpowers/
+
+# HyperFrames generado (conservar fuente: index.html, BRIEF/STORYBOARD/SCRIPT, hyperframes.json, package.json)
+videos/*/renders/
+videos/*/capture/

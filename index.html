@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="HelloChusquis is a local-first AI agent for the terminal, browser, and systems around your work." />
+  <meta name="theme-color" content="#050504" />
+  <meta property="og:title" content="HelloChusquis — Work with an agent you can see" />
+  <meta property="og:description" content="A local-first AI agent for the terminal, browser, and systems around your work." />
+  <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/github-social-preview.png" />
+  <meta property="og:type" content="website" />
+  <link rel="shortcut icon" href="https://aminoy77.github.io/HelloChusquis/assets/favicon-8_k4EUdP.ico?v=2" />
+  <link rel="icon" type="image/png" sizes="64x64" href="https://aminoy77.github.io/HelloChusquis/assets/favicon-sxzypJQD.png?v=2" />
+  <title>HelloChusquis — Work with an agent you can see</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>:root{--bg:#050504;--panel:#0c0c0a;--panel-2:#141412;--panel-3:#1c1c19;--amber:#f5a623;--amber-soft:#ffd37b;--ink:#e8e3d8;--muted:#a09a8e;--quiet:#7e7a70;--line:#25231e;--green:#5eb97e;--blue:#7eb8d4;--sans:"DM Sans", system-ui, sans-serif;--display:"Space Grotesk", var(--sans);--mono:"JetBrains Mono", ui-monospace, monospace;--max:1180px}*,:before,:after{box-sizing:border-box}html{scroll-behavior:smooth}body{background:var(--bg);color:var(--ink);font-family:var(--sans);margin:0;line-height:1.55;overflow-x:hidden}body:before{content:"";pointer-events:none;z-index:10;opacity:.24;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");position:fixed;inset:0}a{color:inherit}.wrap{width:min(var(--max), calc(100% - 48px));margin:0 auto}.mono{font-family:var(--mono)}.eyebrow{color:var(--amber);font:600 .72rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}.eyebrow:before{content:"//";color:var(--quiet);margin-right:10px}.site-nav{z-index:20;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);background:#050504c7;border-bottom:1px solid #25231ed9;position:fixed;top:0;left:0;right:0}.nav-inner{justify-content:space-between;align-items:center;height:76px;display:flex}.brand{color:var(--ink);font:700 .84rem var(--mono);letter-spacing:.05em;align-items:center;gap:10px;text-decoration:none;display:inline-flex}.brand img{object-fit:contain;object-position:center;filter:drop-shadow(0 0 10px #f5a6232e);width:31px;height:31px}.nav-links{color:var(--muted);font:500 .76rem var(--mono);align-items:center;gap:28px;display:flex}.nav-links a{text-decoration:none;transition:color .2s}.nav-links a:hover{color:var(--ink)}.nav-github{background:var(--amber);padding:10px 15px;font-weight:700;color:var(--bg)!important}.hero{min-height:760px;padding:160px 0 78px;position:relative;overflow:hidden}.hero:after{content:"";pointer-events:none;background:radial-gradient(circle,#f5a6231f,#0000 61%);width:760px;height:760px;position:absolute;top:10px;right:-180px}.cube-field{z-index:0;pointer-events:none;opacity:.68;perspective:900px;grid-template-rows:repeat(10,1fr);grid-template-columns:repeat(10,1fr);gap:7px;width:min(58vw,720px);height:620px;padding:22px;display:grid;position:absolute;top:104px;right:-110px;transform:rotate(-8deg)skewY(3deg);-webkit-mask-image:radial-gradient(72% 72% at 52% 47%,#000 33%,#0000 74%);mask-image:radial-gradient(72% 72% at 52% 47%,#000 33%,#0000 74%)}.cube-cell{min-width:0;min-height:0;transform-style:preserve-3d;transform:rotateX(var(--cube-x,0deg)) rotateY(var(--cube-y,0deg)) translateZ(0);background:linear-gradient(145deg,#201c14eb,#0b0b09e6);border:1px dotted #f5a62340;transition:transform .42s cubic-bezier(.2,.8,.2,1),background .25s,border-color .25s,box-shadow .25s;position:relative;box-shadow:inset 0 0 13px #f5a62306}.cube-cell:before,.cube-cell:after{content:"";pointer-events:none;opacity:.32;position:absolute;inset:0}.cube-cell:before{background:#00000085;transform:translateZ(-7px)translateY(5px)}.cube-cell:after{background:linear-gradient(135deg,#ffdd961f,#0000 42%)}.cube-cell.is-ripple{background:#f5a62385;border-color:#ffda89f0;animation:.72s ease-out both cube-ripple;box-shadow:0 0 20px #f5a62361}@keyframes cube-ripple{0%{filter:brightness(1.65)}to{filter:brightness()}}.hero-blur{z-index:3;pointer-events:none;isolation:isolate;height:9rem;position:absolute;bottom:0;left:0;right:0;overflow:hidden}.hero-blur span{background:linear-gradient(to bottom, transparent 0%, #0505041f 72%, var(--bg) 100%);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));-webkit-mask-image:linear-gradient(to bottom, transparent var(--start), #000 var(--end));-webkit-mask-image:linear-gradient(to bottom, transparent var(--start), #000 var(--end));mask-image:linear-gradient(to bottom, transparent var(--start), #000 var(--end));display:block;position:absolute;inset:0}.hero-blur span:first-child{--blur:.35rem;--start:12%;--end:28%}.hero-blur span:nth-child(2){--blur:.65rem;--start:22%;--end:39%}.hero-blur span:nth-child(3){--blur:1rem;--start:32%;--end:49%}.hero-blur span:nth-child(4){--blur:1.45rem;--start:42%;--end:59%}.hero-blur span:nth-child(5){--blur:2rem;--start:52%;--end:69%}.hero-blur span:nth-child(6){--blur:2.7rem;--start:62%;--end:79%}.hero-blur span:nth-child(7){--blur:3.5rem;--start:72%;--end:89%}.hero-blur span:nth-child(8){--blur:4.5rem;--start:82%;--end:100%}@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){.hero-blur{background:linear-gradient(to bottom, transparent, var(--bg))}.hero-blur span{display:none}}.hero-grid{z-index:1;z-index:1;grid-template-columns:minmax(0,.92fr) minmax(430px,1.08fr);align-items:center;gap:clamp(50px,7vw,110px);display:grid;position:relative}h1{max-width:650px;font:700 clamp(3.8rem, 8vw, 7.2rem)/.91 var(--display);letter-spacing:-.075em;margin:22px 0 24px}h1 em{color:var(--amber);font-style:normal}.dynamic-greeting{min-width:5.2ch;color:var(--ink);white-space:nowrap;align-items:center;gap:.12em;display:inline-flex}.greeting-word{transform-origin:50% 100%;display:inline-block}.greeting-word.is-entering{animation:.34s cubic-bezier(.16,1,.3,1) both greeting-in}.greeting-word.is-leaving{animation:.22s cubic-bezier(.4,0,1,1) both greeting-out}.greeting-mark{background:var(--amber);border-radius:50%;width:.12em;height:.12em;margin-top:.52em;box-shadow:0 0 .3em #f5a62399}@keyframes greeting-in{0%{opacity:0;filter:blur(3px);transform:translateY(.38em)skewY(5deg)}to{opacity:1;filter:blur();transform:translateY(0)skewY(0)}}@keyframes greeting-out{to{opacity:0;filter:blur(3px);transform:translateY(-.5em)skewY(-5deg)}}.hero-copy{max-width:530px;color:var(--muted);font-size:1.08rem;line-height:1.72}.actions{flex-wrap:wrap;gap:12px;margin-top:34px;display:flex}.btn{border:1px solid var(--line);font:600 .78rem var(--mono);align-items:center;gap:10px;padding:13px 18px;text-decoration:none;transition:transform .2s,border-color .2s,background .2s;display:inline-flex}.btn:hover{border-color:var(--muted);transform:translateY(-2px)}.btn-primary{background:var(--amber);border-color:var(--amber);color:var(--bg)}.btn-primary:hover{background:var(--amber-soft);border-color:var(--amber-soft)}.btn-secondary{color:var(--ink);background:#0c0c0a8c}.hero-note{color:var(--quiet);font:.68rem var(--mono);align-items:center;gap:10px;margin-top:28px;display:flex}.status-dot{background:var(--green);border-radius:50%;width:7px;height:7px;box-shadow:0 0 12px #5eb97ea6}.terminal{border:1px solid var(--line);background:#0c0c0af0;position:relative;box-shadow:0 30px 90px #00000057,0 0 80px #f5a6230f}.terminal:before{content:"";pointer-events:none;border:1px solid #f5a62314;position:absolute;inset:-1px}.terminal-top{background:var(--panel-2);border-bottom:1px solid var(--line);color:var(--quiet);font:.68rem var(--mono);justify-content:space-between;align-items:center;padding:13px 16px;display:flex}.window-dots{gap:6px;display:flex}.window-dots i{background:var(--line);border-radius:50%;width:7px;height:7px;display:block}.window-dots i:first-child{background:var(--amber)}.terminal-body{font:.78rem/1.75 var(--mono);min-height:390px;padding:24px 24px 26px}.line{display:block}.prompt{color:var(--amber)}.muted{color:var(--quiet)}.green{color:var(--green)}.blue{color:var(--blue)}.terminal-highlight{background:var(--bg);border-left:2px solid var(--amber);color:var(--ink);margin:17px 0;padding:15px 17px}.cursor{background:var(--amber);vertical-align:-2px;width:7px;height:15px;animation:1s steps(2,end) infinite blink;display:inline-block}@keyframes blink{50%{opacity:0}}.terminal-foot{border-top:1px solid var(--line);color:var(--quiet);font:.62rem var(--mono);justify-content:space-between;padding:10px 16px;display:flex}.stat-strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel)}.prelaunch{border-bottom:1px solid var(--line);background:var(--panel)}.prelaunch-inner{flex-wrap:wrap;align-items:center;gap:14px 20px;padding:20px 0;display:flex}.prelaunch-text{color:var(--muted);font:500 .78rem var(--mono);margin-right:auto}.prelaunch-text strong{color:var(--amber);font-weight:700}.stats{grid-template-columns:repeat(4,1fr);display:grid}.stat{border-right:1px solid var(--line);padding:25px 18px}.stat:last-child{border-right:0}.stat strong{color:var(--amber);font:700 1.6rem var(--mono);display:block}.stat span{color:var(--quiet);font:.67rem var(--mono);letter-spacing:.03em;margin-top:4px;display:block}section{padding:120px 0}.section-intro{justify-content:space-between;align-items:end;gap:40px;margin-bottom:48px;display:flex}h2{max-width:640px;font:600 clamp(2.2rem, 4.7vw, 4rem)/1 var(--display);letter-spacing:-.055em;margin:14px 0 0}.section-intro p{max-width:390px;color:var(--muted);margin:0}.feature-grid{border-top:1px solid var(--line);border-left:1px solid var(--line);grid-template-columns:repeat(3,1fr);display:grid}.feature{border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(140deg,#141412bf,#0c0c0a8c);min-height:250px;padding:28px;transition:background .25s,transform .25s}.feature:hover{background:var(--panel-2);transform:translateY(-4px)}.feature-index{color:var(--amber);font:.72rem var(--mono)}.feature h3{font:600 1.28rem var(--display);margin:46px 0 12px}.feature p{color:var(--muted);margin:0;font-size:.94rem;line-height:1.65}.workflow{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.workflow-grid{grid-template-columns:.85fr 1.15fr;align-items:center;gap:80px;display:grid}.workflow-list{border-top:1px solid var(--line)}.workflow-step{border-bottom:1px solid var(--line);grid-template-columns:42px 1fr;gap:18px;padding:22px 0;display:grid}.workflow-step b{color:var(--amber);font:.74rem var(--mono)}.workflow-step h3{font:600 1.02rem var(--display);margin:0 0 5px}.workflow-step p{color:var(--muted);margin:0;font-size:.88rem}.code-card{border:1px solid var(--line);background:var(--bg)}.code-head{border-bottom:1px solid var(--line);color:var(--quiet);font:.68rem var(--mono);justify-content:space-between;align-items:center;padding:12px 16px;display:flex}.copy{color:var(--muted);cursor:pointer;font:inherit;background:0 0;border:0}.copy:hover{color:var(--amber)}pre{color:var(--ink);font:.78rem/1.8 var(--mono);margin:0;padding:22px;overflow-x:auto}.code-comment{color:var(--quiet)}.code-key{color:var(--blue)}.code-string{color:var(--green)}.signals{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.chart-grid{grid-template-columns:repeat(2,1fr);gap:18px;display:grid}.chart-card{border:1px solid var(--line);background:var(--bg);padding:16px}.chart-card img{opacity:.95;width:100%;height:auto;display:block}.chart-caption{color:var(--quiet);font:.68rem/1.5 var(--mono);justify-content:space-between;gap:16px;padding:14px 2px 2px;display:flex}.chart-caption strong{color:var(--ink);font-weight:500}.cta{padding:120px 0 130px}.cta-card{background:var(--amber);color:var(--bg);padding:clamp(38px,8vw,90px);position:relative;overflow:hidden}.cta-card:after{content:"⬡";color:#0505041a;font-size:21rem;line-height:.8;position:absolute;bottom:-15%;right:5%}.cta-card h2{z-index:1;max-width:660px;color:var(--bg);position:relative}.cta-card p{z-index:1;color:#050504b3;max-width:500px;position:relative}.cta-card .btn-primary{z-index:1;background:var(--bg);border-color:var(--bg);color:var(--ink);position:relative}footer{border-top:1px solid var(--line);color:var(--quiet);font:.67rem var(--mono);padding:24px 0}.footer-inner{justify-content:space-between;gap:20px;display:flex}.hero:before{content:"";pointer-events:none;opacity:.44;background-image:linear-gradient(#f5a6230b 1px,#0000 1px),linear-gradient(90deg,#f5a6230b 1px,#0000 1px);background-size:42px 42px;position:absolute;inset:76px 0 0;-webkit-mask-image:linear-gradient(#000,#0000 72%);mask-image:linear-gradient(#000,#0000 72%)}.hero-grid:before{content:"";border:1px solid #f5a62321;border-radius:50%;width:580px;height:580px;animation:22s linear infinite orbit;position:absolute;top:-27px;right:8%;box-shadow:0 0 0 72px #f5a62306,0 0 0 144px #f5a62304}.hero-grid:after{content:"";background:var(--amber);border-radius:50%;width:9px;height:9px;animation:4.4s ease-in-out infinite beacon;position:absolute;top:11%;right:26%;box-shadow:0 0 0 8px #f5a6231f,0 0 28px #f5a623cc}@keyframes orbit{to{transform:rotate(360deg)}}@keyframes beacon{50%{opacity:.55;transform:translate(-33px,24px)}}.hero-grid>*{z-index:1;position:relative}.terminal{transform-style:preserve-3d;will-change:transform;transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .35s,box-shadow .35s}.terminal:after{content:"";z-index:2;pointer-events:none;opacity:var(--terminal-glow,0);background:radial-gradient(430px circle at var(--pointer-x,50%) var(--pointer-y,50%), #ffd37c24, transparent 43%);transition:opacity .25s;position:absolute;inset:0}.terminal:hover{border-color:#f5a6239e;box-shadow:0 34px 100px #0000007a,0 0 80px #f5a6231a}.terminal-body>.line,.terminal-highlight{opacity:0;animation:.52s cubic-bezier(.2,.8,.2,1) forwards terminal-line;transform:translateY(9px)}.terminal-body>.line:first-child{animation-delay:.45s}.terminal-highlight{animation-delay:.72s}.terminal-body>.line:nth-child(3){animation-delay:1.02s}.terminal-body>.line:nth-child(4){animation-delay:1.18s}.terminal-body>.line:nth-child(5){animation-delay:1.34s}.terminal-body>.line:nth-child(7){animation-delay:1.54s}@keyframes terminal-line{to{opacity:1;transform:translateY(0)}}.status-dot{animation:2.4s ease-in-out infinite status-pulse}@keyframes status-pulse{50%{box-shadow:0 0 0 7px #5eb97e08,0 0 20px #5eb97ed9}}.btn{position:relative;overflow:hidden}.btn:before{content:"";background:linear-gradient(115deg,#0000 24%,#ffffff61 48%,#0000 70%);transition:transform .65s;position:absolute;inset:0;transform:translate(-130%)}.btn:hover:before{transform:translate(130%)}.stat{transition:background .3s;position:relative;overflow:hidden}.stat:before{content:"";background:linear-gradient(90deg, transparent, var(--amber), transparent);width:35%;height:1px;transition:left .6s;position:absolute;top:0;left:-40%}.stat:hover{background:#f5a6230b}.stat:hover:before{left:110%}.feature{position:relative;overflow:hidden}.feature:after{content:"";opacity:0;border:1px solid #f5a6232e;border-radius:50%;width:160px;height:160px;transition:opacity .35s,transform .5s cubic-bezier(.2,.8,.2,1);position:absolute;bottom:-84px;right:-84px}.feature:hover:after{opacity:1;transform:scale(1.4)}.feature.flip-card{perspective:1800px;background:0 0;min-height:288px;padding:0;overflow:visible;transform:none}.feature.flip-card:after{display:none}.flip-inner{width:100%;height:100%;min-height:288px;transform-style:preserve-3d;transition:transform .62s cubic-bezier(.77,0,.175,1);position:relative}.flip-card:hover .flip-inner,.flip-card:focus-within .flip-inner,.flip-card.is-flipped .flip-inner{transform:rotateY(180deg)}.flip-face{backface-visibility:hidden;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(145deg,#141412f5,#080807fa);flex-direction:column;padding:28px;display:flex;position:absolute;inset:0;overflow:hidden}.flip-face.back{background:linear-gradient(145deg,#17130c,#0c0c0a 72%);justify-content:space-between;transform:rotateY(180deg)}.flip-face h3{z-index:2;font:600 1.28rem var(--display);margin:46px 0 12px;position:relative}.flip-face p{z-index:2;color:var(--muted);margin:0;font-size:.89rem;line-height:1.65;position:relative}.flip-visual{background:radial-gradient(at 50% 120%,#f5a6232e,#0000 57%);place-items:center;height:145px;display:grid;position:absolute;inset:0 0 auto;overflow:hidden}.flip-ring{opacity:0;border:1px solid #f5a623b3;border-radius:50%;width:52px;height:52px;animation:3s linear infinite flip-ripple;position:absolute}.flip-ring:nth-child(2){animation-delay:.42s}.flip-ring:nth-child(3){animation-delay:.84s}.flip-ring:nth-child(4){animation-delay:1.26s}.flip-ring:nth-child(5){animation-delay:1.68s}@keyframes flip-ripple{0%{opacity:0;transform:scale(.3)}25%{opacity:.7}to{opacity:0;transform:scale(3.7)}}.flip-face .feature-index{z-index:3;position:relative}.flip-turn{z-index:4;width:34px;height:34px;color:var(--amber);font:1rem var(--mono);cursor:pointer;background:#f5a62314;border:1px solid #f5a62359;border-radius:50%;place-items:center;transition:transform .25s,background .25s;display:grid;position:absolute;bottom:18px;right:20px}.flip-turn:hover{background:#f5a62329;transform:rotate(-28deg)scale(1.08)}.flip-turn:focus-visible{outline:2px solid var(--amber);outline-offset:3px}.flip-list{gap:10px;margin:22px 0;display:grid}.flip-list span{color:var(--ink);font:.72rem var(--mono);opacity:0;transition:opacity .32s,transform .32s;transform:translate(-12px)}.flip-list span:before{content:"→";color:var(--amber);margin-right:9px}.flip-card:hover .flip-list span,.flip-card:focus-within .flip-list span,.flip-card.is-flipped .flip-list span{opacity:1;transform:translate(0)}.flip-list span:nth-child(2){transition-delay:70ms}.flip-list span:nth-child(3){transition-delay:.14s}.flip-list span:nth-child(4){transition-delay:.21s}.flip-back-action{color:var(--amber);font:700 .7rem var(--mono);letter-spacing:.04em;text-transform:uppercase;border-top:1px solid #f5a62338;justify-content:space-between;align-items:center;padding-top:15px;display:flex}.workflow-step{transition:padding-left .3s,background .3s}.workflow-step:hover{background:#f5a62309;padding-left:13px}.cta-card:before{content:"";background:linear-gradient(110deg,#0000 28%,#ffffff30 46%,#0000 63%);animation:7s ease-in-out infinite cta-sheen;position:absolute;inset:0;transform:translate(-120%)}@keyframes cta-sheen{30%,to{transform:translate(130%)}}.reveal{opacity:0;transition:opacity .75s cubic-bezier(.16,1,.3,1),transform .75s cubic-bezier(.16,1,.3,1);transition-delay:var(--delay,0s);transform:translateY(28px)}.reveal.visible{opacity:1;transform:translateY(0)}.hero-copy-wrap.reveal{transform:translateY(20px)}.terminal.reveal{transform:translateY(32px)scale(.97)}.terminal.reveal.visible{transform:translateY(0)scale(1)}.feature.reveal:nth-child(2),.workflow-step.reveal:nth-child(2){--delay:.11s}.feature.reveal:nth-child(3),.workflow-step.reveal:nth-child(3){--delay:.22s}@media (width<=900px){.hero-grid,.workflow-grid{grid-template-columns:1fr}.hero{min-height:auto}.hero:after{right:-380px}.hero-grid:before{right:-160px}.terminal{max-width:700px}.cube-field{opacity:.34;right:-250px}}@media (width<=700px){.wrap{width:min(var(--max), calc(100% - 32px))}.nav-inner{height:68px}.nav-links a:not(.nav-github){display:none}.hero{padding-top:125px}h1{font-size:clamp(3.4rem,17vw,5.8rem)}.terminal-body{min-height:330px;padding:18px;font-size:.68rem}.stats{grid-template-columns:repeat(2,1fr)}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}.section-intro{display:block}.section-intro p{margin-top:20px}section{padding:82px 0}.feature-grid{grid-template-columns:1fr}.feature{min-height:auto}.feature h3{margin-top:28px}.feature.flip-card,.flip-inner{min-height:300px}.footer-inner{display:block}.footer-inner span+span{margin-top:8px;display:block}.cube-field{display:none}.hero-blur{height:5rem}}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,:before,:after{transition:none!important;animation:none!important}.reveal{opacity:1;transform:none}}</style>
+  <script type="module" crossorigin src="https://aminoy77.github.io/HelloChusquis/assets/index-D9mqV16Y.js"></script>
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="HelloChusquis home"><img src="https://aminoy77.github.io/HelloChusquis/assets/logo-primary-zA0Rz36w.png" alt="" /> <span>HELLOCHUSQUIS</span></a>
+      <div class="nav-links"><a href="#capabilities">Capabilities</a><a href="#workflow">How it works</a><a class="nav-github" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">View on GitHub ↗</a></div>
+    </div>
+  </nav>
+
+  <main id="top">
+    <header class="hero">
+      <div id="cube-react-root"></div>
+      <div class="hero-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy-wrap reveal">
+          <div class="eyebrow">local-first / open source</div>
+          <h1 aria-label="HelloChusquis"><span class="dynamic-greeting" aria-hidden="true"><span class="greeting-word" id="hero-greeting">Hello</span><span class="greeting-mark"></span></span><br /><em>Chusquis.</em></h1>
+          <p class="hero-copy">HelloChusquis brings conversation, tools, memory, web access, code execution, and integrations into one developer-controlled workspace.</p>
+          <div class="actions"><a class="btn btn-primary" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Explore the repository <span>↗</span></a><a class="btn btn-secondary" href="#quickstart">Get started <span>↓</span></a></div>
+          <div class="hero-note"><span class="status-dot"></span> Built for people who want automation with visibility.</div>
+        </div>
+        <div class="terminal reveal" aria-label="HelloChusquis terminal preview">
+          <div class="terminal-top"><div class="window-dots"><i></i><i></i><i></i></div><span>hellochusquis / local</span><span class="green">● ready</span></div>
+          <div class="terminal-body">
+            <span class="line"><span class="prompt">you ›</span> Inspect this repository and find the riskiest area.</span>
+            <div class="terminal-highlight"><span class="green">agent ›</span> I’ll map the project first, then trace the highest-impact paths.<br /><br /><span class="blue">↳ shell</span> find . -maxdepth 2 -type f<br /><span class="green">✓</span> 247 files found <span class="muted">· 0.08s</span></div>
+            <span class="line"><span class="blue">↳ memory</span> recalled 4 relevant decisions</span>
+            <span class="line"><span class="blue">↳ web</span> checked current dependency advisories</span>
+            <span class="line"><span class="green">✓</span> Risk map ready. 3 findings, 1 needs approval.</span>
+            <br /><span class="line"><span class="prompt">you ›</span> <span class="cursor"></span></span>
+          </div>
+          <div class="terminal-foot"><span>model: configured locally</span><span>memory: on &nbsp;·&nbsp; session: isolated</span></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PRE-LAUNCH | UNEED_PRELAUNCH_URL = "https://www.uneed.best/tool/hellochusquis" | ships with v5.4 per CHANGELOG 5.4 (2026-09-11) -->
+    <div class="prelaunch"><div class="wrap prelaunch-inner"><span class="prelaunch-text"><strong>Launching 31·01·2027 on Uneed</strong> — v5.4 is live, launch day is next.</span><a class="btn btn-primary" href="https://www.uneed.best/tool/hellochusquis" target="_blank" rel="noreferrer">Notify me ↗</a><a class="btn btn-secondary" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Star on GitHub ↗</a></div></div>
+
+    <div class="stat-strip"><div class="wrap stats"><div class="stat"><strong data-count="120" data-suffix="+">120+</strong><span>curated knowledge files</span></div><div class="stat"><strong data-count="70" data-suffix="+">70+</strong><span>provider configurations</span></div><div class="stat"><strong data-count="1">1</strong><span>developer-controlled workspace</span></div><div class="stat"><strong>MIT</strong><span>open source license</span></div></div></div>
+
+    <section id="capabilities"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">the useful middle layer</div><h2>Close to the work. Clear about the risk.</h2></div><p>Most AI tools make you leave the place where the work happens. HelloChusquis keeps the agent close—and makes every important step visible.</p></div><div class="feature-grid">
+      <article class="feature flip-card" aria-label="Context capabilities"><div class="flip-inner"><div class="flip-face front"><div class="flip-visual" aria-hidden="true"><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i></div><span class="feature-index">01 / context</span><h3>Remember what matters</h3><p>Bounded history, searchable sessions, summaries, and local SQLite memory keep context useful without turning every prompt into a transcript dump.</p><button class="flip-turn" type="button" aria-label="Show context features" aria-pressed="false">↻</button></div><div class="flip-face back"><div><span class="feature-index">01 / context</span><h3>Memory, with boundaries.</h3><div class="flip-list"><span>Searchable sessions</span><span>Recall before each turn</span><span>Pin or forget facts</span><span>Local SQLite storage</span></div></div><div class="flip-back-action">Inspect the layer <span>→</span></div><button class="flip-turn" type="button" aria-label="Show context overview" aria-pressed="true">↻</button></div></div></article>
+      <article class="feature flip-card" aria-label="Tool capabilities"><div class="flip-inner"><div class="flip-face front"><div class="flip-visual" aria-hidden="true"><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i></div><span class="feature-index">02 / reach</span><h3>Bring your tools with you</h3><p>Shell, code, files, browser, web search, and integrations live inside one conversation you can inspect as it unfolds.</p><button class="flip-turn" type="button" aria-label="Show tool features" aria-pressed="false">↻</button></div><div class="flip-face back"><div><span class="feature-index">02 / reach</span><h3>One conversation. More reach.</h3><div class="flip-list"><span>Shell and bounded code</span><span>Files and browser tasks</span><span>Current web research</span><span>Service integrations</span></div></div><div class="flip-back-action">Explore the tools <span>→</span></div><button class="flip-turn" type="button" aria-label="Show tool overview" aria-pressed="true">↻</button></div></div></article>
+      <article class="feature flip-card" aria-label="Control capabilities"><div class="flip-inner"><div class="flip-face front"><div class="flip-visual" aria-hidden="true"><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i></div><span class="feature-index">03 / control</span><h3>Automate with visibility</h3><p>Approval gates, isolated HTTP sessions, protected credentials, and audit records keep high-impact operations accountable.</p><button class="flip-turn" type="button" aria-label="Show control features" aria-pressed="false">↻</button></div><div class="flip-face back"><div><span class="feature-index">03 / control</span><h3>Autonomy you can audit.</h3><div class="flip-list"><span>Approval gates</span><span>Isolated API sessions</span><span>Protected credentials</span><span>Persistent audit records</span></div></div><div class="flip-back-action">See the safeguards <span>→</span></div><button class="flip-turn" type="button" aria-label="Show control overview" aria-pressed="true">↻</button></div></div></article>
+    </div></div></section>
+
+    <section id="workflow" class="workflow"><div class="wrap workflow-grid"><div><div class="eyebrow">one surface, many ways in</div><h2>Start where you are. Keep going.</h2><p class="hero-copy">Use the same agent from the terminal, authenticated web interface, REST API, or Telegram. Your workspace stays coherent as the surface changes.</p></div><div class="workflow-list"><div class="workflow-step"><b>01</b><div><h3>Terminal</h3><p>Interactive work, planning, tools, and fast feedback.</p></div></div><div class="workflow-step"><b>02</b><div><h3>Web interface</h3><p>Streaming chat, voice controls, export, themes, and approvals.</p></div></div><div class="workflow-step"><b>03</b><div><h3>REST API</h3><p>Applications, automation, isolated sessions, and service integrations.</p></div></div></div></div></section>
+
+    <section id="quickstart"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">from zero to useful</div><h2>A calm first command.</h2></div><p>Install it, configure a provider, and start asking for concrete work. No new workspace to learn.</p></div><div class="code-card"><div class="code-head"><span>quickstart.sh</span><button class="copy" type="button" data-copy="python -m pip install hellochusquis\nhellochusquis config\nhellochusquis">copy lines</button></div><pre><span class="code-comment"># install</span>
+<span class="code-key">python</span> -m pip install <span class="code-string">hellochusquis</span>
+
+<span class="code-comment"># configure a provider</span>
+<span class="code-key">hellochusquis</span> config
+
+<span class="code-comment"># start chatting</span>
+<span class="code-key">hellochusquis</span></pre></div></div></section>
+
+    <section class="signals" id="updates"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">recent project signals</div><h2>The latest updates, in the numbers.</h2></div><p>Two snapshots already shipped with the repository: knowledge retrieval lifts factual accuracy, while v5.2 cuts the slow paths down.</p></div><div class="chart-grid"><figure class="chart-card"><img src="https://aminoy77.github.io/HelloChusquis/assets/kb-accuracy-BJE44FHS.png?v=2" alt="Factual accuracy improves with MDknowledge across model sizes" /><figcaption class="chart-caption"><strong>MDknowledge improves recall</strong><span>35-question factual probe</span></figcaption></figure><figure class="chart-card"><img src="https://aminoy77.github.io/HelloChusquis/assets/v52-latency-HFR_KV2X.png?v=2" alt="Latency before and after v5.2 on key operations" /><figcaption class="chart-caption"><strong>v5.2 removes waiting</strong><span>seconds, log scale</span></figcaption></figure></div></div></section>
+
+    <section class="cta"><div class="wrap"><div class="cta-card"><div class="eyebrow" style="color:rgba(5,5,4,.72)">open source / developer controlled</div><h2>Make the agent part of the place you already work.</h2><p>Read the code, run it locally, and shape the tools around your own workflows.</p><div class="actions"><a class="btn btn-primary" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Go to GitHub ↗</a></div></div></div></section>
+  </main>
+
+  <footer><div class="wrap footer-inner"><span>© 2026 HelloChusquis</span><span>local-first AI for the terminal, browser, and systems around your work.</span></div></footer>
+  <script>
+    const copyButton = document.querySelector('[data-copy]');
+    copyButton?.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(copyButton.dataset.copy);
+      const original = copyButton.textContent;
+      copyButton.textContent = 'copied ✓';
+      setTimeout(() => copyButton.textContent = original, 1400);
+    });
+
+    document.querySelectorAll('.flip-card').forEach((card) => {
+      const turns = [...card.querySelectorAll('.flip-turn')];
+      turns.forEach((turn, index) => {
+        turn.addEventListener('click', () => {
+          const flipped = card.classList.toggle('is-flipped');
+          turns.forEach((button, buttonIndex) => button.setAttribute('aria-pressed', String(flipped ? buttonIndex === 1 : buttonIndex === 0)));
+          // Keep keyboard users on the face they deliberately opened.
+          requestAnimationFrame(() => turns[flipped ? 1 : 0].focus());
+        });
+      });
+    });
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const greeting = document.querySelector('#hero-greeting');
+    const greetings = ['Hello', 'Bonjour', 'Hola', 'Ciao', 'Hallo', 'こんにちは', '안녕하세요'];
+    if (!reducedMotion && greeting) {
+      let greetingIndex = 0;
+      const cycleGreeting = () => {
+        greeting.classList.add('is-leaving');
+        window.setTimeout(() => {
+          greetingIndex = (greetingIndex + 1) % greetings.length;
+          greeting.textContent = greetings[greetingIndex];
+          greeting.classList.remove('is-leaving');
+          greeting.classList.add('is-entering');
+          window.setTimeout(() => greeting.classList.remove('is-entering'), 360);
+        }, 220);
+      };
+      window.setInterval(cycleGreeting, 1650);
+    }
+
+    // React Bits-style cube field, implemented locally for this static docs page.
+    const cubeField = document.querySelector('#cube-field');
+    const hero = document.querySelector('.hero');
+    if (false && !reducedMotion && cubeField && hero && window.matchMedia('(pointer: fine)').matches) {
+      const gridSize = 10;
+      const radius = 4;
+      const maxAngle = 32;
+      const cubes = [];
+      for (let row = 0; row < gridSize; row += 1) {
+        for (let col = 0; col < gridSize; col += 1) {
+          const cube = document.createElement('span');
+          cube.className = 'cube-cell';
+          cube.dataset.row = row;
+          cube.dataset.col = col;
+          cubeField.append(cube);
+          cubes.push({ element: cube, row, col });
+        }
+      }
+
+      const tiltAt = (rowCenter, colCenter) => {
+        cubes.forEach((cube) => {
+          const distance = Math.hypot(cube.row - rowCenter, cube.col - colCenter);
+          const angle = distance < radius ? (1 - distance / radius) * maxAngle : 0;
+          cube.element.style.setProperty('--cube-x', `${-angle}deg`);
+          cube.element.style.setProperty('--cube-y', `${angle}deg`);
+        });
+      };
+      const fieldPoint = (clientX, clientY) => {
+        const bounds = cubeField.getBoundingClientRect();
+        return { row: ((clientY - bounds.top) / bounds.height) * gridSize, col: ((clientX - bounds.left) / bounds.width) * gridSize, inside: clientX >= bounds.left && clientX <= bounds.right && clientY >= bounds.top && clientY <= bounds.bottom };
+      };
+      let lastInteraction = 0;
+      let pendingPoint = null;
+      let pointerFrame = 0;
+      hero.addEventListener('pointermove', (event) => {
+        const point = fieldPoint(event.clientX, event.clientY);
+        if (!point.inside) return;
+        lastInteraction = performance.now();
+        pendingPoint = point;
+        if (pointerFrame) return;
+        pointerFrame = requestAnimationFrame(() => {
+          tiltAt(pendingPoint.row, pendingPoint.col);
+          pointerFrame = 0;
+        });
+      });
+      hero.addEventListener('pointerleave', () => tiltAt(-10, -10));
+      hero.addEventListener('click', (event) => {
+        if (event.target.closest('a, button')) return;
+        const point = fieldPoint(event.clientX, event.clientY);
+        if (!point.inside) return;
+        cubes.forEach((cube) => {
+          const ring = Math.round(Math.hypot(cube.row - point.row, cube.col - point.col));
+          cube.element.style.animationDelay = `${ring * 42}ms`;
+          cube.element.classList.remove('is-ripple');
+          void cube.element.offsetWidth;
+          cube.element.classList.add('is-ripple');
+        });
+      });
+      let idlePosition = { row: 3, col: 6 };
+      let idleTarget = { row: 7, col: 3 };
+      const drift = () => {
+        if (performance.now() - lastInteraction > 1300) {
+          idlePosition.row += (idleTarget.row - idlePosition.row) * .018;
+          idlePosition.col += (idleTarget.col - idlePosition.col) * .018;
+          tiltAt(idlePosition.row, idlePosition.col);
+          if (Math.hypot(idlePosition.row - idleTarget.row, idlePosition.col - idleTarget.col) < .12) {
+            idleTarget = { row: Math.random() * gridSize, col: Math.random() * gridSize };
+          }
+        }
+        requestAnimationFrame(drift);
+      };
+      requestAnimationFrame(drift);
+    }
+    const revealTargets = document.querySelectorAll('.section-intro, .feature, .workflow-grid > div, .workflow-step, .code-card, .chart-card, .cta-card');
+    revealTargets.forEach((element) => element.classList.add('reveal'));
+
+    const startCounter = (element) => {
+      const target = Number(element.dataset.count);
+      const suffix = element.dataset.suffix || '';
+      const duration = 850;
+      const started = performance.now();
+      const tick = (now) => {
+        const progress = Math.min((now - started) / duration, 1);
+        element.textContent = `${Math.round(target * (1 - Math.pow(1 - progress, 3)))}${suffix}`;
+        if (progress < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    if (reducedMotion || !('IntersectionObserver' in window)) {
+      document.querySelectorAll('.reveal').forEach((element) => element.classList.add('visible'));
+    } else {
+      const observer = new IntersectionObserver((entries, instance) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('visible');
+          if (entry.target.matches('[data-count]')) startCounter(entry.target);
+          instance.unobserve(entry.target);
+        });
+      }, { threshold: .14, rootMargin: '0px 0px -36px' });
+      document.querySelectorAll('.reveal, [data-count]').forEach((element) => observer.observe(element));
+    }
+
+    const terminal = document.querySelector('.terminal');
+    if (!reducedMotion && terminal && window.matchMedia('(pointer: fine)').matches) {
+      terminal.addEventListener('pointermove', (event) => {
+        const bounds = terminal.getBoundingClientRect();
+        const x = (event.clientX - bounds.left) / bounds.width;
+        const y = (event.clientY - bounds.top) / bounds.height;
+        terminal.style.setProperty('--pointer-x', `${x * 100}%`);
+        terminal.style.setProperty('--pointer-y', `${y * 100}%`);
+        terminal.style.setProperty('--terminal-glow', '1');
+        terminal.style.transform = `perspective(1100px) rotateX(${(0.5 - y) * 3}deg) rotateY(${(x - 0.5) * 4}deg) translateY(-5px)`;
+      });
+      terminal.addEventListener('pointerleave', () => {
+        terminal.style.setProperty('--terminal-glow', '0');
+        terminal.style.transform = '';
+      });
+    }
+  </script>
+</body>
+</html>
