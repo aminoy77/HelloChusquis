@@ -762,6 +762,44 @@
         @media (max-width: 600px) { .landing-header { height: 62px; }.landing-text-link { display: none; }.landing-hero, .landing-section, .landing-cta { width: min(100% - 36px, 1160px); }.landing-signal-row, .landing-footer { width: calc(100% - 36px); }.landing-hero h1 { font-size: clamp(2.8rem, 14vw, 4rem); }.landing-hero-lede { font-size: .9rem; }.landing-terminal-body { min-height: 300px; padding: 22px 17px; font-size: .66rem; }.landing-install-line { width: 100%; font-size: .62rem; }.landing-section { padding: 92px 0; }.landing-step-grid, .landing-capability-grid { grid-template-columns: 1fr; }.landing-capability-featured { min-height: 260px; }.landing-control-panel { padding: 28px 22px; }.landing-control-list div { grid-template-columns: 1fr; gap: 6px; }.landing-footer { flex-wrap: wrap; }.landing-footer > span { order: 3; width: 100%; }.landing-footer > div { margin-left: auto; } }
         @media (prefers-reduced-motion: reduce) { .landing *, .landing *::before, .landing *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
 
+        /* Motion layer — deliberately restrained, with the terminal as the stage. */
+        .landing { isolation: isolate; position: relative; }
+        .landing::before { content: ''; position: absolute; z-index: -2; inset: 72px 0 auto; height: 780px; pointer-events: none; background: radial-gradient(ellipse 48% 42% at 76% 20%, rgba(245,166,35,.11), transparent 70%), radial-gradient(ellipse 34% 30% at 19% 18%, rgba(73,128,210,.08), transparent 70%); }
+        .landing-hero::before { content: ''; position: absolute; z-index: -1; width: min(760px, 70vw); height: min(760px, 70vw); right: -210px; top: 35px; border: 1px solid rgba(245,166,35,.12); border-radius: 50%; box-shadow: 0 0 0 64px rgba(245,166,35,.025), 0 0 0 128px rgba(245,166,35,.017); animation: landing-orbit 18s linear infinite; }
+        .landing-hero { position: relative; }
+        .landing-hero::after { content: ''; position: absolute; z-index: -1; right: 9%; top: 12%; width: 11px; height: 11px; border-radius: 50%; background: #f5a623; box-shadow: 0 0 0 7px rgba(245,166,35,.12), 0 0 34px 6px rgba(245,166,35,.3); animation: landing-beacon 3.8s ease-in-out infinite; }
+        @keyframes landing-orbit { to { transform: rotate(360deg); } }
+        @keyframes landing-beacon { 0%,100% { transform: translate(0,0); opacity: .65; } 50% { transform: translate(-24px,18px); opacity: 1; } }
+        .landing-terminal { transform-style: preserve-3d; will-change: transform; transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease, border-color .35s ease; }
+        .landing-terminal::after { content: ''; position: absolute; inset: -1px; pointer-events: none; opacity: var(--terminal-glow, 0); background: radial-gradient(460px circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255,204,106,.16), transparent 44%); transition: opacity .25s ease; }
+        .landing-terminal:hover { border-color: rgba(245,166,35,.65); box-shadow: 24px 34px 90px rgba(0,0,0,.48), 0 0 60px rgba(245,166,35,.08); }
+        .landing-terminal:hover::after { opacity: 1; }
+        .landing-terminal-body p { opacity: 0; transform: translateY(8px); animation: landing-line-in .55s cubic-bezier(.2,.75,.25,1) forwards; }
+        .landing-terminal-body p:nth-child(1) { animation-delay: .55s; }.landing-terminal-body p:nth-child(2) { animation-delay: .72s; }.landing-terminal-body p:nth-child(3) { animation-delay: .89s; }.landing-terminal-body p:nth-child(4) { animation-delay: 1.02s; }.landing-terminal-body p:nth-child(5) { animation-delay: 1.18s; }.landing-terminal-body p:nth-child(6) { animation-delay: 1.39s; }.landing-terminal-body p:nth-child(7) { animation-delay: 1.58s; }.landing-terminal-body p:nth-child(8) { animation-delay: 1.7s; }.landing-terminal-body p:nth-child(9) { animation-delay: 1.85s; }
+        @keyframes landing-line-in { to { opacity: 1; transform: translateY(0); } }
+        .landing-status-dot { animation: landing-status 2.1s ease-in-out infinite; }
+        @keyframes landing-status { 50% { box-shadow: 0 0 0 9px rgba(53,211,154,.02), 0 0 20px rgba(53,211,154,.7); } }
+        .landing-signal-row { position: relative; overflow: hidden; }
+        .landing-signal-row::before { content: ''; position: absolute; top: 0; left: -35%; width: 30%; height: 1px; background: linear-gradient(90deg, transparent, #f5a623, transparent); animation: landing-scan 6s ease-in-out infinite; }
+        @keyframes landing-scan { 50% { left: 105%; } 100% { left: 105%; } }
+        .landing-capability { position: relative; overflow: hidden; }
+        .landing-capability::before { content: ''; position: absolute; width: 140px; height: 140px; right: -70px; bottom: -70px; border: 1px solid rgba(245,166,35,.18); border-radius: 50%; opacity: 0; transition: opacity .35s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
+        .landing-capability:hover::before { opacity: 1; transform: scale(1.45); }
+        .landing-integration-cloud span { transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .25s ease, color .25s ease, background .25s ease; }
+        .landing-integration-cloud span:hover { transform: translateY(-4px) rotate(-1deg); background: rgba(245,166,35,.06); }
+        .landing-button { position: relative; overflow: hidden; }
+        .landing-button::before { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,.34) 48%, transparent 70%); transform: translateX(-130%); transition: transform .65s ease; }
+        .landing-button:hover::before { transform: translateX(130%); }
+        .landing-button > * { position: relative; }
+        .landing .motion-reveal { opacity: 0; transform: translateY(24px); transition: opacity .75s cubic-bezier(.16,1,.3,1), transform .75s cubic-bezier(.16,1,.3,1); transition-delay: var(--reveal-delay, 0ms); }
+        .landing .motion-reveal.is-visible { opacity: 1; transform: translateY(0); }
+        .landing-hero-copy.motion-reveal { transform: translateY(18px); }
+        .landing-terminal.motion-reveal { transform: translateY(28px) scale(.97); }
+        .landing-terminal.motion-reveal.is-visible { transform: translateY(0) scale(1); }
+        .landing-step.motion-reveal:nth-child(2), .landing-capability.motion-reveal:nth-child(2) { --reveal-delay: 100ms; }.landing-step.motion-reveal:nth-child(3), .landing-capability.motion-reveal:nth-child(3) { --reveal-delay: 200ms; }.landing-capability.motion-reveal:nth-child(4) { --reveal-delay: 300ms; }
+        @media (max-width: 900px) { .landing-hero::before { right: -280px; top: 110px; }.landing-hero::after { right: 18%; top: 48%; } }
+        @media (max-width: 600px) { .landing-hero::before, .landing-hero::after { display: none; }.landing-terminal { transform: none !important; } }
+
         /* HelloChusquis app: minimal bonita, misma paleta */
         .app-container { background: radial-gradient(900px 320px at 50% -80px, var(--accent-soft), transparent 70%), var(--bg); }
         .app-header { height: 60px; padding: 0 16px 0 18px; gap: 12px; }
@@ -834,7 +872,7 @@
 
         <main id="landing-main">
             <section class="landing-hero" id="top" aria-labelledby="landing-title">
-                <div class="landing-hero-copy">
+                <div class="landing-hero-copy motion-reveal">
                     <div class="landing-kicker"><span class="landing-status-dot" aria-hidden="true"></span> Local-first AI workspace</div>
                     <h1 id="landing-title">Make the terminal<br><em>your command center.</em></h1>
                     <p class="landing-hero-lede">HelloChusquis connects conversation, tools, memory, web access, and integrations in one developer-controlled agent.</p>
@@ -845,7 +883,7 @@
                     <div class="landing-install-line" aria-label="Install command"><span>$</span> python -m pip install hellochusquis <button id="install-copy-btn" class="landing-copy" type="button" aria-label="Copy install command">copy</button></div>
                     <div class="landing-microproof"><span>Python 3.10+</span><span>MIT licensed</span><span>70+ providers</span></div>
                 </div>
-                <div class="landing-terminal" aria-label="HelloChusquis terminal preview">
+                <div class="landing-terminal motion-reveal" aria-label="HelloChusquis terminal preview">
                     <div class="landing-terminal-top"><span class="landing-window-dots"><i></i><i></i><i></i></span><span>hellochusquis / local session</span><span class="landing-terminal-signal">● ready</span></div>
                     <div class="landing-terminal-body">
                         <p><span class="landing-green">$</span> hellochusquis</p>
@@ -868,21 +906,21 @@
             </section>
 
             <section class="landing-section landing-workflow" id="workflow" aria-labelledby="workflow-title">
-                <div class="landing-section-intro"><div class="landing-eyebrow">The workflow</div><h2 id="workflow-title">From intent to useful work.</h2><p>Ask naturally. Keep the work close to the code. Let the agent make the next step visible.</p></div>
+                <div class="landing-section-intro motion-reveal"><div class="landing-eyebrow">The workflow</div><h2 id="workflow-title">From intent to useful work.</h2><p>Ask naturally. Keep the work close to the code. Let the agent make the next step visible.</p></div>
                 <div class="landing-step-grid">
-                    <article class="landing-step"><span>01</span><div><h3>Describe the job</h3><p>Use plain language for research, code changes, files, data, or multi-step tasks.</p></div></article>
-                    <article class="landing-step"><span>02</span><div><h3>Watch the plan</h3><p>Tools, progress, approvals, and failures stay legible instead of disappearing behind a black box.</p></div></article>
-                    <article class="landing-step"><span>03</span><div><h3>Keep the result</h3><p>Memory, sessions, exports, and integrations keep the useful parts close for the next turn.</p></div></article>
+                    <article class="landing-step motion-reveal"><span>01</span><div><h3>Describe the job</h3><p>Use plain language for research, code changes, files, data, or multi-step tasks.</p></div></article>
+                    <article class="landing-step motion-reveal"><span>02</span><div><h3>Watch the plan</h3><p>Tools, progress, approvals, and failures stay legible instead of disappearing behind a black box.</p></div></article>
+                    <article class="landing-step motion-reveal"><span>03</span><div><h3>Keep the result</h3><p>Memory, sessions, exports, and integrations keep the useful parts close for the next turn.</p></div></article>
                 </div>
             </section>
 
             <section class="landing-section" id="capabilities" aria-labelledby="capabilities-title">
-                <div class="landing-section-intro landing-section-intro-wide"><div class="landing-eyebrow">The toolkit</div><h2 id="capabilities-title">Enough surface area to ship.<br><span>Not enough to get lost.</span></h2><p>Core tools cover the everyday developer loop, while providers and integrations expand the edges when you need them.</p></div>
+                <div class="landing-section-intro landing-section-intro-wide motion-reveal"><div class="landing-eyebrow">The toolkit</div><h2 id="capabilities-title">Enough surface area to ship.<br><span>Not enough to get lost.</span></h2><p>Core tools cover the everyday developer loop, while providers and integrations expand the edges when you need them.</p></div>
                 <div class="landing-capability-grid">
-                    <article class="landing-capability landing-capability-featured"><div class="landing-card-index">01 / terminal</div><h3>Build beside your shell</h3><p>Run commands, inspect files, execute bounded code, and iterate without leaving the conversation.</p><div class="landing-code-line"><span class="landing-green">$</span> hellochusquis <span class="landing-muted">--quick</span></div></article>
-                    <article class="landing-capability"><div class="landing-card-index">02 / context</div><h3>Remember the right things</h3><p>Bounded history, compression, sessions, summaries, and local memory keep context useful.</p></article>
-                    <article class="landing-capability"><div class="landing-card-index">03 / access</div><h3>Meet the web halfway</h3><p>Search, browser automation, an authenticated web UI, and a streaming REST API share one agent.</p></article>
-                    <article class="landing-capability"><div class="landing-card-index">04 / scale</div><h3>Switch providers freely</h3><p>Use hosted, local, enterprise, and specialized providers through one configuration flow.</p></article>
+                    <article class="landing-capability landing-capability-featured motion-reveal"><div class="landing-card-index">01 / terminal</div><h3>Build beside your shell</h3><p>Run commands, inspect files, execute bounded code, and iterate without leaving the conversation.</p><div class="landing-code-line"><span class="landing-green">$</span> hellochusquis <span class="landing-muted">--quick</span></div></article>
+                    <article class="landing-capability motion-reveal"><div class="landing-card-index">02 / context</div><h3>Remember the right things</h3><p>Bounded history, compression, sessions, summaries, and local memory keep context useful.</p></article>
+                    <article class="landing-capability motion-reveal"><div class="landing-card-index">03 / access</div><h3>Meet the web halfway</h3><p>Search, browser automation, an authenticated web UI, and a streaming REST API share one agent.</p></article>
+                    <article class="landing-capability motion-reveal"><div class="landing-card-index">04 / scale</div><h3>Switch providers freely</h3><p>Use hosted, local, enterprise, and specialized providers through one configuration flow.</p></article>
                 </div>
             </section>
 
@@ -1260,6 +1298,42 @@
         landing.classList.remove('hidden');
         document.body.style.overflow = '';
         closeOverlays();
+    }
+
+    // ---------- landing motion ----------
+    function initLandingMotion() {
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const revealItems = document.querySelectorAll('.landing .motion-reveal');
+
+        if (reducedMotion || !('IntersectionObserver' in window)) {
+            revealItems.forEach((item) => item.classList.add('is-visible'));
+            return;
+        }
+
+        const revealObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target);
+            });
+        }, { threshold: 0.14, rootMargin: '0px 0px -30px' });
+        revealItems.forEach((item) => revealObserver.observe(item));
+
+        const terminal = document.querySelector('.landing-terminal');
+        if (!terminal || !window.matchMedia('(pointer: fine)').matches) return;
+        terminal.addEventListener('pointermove', (event) => {
+            const rect = terminal.getBoundingClientRect();
+            const x = (event.clientX - rect.left) / rect.width;
+            const y = (event.clientY - rect.top) / rect.height;
+            terminal.style.setProperty('--pointer-x', `${x * 100}%`);
+            terminal.style.setProperty('--pointer-y', `${y * 100}%`);
+            terminal.style.setProperty('--terminal-glow', '1');
+            terminal.style.transform = `perspective(1100px) rotateX(${(0.5 - y) * 3.2}deg) rotateY(${(x - 0.5) * 4.4}deg) translateY(-4px)`;
+        });
+        terminal.addEventListener('pointerleave', () => {
+            terminal.style.setProperty('--terminal-glow', '0');
+            terminal.style.transform = '';
+        });
     }
 
     // ---------- auth (local-first: sin prompt; token solo si existe para remoto) ----------
@@ -1875,6 +1949,7 @@
         syncAppearance();
         if (storage.get('hc_sidebar') === '1') sidebar.classList.add('hidden');
         setVoiceMode(state.voiceMode);
+        initLandingMotion();
 
         // mark all decorative SVGs as aria-hidden
         document.querySelectorAll('svg.ic').forEach((s) => s.setAttribute('aria-hidden', 'true'));
