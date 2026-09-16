@@ -210,7 +210,7 @@
 
   <main id="top">
     <header class="hero">
-      <div class="cube-field" id="cube-field" aria-hidden="true"></div>
+      <div id="cube-react-root"></div>
       <div class="hero-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
       <div class="wrap hero-grid">
         <div class="hero-copy-wrap reveal">
@@ -305,7 +305,7 @@
     // React Bits-style cube field, implemented locally for this static docs page.
     const cubeField = document.querySelector('#cube-field');
     const hero = document.querySelector('.hero');
-    if (!reducedMotion && cubeField && hero && window.matchMedia('(pointer: fine)').matches) {
+    if (false && !reducedMotion && cubeField && hero && window.matchMedia('(pointer: fine)').matches) {
       const gridSize = 10;
       const radius = 4;
       const maxAngle = 32;
@@ -422,5 +422,6 @@
       });
     }
   </script>
+  <script type="module" src="./src/main.jsx"></script>
 </body>
 </html>
