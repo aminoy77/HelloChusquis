@@ -53,6 +53,17 @@
     .nav-github { color: var(--bg) !important; background: var(--amber); padding: 10px 15px; font-weight: 700; }
     .hero { position: relative; padding: 160px 0 78px; min-height: 760px; overflow: hidden; }
     .hero::after { content: ""; position: absolute; width: 760px; height: 760px; top: 10px; right: -180px; background: radial-gradient(circle, rgba(245,166,35,.12), transparent 61%); pointer-events: none; }
+    .cube-field { position: absolute; z-index: 0; top: 104px; right: -110px; width: min(58vw, 720px); height: 620px; padding: 22px; display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 7px; pointer-events: none; opacity: .68; perspective: 900px; transform: rotate(-8deg) skewY(3deg); mask-image: radial-gradient(ellipse 72% 72% at 52% 47%, #000 33%, transparent 74%); }
+    .cube-cell { position: relative; min-width: 0; min-height: 0; transform-style: preserve-3d; transform: rotateX(var(--cube-x, 0deg)) rotateY(var(--cube-y, 0deg)) translateZ(0); transition: transform .42s cubic-bezier(.2,.8,.2,1), background .25s ease, border-color .25s ease, box-shadow .25s ease; background: linear-gradient(145deg, rgba(32,28,20,.92), rgba(11,11,9,.9)); border: 1px dotted rgba(245,166,35,.25); box-shadow: inset 0 0 13px rgba(245,166,35,.025); }
+    .cube-cell::before, .cube-cell::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .32; }
+    .cube-cell::before { transform: translateZ(-7px) translateY(5px); background: rgba(0,0,0,.52); }.cube-cell::after { background: linear-gradient(135deg, rgba(255,221,150,.12), transparent 42%); }
+    .cube-cell.is-ripple { animation: cube-ripple .72s ease-out both; border-color: rgba(255,218,137,.94); background: rgba(245,166,35,.52); box-shadow: 0 0 20px rgba(245,166,35,.38); }
+    @keyframes cube-ripple { 0% { filter: brightness(1.65); } 100% { filter: brightness(1); } }
+    .hero-blur { position: absolute; z-index: 3; right: 0; bottom: 0; left: 0; height: 9rem; overflow: hidden; pointer-events: none; isolation: isolate; }
+    .hero-blur span { position: absolute; inset: 0; display: block; background: linear-gradient(to bottom, transparent 0%, rgba(5,5,4,.12) 72%, var(--bg) 100%); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); -webkit-mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); }
+    .hero-blur span:nth-child(1) { --blur: .35rem; --start: 12%; --end: 28%; }.hero-blur span:nth-child(2) { --blur: .65rem; --start: 22%; --end: 39%; }.hero-blur span:nth-child(3) { --blur: 1rem; --start: 32%; --end: 49%; }.hero-blur span:nth-child(4) { --blur: 1.45rem; --start: 42%; --end: 59%; }.hero-blur span:nth-child(5) { --blur: 2rem; --start: 52%; --end: 69%; }.hero-blur span:nth-child(6) { --blur: 2.7rem; --start: 62%; --end: 79%; }.hero-blur span:nth-child(7) { --blur: 3.5rem; --start: 72%; --end: 89%; }.hero-blur span:nth-child(8) { --blur: 4.5rem; --start: 82%; --end: 100%; }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .hero-blur { background: linear-gradient(to bottom, transparent, var(--bg)); } .hero-blur span { display: none; } }
+    .hero-grid { position: relative; z-index: 1; }
     .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .92fr) minmax(430px, 1.08fr); gap: clamp(50px, 7vw, 110px); align-items: center; }
     h1 { max-width: 650px; margin: 22px 0 24px; font: 700 clamp(3.8rem, 8vw, 7.2rem)/.91 var(--display); letter-spacing: -.075em; }
     h1 em { color: var(--amber); font-style: normal; }
@@ -183,7 +194,9 @@
     .hero-copy-wrap.reveal { transform: translateY(20px); }.terminal.reveal { transform: translateY(32px) scale(.97); }.terminal.reveal.visible { transform: translateY(0) scale(1); }
     .feature.reveal:nth-child(2), .workflow-step.reveal:nth-child(2) { --delay: 110ms; }.feature.reveal:nth-child(3), .workflow-step.reveal:nth-child(3) { --delay: 220ms; }
     @media (max-width: 900px) { .hero-grid, .workflow-grid { grid-template-columns: 1fr; } .hero { min-height: auto; } .hero::after { right: -380px; } .hero-grid::before { right: -160px; } .terminal { max-width: 700px; } }
+    @media (max-width: 900px) { .cube-field { right: -250px; opacity: .34; } }
     @media (max-width: 700px) { .wrap { width: min(var(--max), calc(100% - 32px)); } .nav-inner { height: 68px; } .nav-links a:not(.nav-github) { display: none; } .hero { padding-top: 125px; } h1 { font-size: clamp(3.4rem, 17vw, 5.8rem); } .terminal-body { min-height: 330px; padding: 18px; font-size: .68rem; } .stats { grid-template-columns: repeat(2, 1fr); } .stat:nth-child(2) { border-right: 0; } .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); } .section-intro { display: block; } .section-intro p { margin-top: 20px; } section { padding: 82px 0; } .feature-grid { grid-template-columns: 1fr; } .feature { min-height: auto; } .feature h3 { margin-top: 28px; } .feature.flip-card, .flip-inner { min-height: 300px; } .footer-inner { display: block; } .footer-inner span + span { display: block; margin-top: 8px; } }
+    @media (max-width: 700px) { .cube-field { display: none; } .hero-blur { height: 5rem; } }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } }
   </style>
 </head>
@@ -197,6 +210,8 @@
 
   <main id="top">
     <header class="hero">
+      <div class="cube-field" id="cube-field" aria-hidden="true"></div>
+      <div class="hero-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
       <div class="wrap hero-grid">
         <div class="hero-copy-wrap reveal">
           <div class="eyebrow">local-first / open source</div>
@@ -285,6 +300,80 @@
         }, 220);
       };
       window.setInterval(cycleGreeting, 1650);
+    }
+
+    // React Bits-style cube field, implemented locally for this static docs page.
+    const cubeField = document.querySelector('#cube-field');
+    const hero = document.querySelector('.hero');
+    if (!reducedMotion && cubeField && hero && window.matchMedia('(pointer: fine)').matches) {
+      const gridSize = 10;
+      const radius = 4;
+      const maxAngle = 32;
+      const cubes = [];
+      for (let row = 0; row < gridSize; row += 1) {
+        for (let col = 0; col < gridSize; col += 1) {
+          const cube = document.createElement('span');
+          cube.className = 'cube-cell';
+          cube.dataset.row = row;
+          cube.dataset.col = col;
+          cubeField.append(cube);
+          cubes.push({ element: cube, row, col });
+        }
+      }
+
+      const tiltAt = (rowCenter, colCenter) => {
+        cubes.forEach((cube) => {
+          const distance = Math.hypot(cube.row - rowCenter, cube.col - colCenter);
+          const angle = distance < radius ? (1 - distance / radius) * maxAngle : 0;
+          cube.element.style.setProperty('--cube-x', `${-angle}deg`);
+          cube.element.style.setProperty('--cube-y', `${angle}deg`);
+        });
+      };
+      const fieldPoint = (clientX, clientY) => {
+        const bounds = cubeField.getBoundingClientRect();
+        return { row: ((clientY - bounds.top) / bounds.height) * gridSize, col: ((clientX - bounds.left) / bounds.width) * gridSize, inside: clientX >= bounds.left && clientX <= bounds.right && clientY >= bounds.top && clientY <= bounds.bottom };
+      };
+      let lastInteraction = 0;
+      let pendingPoint = null;
+      let pointerFrame = 0;
+      hero.addEventListener('pointermove', (event) => {
+        const point = fieldPoint(event.clientX, event.clientY);
+        if (!point.inside) return;
+        lastInteraction = performance.now();
+        pendingPoint = point;
+        if (pointerFrame) return;
+        pointerFrame = requestAnimationFrame(() => {
+          tiltAt(pendingPoint.row, pendingPoint.col);
+          pointerFrame = 0;
+        });
+      });
+      hero.addEventListener('pointerleave', () => tiltAt(-10, -10));
+      hero.addEventListener('click', (event) => {
+        if (event.target.closest('a, button')) return;
+        const point = fieldPoint(event.clientX, event.clientY);
+        if (!point.inside) return;
+        cubes.forEach((cube) => {
+          const ring = Math.round(Math.hypot(cube.row - point.row, cube.col - point.col));
+          cube.element.style.animationDelay = `${ring * 42}ms`;
+          cube.element.classList.remove('is-ripple');
+          void cube.element.offsetWidth;
+          cube.element.classList.add('is-ripple');
+        });
+      });
+      let idlePosition = { row: 3, col: 6 };
+      let idleTarget = { row: 7, col: 3 };
+      const drift = () => {
+        if (performance.now() - lastInteraction > 1300) {
+          idlePosition.row += (idleTarget.row - idlePosition.row) * .018;
+          idlePosition.col += (idleTarget.col - idlePosition.col) * .018;
+          tiltAt(idlePosition.row, idlePosition.col);
+          if (Math.hypot(idlePosition.row - idleTarget.row, idlePosition.col - idleTarget.col) < .12) {
+            idleTarget = { row: Math.random() * gridSize, col: Math.random() * gridSize };
+          }
+        }
+        requestAnimationFrame(drift);
+      };
+      requestAnimationFrame(drift);
     }
     const revealTargets = document.querySelectorAll('.section-intro, .feature, .workflow-grid > div, .workflow-step, .code-card, .chart-card, .cta-card');
     revealTargets.forEach((element) => element.classList.add('reveal'));
