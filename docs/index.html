@@ -54,11 +54,11 @@
     .hero { position: relative; padding: 160px 0 78px; min-height: 760px; overflow: hidden; }
     .hero::after { content: ""; position: absolute; width: 760px; height: 760px; top: 10px; right: -180px; background: radial-gradient(circle, rgba(245,166,35,.12), transparent 61%); pointer-events: none; }
     .cube-field { position: absolute; z-index: 0; top: 104px; right: -110px; width: min(58vw, 720px); height: 620px; padding: 22px; display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 7px; pointer-events: none; opacity: .68; perspective: 900px; transform: rotate(-8deg) skewY(3deg); mask-image: radial-gradient(ellipse 72% 72% at 52% 47%, #000 33%, transparent 74%); }
-    .cube-cell { position: relative; min-width: 0; min-height: 0; transform-style: preserve-3d; transform: rotateX(var(--cube-x, 0deg)) rotateY(var(--cube-y, 0deg)) translateZ(0); transition: transform .42s cubic-bezier(.2,.8,.2,1), background .25s ease, border-color .25s ease, box-shadow .25s ease; background: linear-gradient(145deg, rgba(32,28,20,.92), rgba(11,11,9,.9)); border: 1px dotted rgba(245,166,35,.25); box-shadow: inset 0 0 13px rgba(245,166,35,.025); }
-    .cube-cell::before, .cube-cell::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .32; }
-    .cube-cell::before { transform: translateZ(-7px) translateY(5px); background: rgba(0,0,0,.52); }.cube-cell::after { background: linear-gradient(135deg, rgba(255,221,150,.12), transparent 42%); }
-    .cube-cell.is-ripple { animation: cube-ripple .72s ease-out both; border-color: rgba(255,218,137,.94); background: rgba(245,166,35,.52); box-shadow: 0 0 20px rgba(245,166,35,.38); }
-    @keyframes cube-ripple { 0% { filter: brightness(1.65); } 100% { filter: brightness(1); } }
+    .cube-cell { position: relative; width: 100%; height: 100%; aspect-ratio: 1; transform-style: preserve-3d; transform: rotateX(var(--cube-x, 0deg)) rotateY(var(--cube-y, 0deg)) translateZ(0); transition: transform .42s cubic-bezier(.2,.8,.2,1); }
+    .cube-cell::before { content: ""; position: absolute; inset: -24px; z-index: 2; pointer-events: auto; }
+    .cube-face { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #14120e; border: 1px solid rgba(245,166,35,.28); opacity: .8; box-shadow: inset 0 0 14px rgba(245,166,35,.1), 0 0 8px rgba(0,0,0,.4); backface-visibility: visible; transition: background .3s ease, border-color .3s ease, box-shadow .3s ease; }
+    .cube-face--top { transform: translateY(-50%) rotateX(90deg); background: #1e190f; }.cube-face--bottom { transform: translateY(50%) rotateX(-90deg); background: #0b0a08; }.cube-face--left { transform: translateX(-50%) rotateY(-90deg); background: #100e0a; }.cube-face--right { transform: translateX(50%) rotateY(90deg); background: #211a10; }.cube-face--front { transform: rotateY(-90deg) translateX(50%) rotateY(90deg); }.cube-face--back { transform: rotateY(-90deg) translateX(50%) rotateY(90deg); background: #0d0b09; }
+    .cube-face.is-ripple { background: #f5a623 !important; border-color: #ffd37b !important; box-shadow: 0 0 25px rgba(245,166,35,.55), inset 0 0 16px rgba(255,255,255,.2); }
     .hero-blur { position: absolute; z-index: 3; right: 0; bottom: 0; left: 0; height: 9rem; overflow: hidden; pointer-events: none; isolation: isolate; }
     .hero-blur span { position: absolute; inset: 0; display: block; background: linear-gradient(to bottom, transparent 0%, rgba(5,5,4,.12) 72%, var(--bg) 100%); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); -webkit-mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); }
     .hero-blur span:nth-child(1) { --blur: .35rem; --start: 12%; --end: 28%; }.hero-blur span:nth-child(2) { --blur: .65rem; --start: 22%; --end: 39%; }.hero-blur span:nth-child(3) { --blur: 1rem; --start: 32%; --end: 49%; }.hero-blur span:nth-child(4) { --blur: 1.45rem; --start: 42%; --end: 59%; }.hero-blur span:nth-child(5) { --blur: 2rem; --start: 52%; --end: 69%; }.hero-blur span:nth-child(6) { --blur: 2.7rem; --start: 62%; --end: 79%; }.hero-blur span:nth-child(7) { --blur: 3.5rem; --start: 72%; --end: 89%; }.hero-blur span:nth-child(8) { --blur: 4.5rem; --start: 82%; --end: 100%; }
@@ -186,6 +186,23 @@
     .flip-face .feature-index { position: relative; z-index: 3; }.flip-turn { position: absolute; z-index: 4; right: 20px; bottom: 18px; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(245,166,35,.35); border-radius: 50%; background: rgba(245,166,35,.08); color: var(--amber); font: 1rem var(--mono); cursor: pointer; transition: transform .25s ease, background .25s ease; }.flip-turn:hover { transform: rotate(-28deg) scale(1.08); background: rgba(245,166,35,.16); }.flip-turn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
     .flip-list { display: grid; gap: 10px; margin: 22px 0; }.flip-list span { color: var(--ink); font: .72rem var(--mono); opacity: 0; transform: translateX(-12px); transition: opacity .32s ease, transform .32s ease; }.flip-list span::before { content: "→"; margin-right: 9px; color: var(--amber); }.flip-card:hover .flip-list span, .flip-card:focus-within .flip-list span, .flip-card.is-flipped .flip-list span { opacity: 1; transform: translateX(0); }.flip-list span:nth-child(2) { transition-delay: 70ms; }.flip-list span:nth-child(3) { transition-delay: 140ms; }.flip-list span:nth-child(4) { transition-delay: 210ms; }
     .flip-back-action { display: flex; align-items: center; justify-content: space-between; padding-top: 15px; border-top: 1px solid rgba(245,166,35,.22); color: var(--amber); font: 700 .7rem var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+    .flip-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
+    .flip-face.back h3 { margin-top: 0; }
+    /* DotGrid: canvas ámbar sobre CTA, respeta palette, sin libs. */
+    .cta-card { isolation: isolate; }
+    .dot-grid-canvas { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; display: block; opacity: .5; pointer-events: none; }
+    .cta-card > :not(.dot-grid-canvas) { position: relative; z-index: 1; }
+    /* SpecularButton CSS-only: brillo cónico sigue puntero vía --sb-angle/--sb-bright. Sin ogl/WebGL. */
+    .btn-primary.specular, .nav-github.specular { position: relative; overflow: hidden; isolation: isolate; }
+    .btn-primary.specular::after, .nav-github.specular::after { content: ""; position: absolute; inset: -1px; z-index: 0; border-radius: inherit; padding: 1.5px; background: conic-gradient(from var(--sb-angle, 140deg), transparent 0deg, rgba(255,255,255,.85) 18deg, transparent 42deg, transparent 180deg, rgba(255,211,123,.7) 198deg, transparent 222deg); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: var(--sb-bright, 0); transition: opacity .3s ease; pointer-events: none; }
+    .btn-primary.specular > *, .nav-github.specular > * { position: relative; z-index: 1; }
+    /* GradualBlur page: barras fijas top/bottom, mismo sistema que hero-blur. */
+    .page-blur { position: fixed; right: 0; left: 0; z-index: 15; height: 5rem; overflow: hidden; pointer-events: none; isolation: isolate; }
+    .page-blur--top { top: 76px; transform: scaleY(-1); }
+    .page-blur--bottom { bottom: 0; }
+    .page-blur span { position: absolute; inset: 0; display: block; background: linear-gradient(to bottom, transparent 0%, rgba(5,5,4,.12) 72%, var(--bg) 100%); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); -webkit-mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); }
+    .page-blur span:nth-child(1) { --blur: .35rem; --start: 12%; --end: 28%; }.page-blur span:nth-child(2) { --blur: .65rem; --start: 22%; --end: 39%; }.page-blur span:nth-child(3) { --blur: 1rem; --start: 32%; --end: 49%; }.page-blur span:nth-child(4) { --blur: 1.45rem; --start: 42%; --end: 59%; }.page-blur span:nth-child(5) { --blur: 2rem; --start: 52%; --end: 69%; }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .page-blur { display: none; } }
     .workflow-step { transition: padding-left .3s ease, background .3s ease; }.workflow-step:hover { padding-left: 13px; background: rgba(245,166,35,.035); }
     .cta-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 28%, rgba(255,255,255,.19) 46%, transparent 63%); transform: translateX(-120%); animation: cta-sheen 7s ease-in-out infinite; }
     @keyframes cta-sheen { 30%, 100% { transform: translateX(130%); } }
@@ -204,9 +221,10 @@
   <nav class="site-nav">
     <div class="wrap nav-inner">
       <a class="brand" href="#top" aria-label="HelloChusquis home"><img src="logo-primary.png" alt="" /> <span>HELLOCHUSQUIS</span></a>
-      <div class="nav-links"><a href="#capabilities">Capabilities</a><a href="#workflow">How it works</a><a class="nav-github" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">View on GitHub ↗</a></div>
+      <div class="nav-links"><a href="#capabilities">Capabilities</a><a href="#workflow">How it works</a><a class="nav-github specular" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">View on GitHub ↗</a></div>
     </div>
   </nav>
+  <div class="page-blur page-blur--top" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
 
   <main id="top">
     <header class="hero">
@@ -217,7 +235,7 @@
           <div class="eyebrow">local-first / open source</div>
           <h1 aria-label="HelloChusquis"><span class="dynamic-greeting" aria-hidden="true"><span class="greeting-word" id="hero-greeting">Hello</span><span class="greeting-mark"></span></span><br /><em>Chusquis.</em></h1>
           <p class="hero-copy">HelloChusquis brings conversation, tools, memory, web access, code execution, and integrations into one developer-controlled workspace.</p>
-          <div class="actions"><a class="btn btn-primary" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Explore the repository <span>↗</span></a><a class="btn btn-secondary" href="#quickstart">Get started <span>↓</span></a></div>
+          <div class="actions"><a class="btn btn-primary specular" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Explore the repository <span>↗</span></a><a class="btn btn-secondary" href="#quickstart">Get started <span>↓</span></a></div>
           <div class="hero-note"><span class="status-dot"></span> Built for people who want automation with visibility.</div>
         </div>
         <div class="terminal reveal" aria-label="HelloChusquis terminal preview">
@@ -238,7 +256,7 @@
     <!-- PRE-LAUNCH | UNEED_PRELAUNCH_URL = "https://www.uneed.best/tool/hellochusquis" | ships with v5.4 per CHANGELOG 5.4 (2026-09-11) -->
     <div class="prelaunch"><div class="wrap prelaunch-inner"><span class="prelaunch-text"><strong>Launching 31·01·2027 on Uneed</strong> — v5.4 is live, launch day is next.</span><a class="btn btn-primary" href="https://www.uneed.best/tool/hellochusquis" target="_blank" rel="noreferrer">Notify me ↗</a><a class="btn btn-secondary" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Star on GitHub ↗</a></div></div>
 
-    <div class="stat-strip"><div class="wrap stats"><div class="stat"><strong data-count="120" data-suffix="+">120+</strong><span>curated knowledge files</span></div><div class="stat"><strong data-count="70" data-suffix="+">70+</strong><span>provider configurations</span></div><div class="stat"><strong data-count="1">1</strong><span>developer-controlled workspace</span></div><div class="stat"><strong>MIT</strong><span>open source license</span></div></div></div>
+    <div class="stat-strip"><div class="wrap stats"><div class="stat"><strong data-count="120" data-from="0" data-duration="1.6" data-suffix="+">0+</strong><span>curated knowledge files</span></div><div class="stat"><strong data-count="70" data-from="0" data-duration="1.6" data-suffix="+">0+</strong><span>provider configurations</span></div><div class="stat"><strong data-count="131" data-from="0" data-duration="1.8" data-suffix="">0</strong><span>service integrations</span></div><div class="stat"><strong>MIT</strong><span>open source license</span></div></div></div>
 
     <section id="capabilities"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">the useful middle layer</div><h2>Close to the work. Clear about the risk.</h2></div><p>Most AI tools make you leave the place where the work happens. HelloChusquis keeps the agent close—and makes every important step visible.</p></div><div class="feature-grid">
       <article class="feature flip-card" aria-label="Context capabilities"><div class="flip-inner"><div class="flip-face front"><div class="flip-visual" aria-hidden="true"><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i></div><span class="feature-index">01 / context</span><h3>Remember what matters</h3><p>Bounded history, searchable sessions, summaries, and local SQLite memory keep context useful without turning every prompt into a transcript dump.</p><button class="flip-turn" type="button" aria-label="Show context features" aria-pressed="false">↻</button></div><div class="flip-face back"><div><span class="feature-index">01 / context</span><h3>Memory, with boundaries.</h3><div class="flip-list"><span>Searchable sessions</span><span>Recall before each turn</span><span>Pin or forget facts</span><span>Local SQLite storage</span></div></div><div class="flip-back-action">Inspect the layer <span>→</span></div><button class="flip-turn" type="button" aria-label="Show context overview" aria-pressed="true">↻</button></div></div></article>
@@ -259,8 +277,9 @@
 
     <section class="signals" id="updates"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">recent project signals</div><h2>The latest updates, in the numbers.</h2></div><p>Two snapshots already shipped with the repository: knowledge retrieval lifts factual accuracy, while v5.2 cuts the slow paths down.</p></div><div class="chart-grid"><figure class="chart-card"><img src="assets/kb-accuracy.png?v=2" alt="Factual accuracy improves with MDknowledge across model sizes" /><figcaption class="chart-caption"><strong>MDknowledge improves recall</strong><span>35-question factual probe</span></figcaption></figure><figure class="chart-card"><img src="assets/v52-latency.png?v=2" alt="Latency before and after v5.2 on key operations" /><figcaption class="chart-caption"><strong>v5.2 removes waiting</strong><span>seconds, log scale</span></figcaption></figure></div></div></section>
 
-    <section class="cta"><div class="wrap"><div class="cta-card"><div class="eyebrow" style="color:rgba(5,5,4,.72)">open source / developer controlled</div><h2>Make the agent part of the place you already work.</h2><p>Read the code, run it locally, and shape the tools around your own workflows.</p><div class="actions"><a class="btn btn-primary" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Go to GitHub ↗</a></div></div></div></section>
+    <section class="cta"><div class="wrap"><div class="cta-card"><canvas class="dot-grid-canvas" aria-hidden="true"></canvas><div class="eyebrow" style="color:rgba(5,5,4,.72)">open source / developer controlled</div><h2>Make the agent part of the place you already work.</h2><p>Read the code, run it locally, and shape the tools around your own workflows.</p><div class="actions"><a class="btn btn-primary specular" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Go to GitHub ↗</a></div></div></div></section>
   </main>
+  <div class="page-blur page-blur--bottom" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
 
   <footer><div class="wrap footer-inner"><span>© 2026 HelloChusquis</span><span>local-first AI for the terminal, browser, and systems around your work.</span></div></footer>
   <script>
@@ -379,13 +398,20 @@
     revealTargets.forEach((element) => element.classList.add('reveal'));
 
     const startCounter = (element) => {
-      const target = Number(element.dataset.count);
+      const target = Number(element.dataset.count || 0);
+      const from = Number(element.dataset.from || 0);
       const suffix = element.dataset.suffix || '';
-      const duration = 850;
+      const duration = Number(element.dataset.duration || 1.6) * 1000;
+      const decimals = Math.max(
+        (String(element.dataset.from || '').split('.')[1] || '').length,
+        (String(element.dataset.count || '').split('.')[1] || '').length
+      );
       const started = performance.now();
       const tick = (now) => {
         const progress = Math.min((now - started) / duration, 1);
-        element.textContent = `${Math.round(target * (1 - Math.pow(1 - progress, 3)))}${suffix}`;
+        const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+        const value = from + (target - from) * eased;
+        element.textContent = `${value.toFixed(decimals)}${suffix}`;
         if (progress < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
