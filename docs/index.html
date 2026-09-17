@@ -214,7 +214,7 @@
     @media (max-width: 900px) { .cube-field { right: -250px; opacity: .34; } }
     @media (max-width: 700px) { .wrap { width: min(var(--max), calc(100% - 32px)); } .nav-inner { height: 68px; } .nav-links a:not(.nav-github) { display: none; } .hero { padding-top: 125px; } h1 { font-size: clamp(3.4rem, 17vw, 5.8rem); } .terminal-body { min-height: 330px; padding: 18px; font-size: .68rem; } .stats { grid-template-columns: repeat(2, 1fr); } .stat:nth-child(2) { border-right: 0; } .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); } .section-intro { display: block; } .section-intro p { margin-top: 20px; } section { padding: 82px 0; } .feature-grid { grid-template-columns: 1fr; } .feature { min-height: auto; } .feature h3 { margin-top: 28px; } .feature.flip-card, .flip-inner { min-height: 300px; } .footer-inner { display: block; } .footer-inner span + span { display: block; margin-top: 8px; } }
     @media (max-width: 700px) { .cube-field { display: none; } .hero-blur { height: 5rem; } }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } .terminal-body > .line, .terminal-highlight { opacity: 1; transform: none; } }
   </style>
 </head>
 <body>
@@ -419,6 +419,9 @@
 
     if (reducedMotion || !('IntersectionObserver' in window)) {
       document.querySelectorAll('.reveal').forEach((element) => element.classList.add('visible'));
+      document.querySelectorAll('[data-count]').forEach((element) => {
+        element.textContent = `${element.dataset.count}${element.dataset.suffix || ''}`;
+      });
     } else {
       const observer = new IntersectionObserver((entries, instance) => {
         entries.forEach((entry) => {
