@@ -10,10 +10,12 @@
     "deploy": "npm run build && gh-pages -d dist -r https://github.com/aminoy77/HelloChusquis.git"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "latest",
     "gsap": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "tailwindcss": "^4.3.3",
     "vite": "latest"
   },
   "devDependencies": {
