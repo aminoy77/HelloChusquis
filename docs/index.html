@@ -1,456 +1,210 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="HelloChusquis is a local-first AI agent for the terminal, browser, and systems around your work." />
-  <meta name="theme-color" content="#050504" />
-  <meta property="og:title" content="HelloChusquis — Work with an agent you can see" />
-  <meta property="og:description" content="A local-first AI agent for the terminal, browser, and systems around your work." />
-  <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/github-social-preview.png" />
-  <meta property="og:type" content="website" />
-  <link rel="shortcut icon" href="favicon.ico?v=2" />
-  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=2" />
-  <title>HelloChusquis — Work with an agent you can see</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #050504;
-      --panel: #0c0c0a;
-      --panel-2: #141412;
-      --panel-3: #1c1c19;
-      --amber: #f5a623;
-      --amber-soft: #ffd37b;
-      --ink: #e8e3d8;
-      --muted: #a09a8e;
-      --quiet: #7e7a70;
-      --line: #25231e;
-      --green: #5eb97e;
-      --blue: #7eb8d4;
-      --sans: "DM Sans", system-ui, sans-serif;
-      --display: "Space Grotesk", var(--sans);
-      --mono: "JetBrains Mono", ui-monospace, monospace;
-      --max: 1180px;
-    }
-    *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.55; overflow-x: hidden; }
-    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10; opacity: .24; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E"); }
-    a { color: inherit; }
-    .wrap { width: min(var(--max), calc(100% - 48px)); margin: 0 auto; }
-    .mono { font-family: var(--mono); }
-    .eyebrow { color: var(--amber); font: 600 .72rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
-    .eyebrow::before { content: "//"; margin-right: 10px; color: var(--quiet); }
-    .site-nav { position: fixed; z-index: 20; top: 0; left: 0; right: 0; background: rgba(5,5,4,.78); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(37,35,30,.85); }
-    .nav-inner { height: 76px; display: flex; align-items: center; justify-content: space-between; }
-    .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font: 700 .84rem var(--mono); letter-spacing: .05em; }
-    .brand img { width: 31px; height: 31px; object-fit: contain; object-position: center; filter: drop-shadow(0 0 10px rgba(245,166,35,.18)); }
-    .nav-links { display: flex; align-items: center; gap: 28px; color: var(--muted); font: 500 .76rem var(--mono); }
-    .nav-links a { text-decoration: none; transition: color .2s ease; }
-    .nav-links a:hover { color: var(--ink); }
-    .nav-github { color: var(--bg) !important; background: var(--amber); padding: 10px 15px; font-weight: 700; }
-    .hero { position: relative; padding: 160px 0 78px; min-height: 760px; overflow: hidden; }
-    .hero::after { content: ""; position: absolute; width: 760px; height: 760px; top: 10px; right: -180px; background: radial-gradient(circle, rgba(245,166,35,.12), transparent 61%); pointer-events: none; }
-    .cube-field { position: absolute; z-index: 0; top: 104px; right: -110px; width: min(58vw, 720px); height: 620px; padding: 22px; display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 7px; pointer-events: none; opacity: .68; perspective: 900px; transform: rotate(-8deg) skewY(3deg); mask-image: radial-gradient(ellipse 72% 72% at 52% 47%, #000 33%, transparent 74%); }
-    .cube-cell { position: relative; width: 100%; height: 100%; aspect-ratio: 1; transform-style: preserve-3d; transform: rotateX(var(--cube-x, 0deg)) rotateY(var(--cube-y, 0deg)) translateZ(0); transition: transform .42s cubic-bezier(.2,.8,.2,1); }
-    .cube-cell::before { content: ""; position: absolute; inset: -24px; z-index: 2; pointer-events: auto; }
-    .cube-face { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #14120e; border: 1px solid rgba(245,166,35,.28); opacity: .8; box-shadow: inset 0 0 14px rgba(245,166,35,.1), 0 0 8px rgba(0,0,0,.4); backface-visibility: visible; transition: background .3s ease, border-color .3s ease, box-shadow .3s ease; }
-    .cube-face--top { transform: translateY(-50%) rotateX(90deg); background: #1e190f; }.cube-face--bottom { transform: translateY(50%) rotateX(-90deg); background: #0b0a08; }.cube-face--left { transform: translateX(-50%) rotateY(-90deg); background: #100e0a; }.cube-face--right { transform: translateX(50%) rotateY(90deg); background: #211a10; }.cube-face--front { transform: rotateY(-90deg) translateX(50%) rotateY(90deg); }.cube-face--back { transform: rotateY(-90deg) translateX(50%) rotateY(90deg); background: #0d0b09; }
-    .cube-face.is-ripple { background: #f5a623 !important; border-color: #ffd37b !important; box-shadow: 0 0 25px rgba(245,166,35,.55), inset 0 0 16px rgba(255,255,255,.2); }
-    .hero-blur { position: absolute; z-index: 3; right: 0; bottom: 0; left: 0; height: 9rem; overflow: hidden; pointer-events: none; isolation: isolate; }
-    .hero-blur span { position: absolute; inset: 0; display: block; background: linear-gradient(to bottom, transparent 0%, rgba(5,5,4,.12) 72%, var(--bg) 100%); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); -webkit-mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); }
-    .hero-blur span:nth-child(1) { --blur: .35rem; --start: 12%; --end: 28%; }.hero-blur span:nth-child(2) { --blur: .65rem; --start: 22%; --end: 39%; }.hero-blur span:nth-child(3) { --blur: 1rem; --start: 32%; --end: 49%; }.hero-blur span:nth-child(4) { --blur: 1.45rem; --start: 42%; --end: 59%; }.hero-blur span:nth-child(5) { --blur: 2rem; --start: 52%; --end: 69%; }.hero-blur span:nth-child(6) { --blur: 2.7rem; --start: 62%; --end: 79%; }.hero-blur span:nth-child(7) { --blur: 3.5rem; --start: 72%; --end: 89%; }.hero-blur span:nth-child(8) { --blur: 4.5rem; --start: 82%; --end: 100%; }
-    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .hero-blur { background: linear-gradient(to bottom, transparent, var(--bg)); } .hero-blur span { display: none; } }
-    .hero-grid { position: relative; z-index: 1; }
-    .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .92fr) minmax(430px, 1.08fr); gap: clamp(50px, 7vw, 110px); align-items: center; }
-    h1 { max-width: 650px; margin: 22px 0 24px; font: 700 clamp(3.8rem, 8vw, 7.2rem)/.91 var(--display); letter-spacing: -.075em; }
-    h1 em { color: var(--amber); font-style: normal; }
-    .dynamic-greeting { display: inline-flex; align-items: center; gap: .12em; min-width: 5.2ch; color: var(--ink); white-space: nowrap; }
-    .greeting-word { display: inline-block; transform-origin: 50% 100%; }.greeting-word.is-entering { animation: greeting-in .34s cubic-bezier(.16,1,.3,1) both; }.greeting-word.is-leaving { animation: greeting-out .22s cubic-bezier(.4,0,1,1) both; }
-    .greeting-mark { width: .12em; height: .12em; margin-top: .52em; border-radius: 50%; background: var(--amber); box-shadow: 0 0 .3em rgba(245,166,35,.6); }
-    @keyframes greeting-in { from { opacity: 0; transform: translateY(.38em) skewY(5deg); filter: blur(3px); } to { opacity: 1; transform: translateY(0) skewY(0); filter: blur(0); } }
-    @keyframes greeting-out { to { opacity: 0; transform: translateY(-.5em) skewY(-5deg); filter: blur(3px); } }
-    .hero-copy { max-width: 530px; color: var(--muted); font-size: 1.08rem; line-height: 1.72; }
-    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
-    .btn { display: inline-flex; align-items: center; gap: 10px; padding: 13px 18px; border: 1px solid var(--line); text-decoration: none; font: 600 .78rem var(--mono); transition: transform .2s ease, border-color .2s ease, background .2s ease; }
-    .btn:hover { transform: translateY(-2px); border-color: var(--muted); }
-    .btn-primary { background: var(--amber); border-color: var(--amber); color: var(--bg); }
-    .btn-primary:hover { background: var(--amber-soft); border-color: var(--amber-soft); }
-    .btn-secondary { color: var(--ink); background: rgba(12,12,10,.55); }
-    .hero-note { display: flex; align-items: center; gap: 10px; margin-top: 28px; color: var(--quiet); font: .68rem var(--mono); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px rgba(94,185,126,.65); }
-    .terminal { position: relative; background: rgba(12,12,10,.94); border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.34), 0 0 80px rgba(245,166,35,.06); }
-    .terminal::before { content: ""; position: absolute; inset: -1px; border: 1px solid rgba(245,166,35,.08); pointer-events: none; }
-    .terminal-top { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: var(--panel-2); border-bottom: 1px solid var(--line); color: var(--quiet); font: .68rem var(--mono); }
-    .window-dots { display: flex; gap: 6px; }
-    .window-dots i { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
-    .window-dots i:first-child { background: var(--amber); }
-    .terminal-body { padding: 24px 24px 26px; font: .78rem/1.75 var(--mono); min-height: 390px; }
-    .line { display: block; }
-    .prompt { color: var(--amber); }
-    .muted { color: var(--quiet); }
-    .green { color: var(--green); }
-    .blue { color: var(--blue); }
-    .terminal-highlight { margin: 17px 0; padding: 15px 17px; background: var(--bg); border-left: 2px solid var(--amber); color: var(--ink); }
-    .cursor { display: inline-block; width: 7px; height: 15px; background: var(--amber); vertical-align: -2px; animation: blink 1s steps(2) infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
-    .terminal-foot { display: flex; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--line); color: var(--quiet); font: .62rem var(--mono); }
-    .stat-strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--panel); }
-    .prelaunch { border-bottom: 1px solid var(--line); background: var(--panel); }
-    .prelaunch-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding: 20px 0; }
-    .prelaunch-text { margin-right: auto; color: var(--muted); font: 500 .78rem var(--mono); }
-    .prelaunch-text strong { color: var(--amber); font-weight: 700; }
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); }
-    .stat { padding: 25px 18px; border-right: 1px solid var(--line); }
-    .stat:last-child { border-right: 0; }
-    .stat strong { display: block; color: var(--amber); font: 700 1.6rem var(--mono); }
-    .stat span { display: block; margin-top: 4px; color: var(--quiet); font: .67rem var(--mono); letter-spacing: .03em; }
-    section { padding: 120px 0; }
-    .section-intro { display: flex; justify-content: space-between; gap: 40px; align-items: end; margin-bottom: 48px; }
-    h2 { max-width: 640px; margin: 14px 0 0; font: 600 clamp(2.2rem, 4.7vw, 4rem)/1 var(--display); letter-spacing: -.055em; }
-    .section-intro p { max-width: 390px; margin: 0; color: var(--muted); }
-    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-    .feature { min-height: 250px; padding: 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: linear-gradient(140deg, rgba(20,20,18,.75), rgba(12,12,10,.55)); transition: background .25s ease, transform .25s ease; }
-    .feature:hover { background: var(--panel-2); transform: translateY(-4px); }
-    .feature-index { color: var(--amber); font: .72rem var(--mono); }
-    .feature h3 { margin: 46px 0 12px; font: 600 1.28rem var(--display); }
-    .feature p { margin: 0; color: var(--muted); font-size: .94rem; line-height: 1.65; }
-    .workflow { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-    .workflow-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 80px; align-items: center; }
-    .workflow-list { border-top: 1px solid var(--line); }
-    .workflow-step { display: grid; grid-template-columns: 42px 1fr; gap: 18px; padding: 22px 0; border-bottom: 1px solid var(--line); }
-    .workflow-step b { color: var(--amber); font: .74rem var(--mono); }
-    .workflow-step h3 { margin: 0 0 5px; font: 600 1.02rem var(--display); }
-    .workflow-step p { margin: 0; color: var(--muted); font-size: .88rem; }
-    .code-card { border: 1px solid var(--line); background: var(--bg); }
-    .code-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); color: var(--quiet); font: .68rem var(--mono); }
-    .copy { color: var(--muted); cursor: pointer; background: none; border: 0; font: inherit; }
-    .copy:hover { color: var(--amber); }
-    pre { overflow-x: auto; margin: 0; padding: 22px; color: var(--ink); font: .78rem/1.8 var(--mono); }
-    .code-comment { color: var(--quiet); }
-    .code-key { color: var(--blue); }
-    .code-string { color: var(--green); }
-    .signals { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
-    .chart-card { border: 1px solid var(--line); background: var(--bg); padding: 16px; }
-    .chart-card img { display: block; width: 100%; height: auto; opacity: .95; }
-    .chart-caption { display: flex; justify-content: space-between; gap: 16px; padding: 14px 2px 2px; color: var(--quiet); font: .68rem/1.5 var(--mono); }
-    .chart-caption strong { color: var(--ink); font-weight: 500; }
-    .cta { padding: 120px 0 130px; }
-    .cta-card { position: relative; overflow: hidden; padding: clamp(38px, 8vw, 90px); background: var(--amber); color: var(--bg); }
-    .cta-card::after { content: "⬡"; position: absolute; right: 5%; bottom: -15%; color: rgba(5,5,4,.1); font-size: 21rem; line-height: .8; }
-    .cta-card h2 { position: relative; z-index: 1; max-width: 660px; color: var(--bg); }
-    .cta-card p { position: relative; z-index: 1; max-width: 500px; color: rgba(5,5,4,.7); }
-    .cta-card .btn-primary { position: relative; z-index: 1; background: var(--bg); border-color: var(--bg); color: var(--ink); }
-    footer { padding: 24px 0; border-top: 1px solid var(--line); color: var(--quiet); font: .67rem var(--mono); }
-    .footer-inner { display: flex; justify-content: space-between; gap: 20px; }
-
-    /* Kinetic layer: a living terminal, not a generic marketing page. */
-    .hero::before { content: ""; position: absolute; inset: 76px 0 0; pointer-events: none; opacity: .44; background-image: linear-gradient(rgba(245,166,35,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(245,166,35,.045) 1px, transparent 1px); background-size: 42px 42px; mask-image: linear-gradient(to bottom, #000, transparent 72%); }
-    .hero-grid::before { content: ""; position: absolute; right: 8%; top: -27px; width: 580px; height: 580px; border: 1px solid rgba(245,166,35,.13); border-radius: 50%; box-shadow: 0 0 0 72px rgba(245,166,35,.025), 0 0 0 144px rgba(245,166,35,.015); animation: orbit 22s linear infinite; }
-    .hero-grid::after { content: ""; position: absolute; right: 26%; top: 11%; width: 9px; height: 9px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 8px rgba(245,166,35,.12), 0 0 28px rgba(245,166,35,.8); animation: beacon 4.4s ease-in-out infinite; }
-    @keyframes orbit { to { transform: rotate(360deg); } }
-    @keyframes beacon { 50% { transform: translate(-33px, 24px); opacity: .55; } }
-    .hero-grid > * { position: relative; z-index: 1; }
-    .terminal { transform-style: preserve-3d; will-change: transform; transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s ease, box-shadow .35s ease; }
-    .terminal::after { content: ""; position: absolute; z-index: 2; inset: 0; pointer-events: none; opacity: var(--terminal-glow, 0); background: radial-gradient(430px circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255,211,124,.14), transparent 43%); transition: opacity .25s ease; }
-    .terminal:hover { border-color: rgba(245,166,35,.62); box-shadow: 0 34px 100px rgba(0,0,0,.48), 0 0 80px rgba(245,166,35,.1); }
-    .terminal-body > .line, .terminal-highlight { opacity: 0; transform: translateY(9px); animation: terminal-line .52s cubic-bezier(.2,.8,.2,1) forwards; }
-    .terminal-body > .line:nth-child(1) { animation-delay: .45s; }.terminal-highlight { animation-delay: .72s; }.terminal-body > .line:nth-child(3) { animation-delay: 1.02s; }.terminal-body > .line:nth-child(4) { animation-delay: 1.18s; }.terminal-body > .line:nth-child(5) { animation-delay: 1.34s; }.terminal-body > .line:nth-child(7) { animation-delay: 1.54s; }
-    @keyframes terminal-line { to { opacity: 1; transform: translateY(0); } }
-    .status-dot { animation: status-pulse 2.4s ease-in-out infinite; }
-    @keyframes status-pulse { 50% { box-shadow: 0 0 0 7px rgba(94,185,126,.03), 0 0 20px rgba(94,185,126,.85); } }
-    .btn { position: relative; overflow: hidden; }
-    .btn::before { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 24%, rgba(255,255,255,.38) 48%, transparent 70%); transform: translateX(-130%); transition: transform .65s ease; }
-    .btn:hover::before { transform: translateX(130%); }
-    .stat { position: relative; overflow: hidden; transition: background .3s ease; }
-    .stat::before { content: ""; position: absolute; top: 0; left: -40%; width: 35%; height: 1px; background: linear-gradient(90deg, transparent, var(--amber), transparent); transition: left .6s ease; }
-    .stat:hover { background: rgba(245,166,35,.045); }.stat:hover::before { left: 110%; }
-    .feature { position: relative; overflow: hidden; }
-    .feature::after { content: ""; position: absolute; width: 160px; height: 160px; right: -84px; bottom: -84px; border: 1px solid rgba(245,166,35,.18); border-radius: 50%; opacity: 0; transition: opacity .35s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
-    .feature:hover::after { opacity: 1; transform: scale(1.4); }
-    /* Kokonut-inspired flip cards, adapted for the static documentation site. */
-    .feature.flip-card { min-height: 288px; padding: 0; overflow: visible; background: transparent; perspective: 1800px; transform: none; }
-    .feature.flip-card::after { display: none; }
-    .flip-inner { position: relative; width: 100%; height: 100%; min-height: 288px; transform-style: preserve-3d; transition: transform .62s cubic-bezier(.77,0,.175,1); }
-    .flip-card:hover .flip-inner, .flip-card:focus-within .flip-inner, .flip-card.is-flipped .flip-inner { transform: rotateY(180deg); }
-    .flip-face { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 28px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; background: linear-gradient(145deg, rgba(20,20,18,.96), rgba(8,8,7,.98)); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-    .flip-face.back { justify-content: space-between; transform: rotateY(180deg); background: linear-gradient(145deg, #17130c, #0c0c0a 72%); }
-    .flip-face h3 { position: relative; z-index: 2; margin: 46px 0 12px; font: 600 1.28rem var(--display); }.flip-face p { position: relative; z-index: 2; margin: 0; color: var(--muted); font-size: .89rem; line-height: 1.65; }
-    .flip-visual { position: absolute; inset: 0 0 auto; height: 145px; display: grid; place-items: center; overflow: hidden; background: radial-gradient(ellipse at 50% 120%, rgba(245,166,35,.18), transparent 57%); }
-    .flip-ring { position: absolute; width: 52px; height: 52px; border: 1px solid rgba(245,166,35,.7); border-radius: 50%; opacity: 0; animation: flip-ripple 3s linear infinite; }
-    .flip-ring:nth-child(2) { animation-delay: .42s; }.flip-ring:nth-child(3) { animation-delay: .84s; }.flip-ring:nth-child(4) { animation-delay: 1.26s; }.flip-ring:nth-child(5) { animation-delay: 1.68s; }
-    @keyframes flip-ripple { 0% { transform: scale(.3); opacity: 0; } 25% { opacity: .7; } 100% { transform: scale(3.7); opacity: 0; } }
-    .flip-face .feature-index { position: relative; z-index: 3; }.flip-turn { position: absolute; z-index: 4; right: 20px; bottom: 18px; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(245,166,35,.35); border-radius: 50%; background: rgba(245,166,35,.08); color: var(--amber); font: 1rem var(--mono); cursor: pointer; transition: transform .25s ease, background .25s ease; }.flip-turn:hover { transform: rotate(-28deg) scale(1.08); background: rgba(245,166,35,.16); }.flip-turn:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
-    .flip-list { display: grid; gap: 10px; margin: 22px 0; }.flip-list span { color: var(--ink); font: .72rem var(--mono); opacity: 0; transform: translateX(-12px); transition: opacity .32s ease, transform .32s ease; }.flip-list span::before { content: "→"; margin-right: 9px; color: var(--amber); }.flip-card:hover .flip-list span, .flip-card:focus-within .flip-list span, .flip-card.is-flipped .flip-list span { opacity: 1; transform: translateX(0); }.flip-list span:nth-child(2) { transition-delay: 70ms; }.flip-list span:nth-child(3) { transition-delay: 140ms; }.flip-list span:nth-child(4) { transition-delay: 210ms; }
-    .flip-back-action { display: flex; align-items: center; justify-content: space-between; padding-top: 15px; border-top: 1px solid rgba(245,166,35,.22); color: var(--amber); font: 700 .7rem var(--mono); letter-spacing: .04em; text-transform: uppercase; }
-    .flip-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
-    .flip-face.back h3 { margin-top: 0; }
-    /* DotGrid: canvas ámbar sobre CTA, respeta palette, sin libs. */
-    .cta-card { isolation: isolate; }
-    .dot-grid-canvas { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; display: block; opacity: .5; pointer-events: none; }
-    .cta-card > :not(.dot-grid-canvas) { position: relative; z-index: 1; }
-    /* SpecularButton CSS-only: brillo cónico sigue puntero vía --sb-angle/--sb-bright. Sin ogl/WebGL. */
-    .btn-primary.specular, .nav-github.specular { position: relative; overflow: hidden; isolation: isolate; }
-    .btn-primary.specular::after, .nav-github.specular::after { content: ""; position: absolute; inset: -1px; z-index: 0; border-radius: inherit; padding: 1.5px; background: conic-gradient(from var(--sb-angle, 140deg), transparent 0deg, rgba(255,255,255,.85) 18deg, transparent 42deg, transparent 180deg, rgba(255,211,123,.7) 198deg, transparent 222deg); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: var(--sb-bright, 0); transition: opacity .3s ease; pointer-events: none; }
-    .btn-primary.specular > *, .nav-github.specular > * { position: relative; z-index: 1; }
-    /* GradualBlur page: barras fijas top/bottom, mismo sistema que hero-blur. */
-    .page-blur { position: fixed; right: 0; left: 0; z-index: 15; height: 5rem; overflow: hidden; pointer-events: none; isolation: isolate; }
-    .page-blur--top { top: 76px; transform: scaleY(-1); }
-    .page-blur--bottom { bottom: 0; }
-    .page-blur span { position: absolute; inset: 0; display: block; background: linear-gradient(to bottom, transparent 0%, rgba(5,5,4,.12) 72%, var(--bg) 100%); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); -webkit-mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); mask-image: linear-gradient(to bottom, transparent var(--start), #000 var(--end)); }
-    .page-blur span:nth-child(1) { --blur: .35rem; --start: 12%; --end: 28%; }.page-blur span:nth-child(2) { --blur: .65rem; --start: 22%; --end: 39%; }.page-blur span:nth-child(3) { --blur: 1rem; --start: 32%; --end: 49%; }.page-blur span:nth-child(4) { --blur: 1.45rem; --start: 42%; --end: 59%; }.page-blur span:nth-child(5) { --blur: 2rem; --start: 52%; --end: 69%; }
-    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .page-blur { display: none; } }
-    .workflow-step { transition: padding-left .3s ease, background .3s ease; }.workflow-step:hover { padding-left: 13px; background: rgba(245,166,35,.035); }
-    .cta-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 28%, rgba(255,255,255,.19) 46%, transparent 63%); transform: translateX(-120%); animation: cta-sheen 7s ease-in-out infinite; }
-    @keyframes cta-sheen { 30%, 100% { transform: translateX(130%); } }
-    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .75s cubic-bezier(.16,1,.3,1), transform .75s cubic-bezier(.16,1,.3,1); transition-delay: var(--delay, 0ms); }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-    .hero-copy-wrap.reveal { transform: translateY(20px); }.terminal.reveal { transform: translateY(32px) scale(.97); }.terminal.reveal.visible { transform: translateY(0) scale(1); }
-    .feature.reveal:nth-child(2), .workflow-step.reveal:nth-child(2) { --delay: 110ms; }.feature.reveal:nth-child(3), .workflow-step.reveal:nth-child(3) { --delay: 220ms; }
-    @media (max-width: 900px) { .hero-grid, .workflow-grid { grid-template-columns: 1fr; } .hero { min-height: auto; } .hero::after { right: -380px; } .hero-grid::before { right: -160px; } .terminal { max-width: 700px; } }
-    @media (max-width: 900px) { .cube-field { right: -250px; opacity: .34; } }
-    @media (max-width: 700px) { .wrap { width: min(var(--max), calc(100% - 32px)); } .nav-inner { height: 68px; } .nav-links a:not(.nav-github) { display: none; } .hero { padding-top: 125px; } h1 { font-size: clamp(3.4rem, 17vw, 5.8rem); } .terminal-body { min-height: 330px; padding: 18px; font-size: .68rem; } .stats { grid-template-columns: repeat(2, 1fr); } .stat:nth-child(2) { border-right: 0; } .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); } .section-intro { display: block; } .section-intro p { margin-top: 20px; } section { padding: 82px 0; } .feature-grid { grid-template-columns: 1fr; } .feature { min-height: auto; } .feature h3 { margin-top: 28px; } .feature.flip-card, .flip-inner { min-height: 300px; } .footer-inner { display: block; } .footer-inner span + span { display: block; margin-top: 8px; } }
-    @media (max-width: 700px) { .cube-field { display: none; } .hero-blur { height: 5rem; } }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } .terminal-body > .line, .terminal-highlight { opacity: 1; transform: none; } }
-  </style>
-</head>
-<body>
-  <nav class="site-nav">
-    <div class="wrap nav-inner">
-      <a class="brand" href="#top" aria-label="HelloChusquis home"><img src="logo-primary.png" alt="" /> <span>HELLOCHUSQUIS</span></a>
-      <div class="nav-links"><a href="#capabilities">Capabilities</a><a href="#workflow">How it works</a><a class="nav-github specular" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">View on GitHub ↗</a></div>
-    </div>
-  </nav>
-  <div class="page-blur page-blur--top" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-
-  <main id="top">
-    <header class="hero">
-      <div id="cube-react-root"></div>
-      <div class="hero-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-      <div class="wrap hero-grid">
-        <div class="hero-copy-wrap reveal">
-          <div class="eyebrow">local-first / open source</div>
-          <h1 aria-label="HelloChusquis"><span class="dynamic-greeting" aria-hidden="true"><span class="greeting-word" id="hero-greeting">Hello</span><span class="greeting-mark"></span></span><br /><em>Chusquis.</em></h1>
-          <p class="hero-copy">HelloChusquis brings conversation, tools, memory, web access, code execution, and integrations into one developer-controlled workspace.</p>
-          <div class="actions"><a class="btn btn-primary specular" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Explore the repository <span>↗</span></a><a class="btn btn-secondary" href="#quickstart">Get started <span>↓</span></a></div>
-          <div class="hero-note"><span class="status-dot"></span> Built for people who want automation with visibility.</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="HelloChusquis v5.4 is a local-first AI agent for the terminal, browser, and systems around your work. Python 3.10+, MIT licensed." />
+    <meta name="theme-color" content="#050504" />
+    <meta property="og:title" content="HelloChusquis — Work with an agent you can see" />
+    <meta property="og:description" content="Local-first AI agent: terminal, web UI, REST API, Telegram. 421 tests passing, MIT licensed." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg" />
+    <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <title>HelloChusquis — Work with an agent you can see</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <div class="brand" aria-label="HelloChusquis brand">
+          <img src="./logo-primary.png" alt="HelloChusquis logo" />
+          <span>HelloChusquis</span>
         </div>
-        <div class="terminal reveal" aria-label="HelloChusquis terminal preview">
-          <div class="terminal-top"><div class="window-dots"><i></i><i></i><i></i></div><span>hellochusquis / local</span><span class="green">● ready</span></div>
-          <div class="terminal-body">
-            <span class="line"><span class="prompt">you ›</span> Inspect this repository and find the riskiest area.</span>
-            <div class="terminal-highlight"><span class="green">agent ›</span> I’ll map the project first, then trace the highest-impact paths.<br /><br /><span class="blue">↳ shell</span> find . -maxdepth 2 -type f<br /><span class="green">✓</span> 247 files found <span class="muted">· 0.08s</span></div>
-            <span class="line"><span class="blue">↳ memory</span> recalled 4 relevant decisions</span>
-            <span class="line"><span class="blue">↳ web</span> checked current dependency advisories</span>
-            <span class="line"><span class="green">✓</span> Risk map ready. 3 findings, 1 needs approval.</span>
-            <br /><span class="line"><span class="prompt">you ›</span> <span class="cursor"></span></span>
-          </div>
-          <div class="terminal-foot"><span>model: configured locally</span><span>memory: on &nbsp;·&nbsp; session: isolated</span></div>
-        </div>
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="#proof">Proof</a>
+          <a href="#features">Features</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#install" class="cta">Install</a>
+        </nav>
       </div>
     </header>
 
-    <!-- PRE-LAUNCH | UNEED_PRELAUNCH_URL = "https://www.uneed.best/tool/hellochusquis" | ships with v5.4 per CHANGELOG 5.4 (2026-09-11) -->
-    <div class="prelaunch"><div class="wrap prelaunch-inner"><span class="prelaunch-text"><strong>Launching 31·01·2027 on Uneed</strong> — v5.4 is live, launch day is next.</span><a class="btn btn-primary" href="https://www.uneed.best/tool/hellochusquis" target="_blank" rel="noreferrer">Notify me ↗</a><a class="btn btn-secondary" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Star on GitHub ↗</a></div></div>
+    <main>
+      <section class="hero" id="top">
+        <canvas id="aurora" aria-hidden="true"></canvas>
+        <div class="hero-fade" aria-hidden="true"></div>
+        <div class="container hero-inner">
+          <a class="launch-pill reveal" href="https://www.uneed.best/tool/hellochusquis" target="_blank" rel="noreferrer"><span class="launch-dot"></span>Launching soon on Uneed ↗</a>
+          <div class="eyebrow reveal">Local-first AI for builders · v5.4 · MIT</div>
+          <h1 class="hello-line reveal" style="--reveal-delay: 80ms" aria-live="off">
+            <span class="hello-word" id="hello-word">Hola</span><span class="hello-comma">,</span><br />
+            Chusquis<span class="hello-dot">.</span>
+          </h1>
+          <p class="hero-sub reveal" style="--reveal-delay: 160ms">
+            Give your work <b>an agent</b> you can trust — terminal, browser, memory,
+            and 131 integrations under one approval-gated roof.
+          </p>
+          <div class="hero-actions reveal" style="--reveal-delay: 240ms">
+            <button class="primary-btn" type="button" data-copy="python -m pip install hellochusquis">Copy install command</button>
+            <a class="secondary-btn" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">GitHub ↗</a>
+          </div>
+          <div class="install-line reveal" style="--reveal-delay: 300ms" aria-label="Install command">
+            <span class="prompt">$</span><span>python -m pip install hellochusquis</span><span class="typed-caret" aria-hidden="true"></span>
+          </div>
+          <div class="stats-strip">
+            <div class="stat-pill reveal" style="--reveal-delay: 340ms">
+              <strong><span data-count="421">421</span></strong>
+              <span>tests passing</span>
+            </div>
+            <div class="stat-pill reveal" style="--reveal-delay: 420ms">
+              <strong><span data-count="131">131</span></strong>
+              <span>tool integrations</span>
+            </div>
+            <div class="stat-pill reveal" style="--reveal-delay: 500ms">
+              <strong><span data-count="100" data-suffix="%">100%</span></strong>
+              <span>local-first by default</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <div class="stat-strip"><div class="wrap stats"><div class="stat"><strong data-count="120" data-from="0" data-duration="1.6" data-suffix="+">0+</strong><span>curated knowledge files</span></div><div class="stat"><strong data-count="70" data-from="0" data-duration="1.6" data-suffix="+">0+</strong><span>provider configurations</span></div><div class="stat"><strong data-count="131" data-from="0" data-duration="1.8" data-suffix="">0</strong><span>service integrations</span></div><div class="stat"><strong>MIT</strong><span>open source license</span></div></div></div>
+      <section class="section" id="proof">
+        <div class="container proof-grid">
+          <div class="proof-card reveal">
+            <img src="./assets/kb-accuracy.svg" alt="Knowledge accuracy: local 3B model from 86 to 100 percent on a 35-question probe" loading="lazy" />
+          </div>
+          <div class="proof-card proof-copy reveal" style="--reveal-delay: 120ms">
+            <div class="eyebrow">Proof</div>
+            <h2>Measured gains, not empty promises.</h2>
+            <p>
+              A 1200+ file knowledge layer (~9900 facts) lifts a local 3B model from
+              86% to 100% on a 35-question factual probe, with 97% retrieval coverage.
+              v5.2 cut KB ingest from 64s to 0.5s.
+            </p>
+            <ul>
+              <li>Retrieval coverage that stays useful in real work</li>
+              <li>Explainable tool calls rather than opaque black-box behavior</li>
+              <li>Local-first defaults that keep credentials and context in your control</li>
+            </ul>
+          </div>
+        </div>
+        <div class="container chart-row">
+          <div class="chart-card reveal">
+            <div class="chart-label">Latency · v5.2 wins: KB ingest 64s→0.5s</div>
+            <img src="./assets/v52-latency.svg" alt="Latency: KB ingest 64s to 0.5s, browser fail 30s to 0.2s, search worst 9.6s to 6.2s" loading="lazy" />
+          </div>
+          <div class="chart-card reveal" style="--reveal-delay: 120ms">
+            <div class="chart-label">One agent, four surfaces</div>
+            <div class="workflow-list">
+              <span>terminal</span>
+              <span>web</span>
+              <span>api</span>
+              <span>telegram</span>
+            </div>
+            <p class="chart-note">Every turn searchable · every tool call visible · every boundary clear.</p>
+          </div>
+        </div>
+      </section>
 
-    <section id="capabilities"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">the useful middle layer</div><h2>Close to the work. Clear about the risk.</h2></div><p>Most AI tools make you leave the place where the work happens. HelloChusquis keeps the agent close—and makes every important step visible.</p></div><div class="feature-grid">
-      <article class="feature flip-card" aria-label="Context capabilities"><div class="flip-inner"><div class="flip-face front"><div class="flip-visual" aria-hidden="true"><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i></div><span class="feature-index">01 / context</span><h3>Remember what matters</h3><p>Bounded history, searchable sessions, summaries, and local SQLite memory keep context useful without turning every prompt into a transcript dump.</p><button class="flip-turn" type="button" aria-label="Show context features" aria-pressed="false">↻</button></div><div class="flip-face back"><div><span class="feature-index">01 / context</span><h3>Memory, with boundaries.</h3><div class="flip-list"><span>Searchable sessions</span><span>Recall before each turn</span><span>Pin or forget facts</span><span>Local SQLite storage</span></div></div><div class="flip-back-action">Inspect the layer <span>→</span></div><button class="flip-turn" type="button" aria-label="Show context overview" aria-pressed="true">↻</button></div></div></article>
-      <article class="feature flip-card" aria-label="Tool capabilities"><div class="flip-inner"><div class="flip-face front"><div class="flip-visual" aria-hidden="true"><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i></div><span class="feature-index">02 / reach</span><h3>Bring your tools with you</h3><p>Shell, code, files, browser, web search, and integrations live inside one conversation you can inspect as it unfolds.</p><button class="flip-turn" type="button" aria-label="Show tool features" aria-pressed="false">↻</button></div><div class="flip-face back"><div><span class="feature-index">02 / reach</span><h3>One conversation. More reach.</h3><div class="flip-list"><span>Shell and bounded code</span><span>Files and browser tasks</span><span>Current web research</span><span>Service integrations</span></div></div><div class="flip-back-action">Explore the tools <span>→</span></div><button class="flip-turn" type="button" aria-label="Show tool overview" aria-pressed="true">↻</button></div></div></article>
-      <article class="feature flip-card" aria-label="Control capabilities"><div class="flip-inner"><div class="flip-face front"><div class="flip-visual" aria-hidden="true"><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i><i class="flip-ring"></i></div><span class="feature-index">03 / control</span><h3>Automate with visibility</h3><p>Approval gates, isolated HTTP sessions, protected credentials, and audit records keep high-impact operations accountable.</p><button class="flip-turn" type="button" aria-label="Show control features" aria-pressed="false">↻</button></div><div class="flip-face back"><div><span class="feature-index">03 / control</span><h3>Autonomy you can audit.</h3><div class="flip-list"><span>Approval gates</span><span>Isolated API sessions</span><span>Protected credentials</span><span>Persistent audit records</span></div></div><div class="flip-back-action">See the safeguards <span>→</span></div><button class="flip-turn" type="button" aria-label="Show control overview" aria-pressed="true">↻</button></div></div></article>
-    </div></div></section>
+      <section class="section" id="features">
+        <div class="container">
+          <div class="section-heading reveal">
+            <div class="eyebrow">Why it works</div>
+            <h2>Everything your stack already needs, in one control plane.</h2>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card reveal">
+              <div class="feature-index">01</div>
+              <h3>Work beside your code</h3>
+              <p>Search repos, inspect files, run bounded shell tasks, and plan multi-step work with <b>/plan</b> — without leaving the agent.</p>
+            </article>
+            <article class="feature-card reveal" style="--reveal-delay: 90ms">
+              <div class="feature-index">02</div>
+              <h3>Connect the tools you trust</h3>
+              <p>GitHub, Slack, Docker, Notion, AWS, Stripe, Postgres, and 120+ more — high-impact actions wait for your approval.</p>
+            </article>
+            <article class="feature-card reveal" style="--reveal-delay: 180ms">
+              <div class="feature-index">03</div>
+              <h3>Keep context useful</h3>
+              <p>SQLite-backed memory, sessions, summaries, and per-turn recall stay local — no transcript dump in every prompt.</p>
+            </article>
+          </div>
+        </div>
+      </section>
 
-    <section id="workflow" class="workflow"><div class="wrap workflow-grid"><div><div class="eyebrow">one surface, many ways in</div><h2>Start where you are. Keep going.</h2><p class="hero-copy">Use the same agent from the terminal, authenticated web interface, REST API, or Telegram. Your workspace stays coherent as the surface changes.</p></div><div class="workflow-list"><div class="workflow-step"><b>01</b><div><h3>Terminal</h3><p>Interactive work, planning, tools, and fast feedback.</p></div></div><div class="workflow-step"><b>02</b><div><h3>Web interface</h3><p>Streaming chat, voice controls, export, themes, and approvals.</p></div></div><div class="workflow-step"><b>03</b><div><h3>REST API</h3><p>Applications, automation, isolated sessions, and service integrations.</p></div></div></div></div></section>
+      <section class="section" id="workflow">
+        <div class="container showcase-grid">
+          <div class="showcase-copy reveal">
+            <div class="eyebrow">Workflow</div>
+            <h2>From a single prompt to a safe, visible result.</h2>
+            <p>Plan, execute, and review in one place. Sessions stay isolated, requests stay bounded, credentials stay protected.</p>
+            <div class="mini-list">
+              <span>Command execution</span>
+              <span>Web access</span>
+              <span>File management</span>
+              <span>Approval gates</span>
+            </div>
+          </div>
+          <div class="terminal reveal" style="--reveal-delay: 120ms" aria-label="HelloChusquis terminal preview">
+            <div class="terminal-top"><span class="window-dots"><i></i><i></i><i></i></span><span>hellochusquis · local</span><span class="live">● live</span></div>
+            <div class="terminal-body">
+              <div class="prompt-line"><span class="prompt">$</span> <span id="typed-cmd">hellochusquis</span><span class="typed-caret" aria-hidden="true"></span></div>
+              <div class="term-out"><span class="tag">search</span> latest Python release — summarized</div>
+              <div class="term-out dim">→ 6 files inspected · 1 issue found · approval requested</div>
+              <div class="term-out"><span class="ok">✓</span> done · memory updated · audit written</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <section id="quickstart"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">from zero to useful</div><h2>A calm first command.</h2></div><p>Install it, configure a provider, and start asking for concrete work. No new workspace to learn.</p></div><div class="code-card"><div class="code-head"><span>quickstart.sh</span><button class="copy" type="button" data-copy="python -m pip install hellochusquis\nhellochusquis config\nhellochusquis">copy lines</button></div><pre><span class="code-comment"># install</span>
-<span class="code-key">python</span> -m pip install <span class="code-string">hellochusquis</span>
+      <section class="section" id="install">
+        <div class="container">
+          <div class="section-heading reveal">
+            <div class="eyebrow">Install</div>
+            <h2>One command to start.</h2>
+          </div>
+          <div class="install-grid">
+            <div class="install-card reveal">
+              <div class="chart-label">1 · Install · Python 3.10+</div>
+              <code>python -m pip install hellochusquis</code>
+              <button class="copy-btn" type="button" data-copy="python -m pip install hellochusquis">copy</button>
+            </div>
+            <div class="install-card reveal" style="--reveal-delay: 90ms">
+              <div class="chart-label">2 · Configure</div>
+              <code>hellochusquis config</code>
+              <button class="copy-btn" type="button" data-copy="hellochusquis config">copy</button>
+            </div>
+            <div class="install-card reveal" style="--reveal-delay: 180ms">
+              <div class="chart-label">3 · Chat · Web · API</div>
+              <code>hellochusquis · web · api</code>
+              <button class="copy-btn" type="button" data-copy="hellochusquis">copy</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
 
-<span class="code-comment"># configure a provider</span>
-<span class="code-key">hellochusquis</span> config
+    <footer class="footer">
+      <div class="container footer-shell">
+        <div class="brand" aria-label="HelloChusquis brand">
+          <img src="./logo-primary.png" alt="HelloChusquis logo" />
+          <span>HelloChusquis</span>
+        </div>
+        <div class="footer-actions">
+          <code>python -m pip install hellochusquis</code>
+          <a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+      </div>
+      <div class="container footer-meta">v5.4 · Python 3.10+ · MIT · 421 tests passing</div>
+    </footer>
 
-<span class="code-comment"># start chatting</span>
-<span class="code-key">hellochusquis</span></pre></div></div></section>
-
-    <section class="signals" id="updates"><div class="wrap"><div class="section-intro"><div><div class="eyebrow">recent project signals</div><h2>The latest updates, in the numbers.</h2></div><p>Two snapshots already shipped with the repository: knowledge retrieval lifts factual accuracy, while v5.2 cuts the slow paths down.</p></div><div class="chart-grid"><figure class="chart-card"><img src="assets/kb-accuracy.png?v=2" alt="Factual accuracy improves with MDknowledge across model sizes" /><figcaption class="chart-caption"><strong>MDknowledge improves recall</strong><span>35-question factual probe</span></figcaption></figure><figure class="chart-card"><img src="assets/v52-latency.png?v=2" alt="Latency before and after v5.2 on key operations" /><figcaption class="chart-caption"><strong>v5.2 removes waiting</strong><span>seconds, log scale</span></figcaption></figure></div></div></section>
-
-    <section class="cta"><div class="wrap"><div class="cta-card"><canvas class="dot-grid-canvas" aria-hidden="true"></canvas><div class="eyebrow" style="color:rgba(5,5,4,.72)">open source / developer controlled</div><h2>Make the agent part of the place you already work.</h2><p>Read the code, run it locally, and shape the tools around your own workflows.</p><div class="actions"><a class="btn btn-primary specular" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noreferrer">Go to GitHub ↗</a></div></div></div></section>
-  </main>
-  <div class="page-blur page-blur--bottom" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-
-  <footer><div class="wrap footer-inner"><span>© 2026 HelloChusquis</span><span>local-first AI for the terminal, browser, and systems around your work.</span></div></footer>
-  <script>
-    const copyButton = document.querySelector('[data-copy]');
-    copyButton?.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(copyButton.dataset.copy);
-      const original = copyButton.textContent;
-      copyButton.textContent = 'copied ✓';
-      setTimeout(() => copyButton.textContent = original, 1400);
-    });
-
-    document.querySelectorAll('.flip-card').forEach((card) => {
-      const turns = [...card.querySelectorAll('.flip-turn')];
-      turns.forEach((turn, index) => {
-        turn.addEventListener('click', () => {
-          const flipped = card.classList.toggle('is-flipped');
-          turns.forEach((button, buttonIndex) => button.setAttribute('aria-pressed', String(flipped ? buttonIndex === 1 : buttonIndex === 0)));
-          // Keep keyboard users on the face they deliberately opened.
-          requestAnimationFrame(() => turns[flipped ? 1 : 0].focus());
-        });
-      });
-    });
-
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const greeting = document.querySelector('#hero-greeting');
-    const greetings = ['Hello', 'Bonjour', 'Hola', 'Ciao', 'Hallo', 'こんにちは', '안녕하세요'];
-    if (!reducedMotion && greeting) {
-      let greetingIndex = 0;
-      const cycleGreeting = () => {
-        greeting.classList.add('is-leaving');
-        window.setTimeout(() => {
-          greetingIndex = (greetingIndex + 1) % greetings.length;
-          greeting.textContent = greetings[greetingIndex];
-          greeting.classList.remove('is-leaving');
-          greeting.classList.add('is-entering');
-          window.setTimeout(() => greeting.classList.remove('is-entering'), 360);
-        }, 220);
-      };
-      window.setInterval(cycleGreeting, 1650);
-    }
-
-    // React Bits-style cube field, implemented locally for this static docs page.
-    const cubeField = document.querySelector('#cube-field');
-    const hero = document.querySelector('.hero');
-    if (false && !reducedMotion && cubeField && hero && window.matchMedia('(pointer: fine)').matches) {
-      const gridSize = 10;
-      const radius = 4;
-      const maxAngle = 32;
-      const cubes = [];
-      for (let row = 0; row < gridSize; row += 1) {
-        for (let col = 0; col < gridSize; col += 1) {
-          const cube = document.createElement('span');
-          cube.className = 'cube-cell';
-          cube.dataset.row = row;
-          cube.dataset.col = col;
-          cubeField.append(cube);
-          cubes.push({ element: cube, row, col });
-        }
-      }
-
-      const tiltAt = (rowCenter, colCenter) => {
-        cubes.forEach((cube) => {
-          const distance = Math.hypot(cube.row - rowCenter, cube.col - colCenter);
-          const angle = distance < radius ? (1 - distance / radius) * maxAngle : 0;
-          cube.element.style.setProperty('--cube-x', `${-angle}deg`);
-          cube.element.style.setProperty('--cube-y', `${angle}deg`);
-        });
-      };
-      const fieldPoint = (clientX, clientY) => {
-        const bounds = cubeField.getBoundingClientRect();
-        return { row: ((clientY - bounds.top) / bounds.height) * gridSize, col: ((clientX - bounds.left) / bounds.width) * gridSize, inside: clientX >= bounds.left && clientX <= bounds.right && clientY >= bounds.top && clientY <= bounds.bottom };
-      };
-      let lastInteraction = 0;
-      let pendingPoint = null;
-      let pointerFrame = 0;
-      hero.addEventListener('pointermove', (event) => {
-        const point = fieldPoint(event.clientX, event.clientY);
-        if (!point.inside) return;
-        lastInteraction = performance.now();
-        pendingPoint = point;
-        if (pointerFrame) return;
-        pointerFrame = requestAnimationFrame(() => {
-          tiltAt(pendingPoint.row, pendingPoint.col);
-          pointerFrame = 0;
-        });
-      });
-      hero.addEventListener('pointerleave', () => tiltAt(-10, -10));
-      hero.addEventListener('click', (event) => {
-        if (event.target.closest('a, button')) return;
-        const point = fieldPoint(event.clientX, event.clientY);
-        if (!point.inside) return;
-        cubes.forEach((cube) => {
-          const ring = Math.round(Math.hypot(cube.row - point.row, cube.col - point.col));
-          cube.element.style.animationDelay = `${ring * 42}ms`;
-          cube.element.classList.remove('is-ripple');
-          void cube.element.offsetWidth;
-          cube.element.classList.add('is-ripple');
-        });
-      });
-      let idlePosition = { row: 3, col: 6 };
-      let idleTarget = { row: 7, col: 3 };
-      const drift = () => {
-        if (performance.now() - lastInteraction > 1300) {
-          idlePosition.row += (idleTarget.row - idlePosition.row) * .018;
-          idlePosition.col += (idleTarget.col - idlePosition.col) * .018;
-          tiltAt(idlePosition.row, idlePosition.col);
-          if (Math.hypot(idlePosition.row - idleTarget.row, idlePosition.col - idleTarget.col) < .12) {
-            idleTarget = { row: Math.random() * gridSize, col: Math.random() * gridSize };
-          }
-        }
-        requestAnimationFrame(drift);
-      };
-      requestAnimationFrame(drift);
-    }
-    const revealTargets = document.querySelectorAll('.section-intro, .feature, .workflow-grid > div, .workflow-step, .code-card, .chart-card, .cta-card');
-    revealTargets.forEach((element) => element.classList.add('reveal'));
-
-    const startCounter = (element) => {
-      const target = Number(element.dataset.count || 0);
-      const from = Number(element.dataset.from || 0);
-      const suffix = element.dataset.suffix || '';
-      const duration = Number(element.dataset.duration || 1.6) * 1000;
-      const decimals = Math.max(
-        (String(element.dataset.from || '').split('.')[1] || '').length,
-        (String(element.dataset.count || '').split('.')[1] || '').length
-      );
-      const started = performance.now();
-      const tick = (now) => {
-        const progress = Math.min((now - started) / duration, 1);
-        const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-        const value = from + (target - from) * eased;
-        element.textContent = `${value.toFixed(decimals)}${suffix}`;
-        if (progress < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    };
-
-    if (reducedMotion || !('IntersectionObserver' in window)) {
-      document.querySelectorAll('.reveal').forEach((element) => element.classList.add('visible'));
-      document.querySelectorAll('[data-count]').forEach((element) => {
-        element.textContent = `${element.dataset.count}${element.dataset.suffix || ''}`;
-      });
-    } else {
-      const observer = new IntersectionObserver((entries, instance) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add('visible');
-          if (entry.target.matches('[data-count]')) startCounter(entry.target);
-          instance.unobserve(entry.target);
-        });
-      }, { threshold: .14, rootMargin: '0px 0px -36px' });
-      document.querySelectorAll('.reveal, [data-count]').forEach((element) => observer.observe(element));
-    }
-
-    const terminal = document.querySelector('.terminal');
-    if (!reducedMotion && terminal && window.matchMedia('(pointer: fine)').matches) {
-      terminal.addEventListener('pointermove', (event) => {
-        const bounds = terminal.getBoundingClientRect();
-        const x = (event.clientX - bounds.left) / bounds.width;
-        const y = (event.clientY - bounds.top) / bounds.height;
-        terminal.style.setProperty('--pointer-x', `${x * 100}%`);
-        terminal.style.setProperty('--pointer-y', `${y * 100}%`);
-        terminal.style.setProperty('--terminal-glow', '1');
-        terminal.style.transform = `perspective(1100px) rotateX(${(0.5 - y) * 3}deg) rotateY(${(x - 0.5) * 4}deg) translateY(-5px)`;
-      });
-      terminal.addEventListener('pointerleave', () => {
-        terminal.style.setProperty('--terminal-glow', '0');
-        terminal.style.transform = '';
-      });
-    }
-  </script>
-  <script type="module" src="./src/main.js"></script>
-</body>
+    <script src="./app.js" defer></script>
+  </body>
 </html>
