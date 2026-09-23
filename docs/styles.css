@@ -137,6 +137,9 @@ h1, h2, h3 { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; let
 .workflow-list span:hover { border-color: var(--panel-border); color: var(--amber-soft); transform: translateY(-2px); }
 
 .section-heading { margin-bottom: 28px; }
+.section-lede { margin-top: 14px; max-width: 620px; color: var(--muted); line-height: 1.75; }
+.use-card h3 { margin-top: 0; }
+.use-card code { display: inline-block; margin-top: 14px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); color: var(--amber-soft); font: 500 0.72rem/1.5 "JetBrains Mono", monospace; }
 .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
 .feature-card { padding: 26px 22px; transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease; }
 .feature-card:hover { transform: translateY(-4px); border-color: var(--panel-border); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35); }

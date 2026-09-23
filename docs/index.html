@@ -33,13 +33,14 @@
     <header class="site-header">
       <div class="container nav">
         <div class="brand" aria-label="HelloChusquis brand">
-          <img src="./logo-primary.png" alt="HelloChusquis logo — local-first AI agent" width="28" height="28" />
+          <picture><source srcset="./logo-56.webp" type="image/webp" /><img src="./logo-56.png" alt="HelloChusquis logo — local-first AI agent" width="28" height="28" /></picture>
           <span>HelloChusquis</span>
         </div>
         <nav class="nav-links" aria-label="Main navigation">
           <a href="#proof">Proof</a>
           <a href="#features">Features</a>
           <a href="#workflow">Workflow</a>
+          <a href="#use-cases">Use cases</a>
           <a href="#install" class="cta">Install</a>
         </nav>
       </div>
@@ -94,7 +95,7 @@
           </div>
           <div class="proof-card proof-copy reveal" style="--reveal-delay: 120ms">
             <div class="eyebrow">Proof</div>
-            <h2>Measured gains, not empty promises.</h2>
+            <h2>Measured: 86% → 100% recall, 64s → 0.5s ingest.</h2>
             <p>
               A 1200+ file knowledge layer (~9900 facts) lifts a local 3B model from
               86% to 100% on a 35-question factual probe, with 97% retrieval coverage.
@@ -176,6 +177,48 @@
         </div>
       </section>
 
+      <section class="section" id="use-cases">
+        <div class="container">
+          <div class="section-heading reveal">
+            <div class="eyebrow">Use cases</div>
+            <h2>Tuesday work, handled.</h2>
+            <p class="section-lede">Six jobs developers actually do, each one a single prompt away — guarded by 421 passing tests and a human approval gate.</p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card use-card reveal">
+              <h3>Ship the scary code review</h3>
+              <p>Point Chusquis at an unfamiliar repo and ask for the riskiest gap. It maps the project, traces the highest-impact paths, and reports findings with file names — then waits for your approval before touching anything.</p>
+              <code>/plan find the riskiest test gap</code>
+            </article>
+            <article class="feature-card use-card reveal" style="--reveal-delay: 90ms">
+              <h3>Brief yourself in minutes</h3>
+              <p>Ask for the latest release notes, advisories, or docs across the web and get a summary back in chat. Search and browser tools do the legwork; bounded shell commands verify claims against your local checkout.</p>
+              <code>summarize what changed upstream</code>
+            </article>
+            <article class="feature-card use-card reveal" style="--reveal-delay: 180ms">
+              <h3>Triage inbox and chat</h3>
+              <p>Gmail, Slack, and Discord integrations pull threads into one place. Draft replies, file follow-ups, and ping allowlisted Telegram chats — every external write pauses at the approval gate first.</p>
+              <code>draft replies for unread threads</code>
+            </article>
+            <article class="feature-card use-card reveal">
+              <h3>Run boring ops safely</h3>
+              <p>Docker, Kubernetes, Postgres, Terraform, and AWS tasks run through the same chat with the same guardrails. Isolated sessions keep one operator's state away from another's, and every decision lands in the audit log.</p>
+              <code>check staging health, then report</code>
+            </article>
+            <article class="feature-card use-card reveal" style="--reveal-delay: 90ms">
+              <h3>Remember everything</h3>
+              <p>Say <b>remember</b> to pin a decision and <b>forget</b> to drop it. Sessions, summaries, and learnings persist in local SQLite, and the most relevant turns are recalled into context automatically before each answer.</p>
+              <code>remember we deploy on Fridays</code>
+            </article>
+            <article class="feature-card use-card reveal" style="--reveal-delay: 180ms">
+              <h3>Talk from anywhere</h3>
+              <p>Start in the terminal, continue from the web UI on port 7272, automate over the REST API with streaming responses, or chat from Telegram. One agent, four surfaces, same memory everywhere.</p>
+              <code>hellochusquis web</code>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section class="section" id="install">
         <div class="container">
           <div class="section-heading reveal">
@@ -228,6 +271,10 @@
               <summary>What does it cost? What license?</summary>
               <p>HelloChusquis v5.4 is MIT licensed and free. You only pay your model provider, if anything — local models cost nothing beyond your hardware. 421 tests guard every release.</p>
             </details>
+            <details class="faq-item reveal" style="--reveal-delay: 300ms">
+              <summary>Which surfaces can I work from?</summary>
+              <p>Four, sharing one memory. The terminal (<b>hellochusquis</b>) for interactive work, the web UI (<b>hellochusquis web</b>, port 7272) for streaming chat with voice and themes, the REST API (<b>hellochusquis api --port 8080</b>) for automation with server-sent events, and Telegram for allowlisted chats on the go.</p>
+            </details>
           </div>
         </div>
       </section>
@@ -236,7 +283,7 @@
     <footer class="footer">
       <div class="container footer-shell">
         <div class="brand" aria-label="HelloChusquis brand">
-          <img src="./logo-primary.png" alt="HelloChusquis logo — local-first AI agent" width="28" height="28" />
+          <picture><source srcset="./logo-56.webp" type="image/webp" /><img src="./logo-56.png" alt="HelloChusquis logo — local-first AI agent" width="28" height="28" /></picture>
           <span>HelloChusquis</span>
         </div>
         <div class="footer-actions">
