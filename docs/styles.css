@@ -77,7 +77,8 @@ button { font: inherit; }
 .launch-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 12px rgba(245, 166, 35, 0.8); animation: live-pulse 2s ease-in-out infinite; }
 .eyebrow::before { content: ""; display: block; width: 26px; height: 1px; background: currentColor; }
 
-.hello-line { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; font-size: clamp(3.4rem, 9vw, 7rem); line-height: 0.95; letter-spacing: -0.06em; }
+.hello-kicker { margin: 0 0 14px; font-family: "Space Grotesk", "DM Sans", sans-serif; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1; letter-spacing: -0.05em; color: var(--text); }
+.hero-title { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; font-size: clamp(2.4rem, 5.4vw, 4.2rem); line-height: 1.02; letter-spacing: -0.055em; max-width: 16ch; }
 .hello-word { display: inline-block; background: linear-gradient(135deg, #fff1b8 0%, var(--amber-soft) 40%, var(--amber) 75%, var(--green) 110%); background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: gradient-pan 7s ease-in-out infinite alternate; }
 .hello-word.is-leaving { animation: word-out 0.22s ease-in both; }
 .hello-word.is-entering { animation: word-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) both; }
