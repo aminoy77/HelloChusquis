@@ -87,7 +87,13 @@ button { font: inherit; }
 @keyframes gradient-pan { from { background-position: 0% center; } to { background-position: 100% center; } }
 
 .hero-sub { max-width: 560px; margin: 24px 0 0; color: var(--muted); font-size: 1.1rem; line-height: 1.75; }
+.hero-problem { max-width: 560px; margin: 24px 0 0; color: var(--text); font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
 .hero-sub b { color: var(--text); }
+.hero-term { width: fit-content; max-width: 100%; margin-top: 22px; padding: 16px 18px; border: 1px solid var(--panel-border); border-radius: 14px; background: rgba(12, 12, 10, 0.85); font: 500 0.78rem/2 "JetBrains Mono", monospace; color: var(--muted); }
+.hero-term-row { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.hero-term-row.dim { opacity: 0.7; }
+.hero-term .prompt { color: var(--amber-soft); }
+.hero-term .ok { color: var(--green); }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
 .primary-btn, .secondary-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 22px; border-radius: 14px; font: 700 0.75rem/1 "JetBrains Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .primary-btn { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--amber), #ffca62); color: #100d08; border: 1px solid rgba(255, 211, 123, 0.5); box-shadow: 0 14px 30px rgba(245, 166, 35, 0.24); }
