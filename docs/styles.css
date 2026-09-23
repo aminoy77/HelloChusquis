@@ -197,3 +197,16 @@ h1, h2, h3 { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; let
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* Accessibility + FAQ */
+.skip-link { position: absolute; left: 16px; top: -100px; z-index: 100; padding: 10px 16px; border-radius: 10px; background: var(--amber); color: #140f04; font: 700 0.75rem/1 "JetBrains Mono", monospace; }
+.skip-link:focus { top: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 6px; }
+.faq-list { display: grid; gap: 12px; max-width: 760px; }
+.faq-item { border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; background: rgba(12, 12, 10, 0.76); padding: 6px 20px; transition: border-color 0.2s ease; }
+.faq-item:hover { border-color: var(--panel-border); }
+.faq-item summary { cursor: pointer; padding: 14px 0; font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
+.faq-item summary::marker { color: var(--amber); }
+.faq-item p { margin: 0 0 16px; color: var(--muted); line-height: 1.75; }
+.faq-item b, .faq-item code { color: var(--amber-soft); font-family: "JetBrains Mono", monospace; font-size: 0.85em; }

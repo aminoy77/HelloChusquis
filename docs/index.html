@@ -9,6 +9,14 @@
     <meta property="og:description" content="Local-first AI agent: terminal, web UI, REST API, Telegram. 421 tests passing, MIT licensed." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg" />
+    <link rel="canonical" href="https://aminoy77.github.io/HelloChusquis/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="HelloChusquis — Work with an agent you can see" />
+    <meta name="twitter:description" content="Local-first AI agent: terminal, web UI, REST API, Telegram. 421 tests passing, MIT licensed." />
+    <meta name="twitter:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg" />
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"SoftwareApplication","name":"HelloChusquis","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, macOS, Linux","softwareVersion":"5.4","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Local-first AI agent for the terminal, browser, and systems around your work. Terminal chat, web UI, REST API, and Telegram with approval-gated tools and SQLite-backed memory."}
+    </script>
     <link rel="icon" type="image/x-icon" href="./favicon.ico" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <title>HelloChusquis — Work with an agent you can see</title>
@@ -21,10 +29,11 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
       <div class="container nav">
         <div class="brand" aria-label="HelloChusquis brand">
-          <img src="./logo-primary.png" alt="HelloChusquis logo" />
+          <img src="./logo-primary.png" alt="HelloChusquis logo" width="28" height="28" />
           <span>HelloChusquis</span>
         </div>
         <nav class="nav-links" aria-label="Main navigation">
@@ -36,15 +45,15 @@
       </div>
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero" id="top">
         <canvas id="aurora" aria-hidden="true"></canvas>
         <div class="hero-fade" aria-hidden="true"></div>
         <div class="container hero-inner">
           <a class="launch-pill reveal" href="https://www.uneed.best/tool/hellochusquis" target="_blank" rel="noreferrer"><span class="launch-dot"></span>Launching soon on Uneed ↗</a>
           <div class="eyebrow reveal">Local-first AI for builders · v5.4 · MIT</div>
-          <h1 class="hello-line reveal" style="--reveal-delay: 80ms" aria-live="off">
-            <span class="hello-word" id="hello-word">Hola</span><span class="hello-comma">,</span><br />
+          <h1 class="hello-line reveal" style="--reveal-delay: 80ms">
+            <span class="sr-only">Hello,</span><span class="hello-word" id="hello-word" aria-hidden="true">Hola</span><span class="hello-comma">,</span><br />
             Chusquis<span class="hello-dot">.</span>
           </h1>
           <p class="hero-sub reveal" style="--reveal-delay: 160ms">
@@ -123,17 +132,17 @@
             <article class="feature-card reveal">
               <div class="feature-index">01</div>
               <h3>Work beside your code</h3>
-              <p>Search repos, inspect files, run bounded shell tasks, and plan multi-step work with <b>/plan</b> — without leaving the agent.</p>
+              <p>Search repos, inspect files, run bounded shell tasks, and plan multi-step work with <b>/plan</b> — without leaving the agent. Tool calls stream visibly, so a research task like "find the riskiest test gap" shows its files, commands, and findings instead of hiding them.</p>
             </article>
             <article class="feature-card reveal" style="--reveal-delay: 90ms">
               <div class="feature-index">02</div>
               <h3>Connect the tools you trust</h3>
-              <p>GitHub, Slack, Docker, Notion, AWS, Stripe, Postgres, and 120+ more — high-impact actions wait for your approval.</p>
+              <p>GitHub, Slack, Docker, Notion, AWS, Stripe, Postgres, and 120+ more — high-impact actions wait for your approval. Sessions stay isolated per caller, credentials stay redacted in audit logs, and roles (viewer, operator, owner) decide who can chat, approve, or manage runtime.</p>
             </article>
             <article class="feature-card reveal" style="--reveal-delay: 180ms">
               <div class="feature-index">03</div>
               <h3>Keep context useful</h3>
-              <p>SQLite-backed memory, sessions, summaries, and per-turn recall stay local — no transcript dump in every prompt.</p>
+              <p>SQLite-backed memory, sessions, summaries, and per-turn recall stay local — no transcript dump in every prompt. Say <b>remember</b> to pin a fact, <b>forget</b> to drop one, and let the 1200-file knowledge layer lift factual recall on every turn.</p>
             </article>
           </div>
         </div>
@@ -189,12 +198,42 @@
           </div>
         </div>
       </section>
+      <section class="section" id="faq">
+        <div class="container">
+          <div class="section-heading reveal">
+            <div class="eyebrow">FAQ</div>
+            <h2>Questions, answered straight.</h2>
+          </div>
+          <div class="faq-list">
+            <details class="faq-item reveal">
+              <summary>How do I install and start?</summary>
+              <p>Run <b>python -m pip install hellochusquis</b> (Python 3.10+), then <b>hellochusquis config</b> to set up a provider, then <b>hellochusquis</b> to chat. Prefer a UI? <b>hellochusquis web</b> serves a local workspace on port 7272.</p>
+            </details>
+            <details class="faq-item reveal" style="--reveal-delay: 60ms">
+              <summary>Which AI providers work?</summary>
+              <p>Any OpenAI-compatible endpoint plus configured hosted and local providers, managed through one setup flow. Keys live in your local setup store or environment variables — never in the repo. Run <b>hellochusquis doctor --contracts</b> for offline diagnostics.</p>
+            </details>
+            <details class="faq-item reveal" style="--reveal-delay: 120ms">
+              <summary>Where does my data live?</summary>
+              <p>On your machine. Memory, sessions, audit records, and config sit under <b>~/.hellochusquis</b> in SQLite stores. The web UI creates a local access key on first launch; every chat turn is saved, searchable, and recallable per turn.</p>
+            </details>
+            <details class="faq-item reveal" style="--reveal-delay: 180ms">
+              <summary>Is it safe to let it run commands?</summary>
+              <p>High-impact operations — shell execution, file mutation, external writes, browser submissions — can pause for your approval before dispatch. HTTP sessions are isolated per caller, approval records are audit-logged with secrets redacted, and named roles control who may chat, approve, or administer.</p>
+            </details>
+            <details class="faq-item reveal" style="--reveal-delay: 240ms">
+              <summary>What does it cost? What license?</summary>
+              <p>HelloChusquis v5.4 is MIT licensed and free. You only pay your model provider, if anything — local models cost nothing beyond your hardware. 421 tests guard every release.</p>
+            </details>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">
       <div class="container footer-shell">
         <div class="brand" aria-label="HelloChusquis brand">
-          <img src="./logo-primary.png" alt="HelloChusquis logo" />
+          <img src="./logo-primary.png" alt="HelloChusquis logo" width="28" height="28" />
           <span>HelloChusquis</span>
         </div>
         <div class="footer-actions">
