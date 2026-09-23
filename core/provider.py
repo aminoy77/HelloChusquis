@@ -354,12 +354,14 @@ class ProviderPool:
                                 read=120.0 if is_local else float(self.timeout),
                                 write=10.0, pool=5.0)
         with httpx.Client(timeout=timeout) as client:
+            # Keyless local servers (Ollama, LM Studio, llama.cpp) need no
+            # auth header at all; an empty "Bearer " value makes httpx fail.
+            headers = {"Content-Type": "application/json"}
+            if (provider.api_key or "").strip():
+                headers["Authorization"] = f"Bearer {provider.api_key}"
             response = client.post(
                 f"{provider.base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {provider.api_key}",
-                    "Content-Type": "application/json",
-                },
+                headers=headers,
                 json=payload,
             )
             response.raise_for_status()
