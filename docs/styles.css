@@ -125,6 +125,7 @@ h1, h2, h3 { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; let
 .proof-copy h2, .section-heading h2, .showcase-copy h2 { font-size: clamp(2.2rem, 4vw, 3.3rem); line-height: 1.04; }
 .proof-copy { padding: 26px; }
 .proof-copy p, .showcase-copy p, .feature-card p { color: var(--muted); line-height: 1.7; }
+.proof-copy .method { margin-top: 12px; font-size: 0.82rem; border-left: 2px solid var(--panel-border); padding-left: 12px; }
 .proof-copy ul { list-style: disc; padding-left: 18px; margin: 18px 0 0; display: grid; gap: 10px; color: var(--text); }
 .chart-row { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(200px, 0.9fr); gap: 24px; margin-top: 24px; }
 .chart-card { padding: 18px; }

@@ -88,7 +88,7 @@
         </div>
       </section>
 
-      <section class="section" id="proof">
+      <section class="section" id="proof" aria-label="Measured results">
         <div class="container proof-grid">
           <div class="proof-card reveal">
             <img src="./assets/kb-accuracy.svg" alt="Knowledge accuracy: local 3B model from 86 to 100 percent on a 35-question probe" loading="lazy" />
@@ -100,6 +100,10 @@
               A 1200+ file knowledge layer (~9900 facts) lifts a local 3B model from
               86% to 100% on a 35-question factual probe, with 97% retrieval coverage.
               v5.2 cut KB ingest from 64s to 0.5s — and 421 passing tests guard every release.
+            </p>
+            <p class="method">
+              Methodology: a 35-question factual probe against a local 3B model (qwen2.5-coder:3b), bare versus knowledge-layered.
+              Retrieval coverage went from 0% to 97%; accuracy from 86% to 100%. Latency wins measured on KB ingest, browser failure recovery, and worst-case search before and after v5.2.
             </p>
             <ul>
               <li>Retrieval coverage that stays useful in real work</li>
@@ -126,7 +130,7 @@
         </div>
       </section>
 
-      <section class="section" id="features">
+      <section class="section" id="features" aria-label="Features">
         <div class="container">
           <div class="section-heading reveal">
             <div class="eyebrow">Why it works</div>
@@ -152,7 +156,7 @@
         </div>
       </section>
 
-      <section class="section" id="workflow">
+      <section class="section" id="workflow" aria-label="Workflow">
         <div class="container showcase-grid">
           <div class="showcase-copy reveal">
             <div class="eyebrow">Workflow</div>
@@ -177,7 +181,7 @@
         </div>
       </section>
 
-      <section class="section" id="use-cases">
+      <section class="section" id="use-cases" aria-label="Use cases">
         <div class="container">
           <div class="section-heading reveal">
             <div class="eyebrow">Use cases</div>
@@ -219,7 +223,7 @@
         </div>
       </section>
 
-      <section class="section" id="install">
+      <section class="section" id="install" aria-label="Install">
         <div class="container">
           <div class="section-heading reveal">
             <div class="eyebrow">Install</div>
@@ -244,7 +248,7 @@
           </div>
         </div>
       </section>
-      <section class="section" id="faq">
+      <section class="section" id="faq" aria-label="Frequently asked questions">
         <div class="container">
           <div class="section-heading reveal">
             <div class="eyebrow">FAQ</div>
@@ -280,7 +284,7 @@
       </section>
     </main>
 
-    <footer class="footer">
+    <footer class="footer" role="contentinfo" aria-label="Footer">
       <div class="container footer-shell">
         <div class="brand" aria-label="HelloChusquis brand">
           <picture><source srcset="./logo-56.webp" type="image/webp" /><img src="./logo-56.png" alt="HelloChusquis logo — local-first AI agent" width="28" height="28" /></picture>
