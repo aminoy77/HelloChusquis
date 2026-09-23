@@ -1315,7 +1315,7 @@ class Agent:
                 error="Tool execution denied by current policy.",
             )
         else:
-            result = self._dispatch_tool(
+            result = self._safe_dispatch(
                 request.tool_name,
                 request.tool_args,
                 approval_granted=True,
@@ -1431,6 +1431,22 @@ class Agent:
                 "Ask the user to approve or deny this action before execution."
             ),
         )
+
+    def _safe_dispatch(self, tool_name: str, tool_args: dict,
+                         approval_granted: bool = False) -> ToolResult:
+        """Dispatch that never raises: malformed model args (missing params,
+        wrong types) become an error result the model can self-correct from.
+        Without this, one bad tool call crashes the turn — a 500 on web/API.
+        """
+        try:
+            return self._dispatch_tool(tool_name, tool_args,
+                                       approval_granted=approval_granted)
+        except Exception as exc:
+            logger.error("Tool dispatch failed (%s)", type(exc).__name__)
+            return ToolResult(
+                success=False, output="",
+                error=f"{tool_name} call failed: missing or invalid arguments.",
+            )
 
     def _dispatch_tool(
         self,
@@ -1879,7 +1895,7 @@ class Agent:
                                         except Exception:
                                             pass
 
-                                result = self._dispatch_tool(tool_name, tool_args)
+                                result = self._safe_dispatch(tool_name, tool_args)
 
                                 # --- Plugin hooks: after_tool ---
                                 for plugin in self.plugins:
@@ -2055,7 +2071,7 @@ class Agent:
                                             hook_fn(tool_name, tool_args)
                                         except Exception:
                                             pass
-                                result = self._dispatch_tool(tool_name, tool_args)
+                                result = self._safe_dispatch(tool_name, tool_args)
                                 # --- Plugin hooks: after_tool ---
                                 for plugin in self.plugins:
                                     hook_fn = plugin.get("after_tool")

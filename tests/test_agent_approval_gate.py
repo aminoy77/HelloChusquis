@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from core.agent import Agent
 from core.approvals import ApprovalManager
 from tools.base import ToolResult
+from tools.files import FilesTool
+from workspace.manager import WorkspaceManager
 
 
 class _AuditSink:
@@ -96,6 +100,18 @@ class TestAgentApprovalGate(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.error, "failing-plugin tool failed. Check server logs.")
         self.assertNotIn("super-secret", result.error)
+
+    def test_malformed_tool_call_returns_error_instead_of_raising(self):
+        with tempfile.TemporaryDirectory() as workspace:
+            agent = self._agent(require_approval=False)
+            agent.workspace = WorkspaceManager([workspace])
+            agent.files = FilesTool([workspace])
+            # Model omitted the required `action` param: must not raise
+            # (on web/API that would be a 500).
+            result = agent._safe_dispatch(
+                "files", {"path": str(Path(workspace) / "x.txt"), "content": "hi"})
+            self.assertFalse(result.success)
+            self.assertIn("missing or invalid arguments", result.error)
 
 
 if __name__ == "__main__":

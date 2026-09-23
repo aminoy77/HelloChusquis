@@ -34,8 +34,16 @@ class WorkspaceManager:
         p = Path(path).expanduser().resolve()
         if self.is_allowed(path):
             return True
+        import sys
+        if not sys.stdin.isatty():
+            # Headless (web/API/workers): never block on a terminal prompt;
+            # deny and let the caller surface "Access denied" instead.
+            return False
         console.print(f"\n[yellow]⚠ HelloChusquis wants access to:[/yellow] {p}")
-        granted = Confirm.ask("Allow?", default=True)
+        try:
+            granted = Confirm.ask("Allow?", default=True)
+        except EOFError:
+            return False
         if granted:
             self.allowed.append(p)
             console.print("[green]✓ Access granted[/green]")
