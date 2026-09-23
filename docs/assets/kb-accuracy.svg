@@ -9,10 +9,10 @@
 <text x="38" y="87" fill="#a3a0b0" font-size="10" text-anchor="end">75%</text>
 <line x1="44" y1="28" x2="548" y2="28" stroke="#26262e"/>
 <text x="38" y="32" fill="#a3a0b0" font-size="10" text-anchor="end">100%</text>
-<rect x="62" y="127" width="34" height="121" rx="4" fill="#a3a0b0"/>
-<rect x="106" y="50" width="34" height="198" rx="4" fill="#f5a623"/>
-<text x="101" y="266" fill="#f1efe9" font-size="11" text-anchor="middle">~1B*</text>
-<text x="101" y="280" fill="#a3a0b0" font-size="9" text-anchor="middle">55→90%</text>
+<rect x="62" y="204" width="34" height="44" rx="4" fill="#a3a0b0"/>
+<rect x="106" y="85" width="34" height="163" rx="4" fill="#f5a623"/>
+<text x="101" y="266" fill="#f1efe9" font-size="11" text-anchor="middle">1B</text>
+<text x="101" y="280" fill="#a3a0b0" font-size="9" text-anchor="middle">20→74%</text>
 <rect x="170" y="59" width="34" height="189" rx="4" fill="#a3a0b0"/>
 <rect x="214" y="28" width="34" height="220" rx="4" fill="#34d399"/>
 <text x="209" y="266" fill="#f1efe9" font-size="11" text-anchor="middle">3B</text>
@@ -25,7 +25,7 @@
 <rect x="430" y="28" width="34" height="220" rx="4" fill="#f5a623"/>
 <text x="425" y="266" fill="#f1efe9" font-size="11" text-anchor="middle">~32B*</text>
 <text x="425" y="280" fill="#a3a0b0" font-size="9" text-anchor="middle">97→100%</text>
-<text x="44" y="294" fill="#a3a0b0" font-size="9">35-question factual probe. 3B measured on qwen2.5-coder:3b; * projected (same retrieval coverage).</text>
+<text x="44" y="294" fill="#a3a0b0" font-size="9">35-question probe. 1B measured on llama3.2:1b, 3B on qwen2.5-coder:3b; * projected.</text>
 <circle cx="388" cy="16" r="5" fill="#a3a0b0"/><text x="398" y="20" fill="#a3a0b0" font-size="10">bare</text>
 <circle cx="448" cy="16" r="5" fill="#f5a623"/><text x="458" y="20" fill="#a3a0b0" font-size="10">+ KB</text>
 </svg>

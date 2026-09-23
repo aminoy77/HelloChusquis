@@ -1,0 +1,9 @@
+{
+  "model": "llama3.2:1b",
+  "provider": "Ollama (local)-3",
+  "total": 35,
+  "bare": 7,
+  "layered": 26,
+  "bare_pct": 20.0,
+  "layered_pct": 74.3
+}

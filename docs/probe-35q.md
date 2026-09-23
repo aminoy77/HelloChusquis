@@ -13,6 +13,18 @@ offline against an isolated temp DB; no provider credentials needed.
 
 Result: **35/35 (100%)**. Raw per-question rows: `probe-35q.csv`.
 
+## End-to-end accuracy, local 1B (measured 2026-09-23)
+
+Same 35 questions answered by **llama3.2:1b via local Ollama**, bare versus
+knowledge-layered (production `recall_context` prepended, no tools), graded by
+gold-substring match. Rerun: `OLLAMA_E2E_MODEL=llama3.2:1b python3
+tests/test_probe_e2e_1b.py --write-docs` (writes `probe-e2e-1b.csv`/`.json`).
+
+Result: **bare 7/35 (20%) → layered 26/35 (74%)**. The KB more than triples
+the tiny model's factual accuracy; grading is strict substring, so paraphrased
+correct answers can count as misses on both sides. This run replaced the old
+"~1B 55→90% (projected)" estimate in `assets/kb-accuracy.svg`.
+
 ## The other number on the landing page
 
 The "86% → 100% accuracy" chart (`assets/kb-accuracy.svg`) is a separate,
