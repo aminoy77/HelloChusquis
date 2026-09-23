@@ -25,6 +25,11 @@ the tiny model's factual accuracy; grading is strict substring, so paraphrased
 correct answers can count as misses on both sides. This run replaced the old
 "~1B 55→90% (projected)" estimate in `assets/kb-accuracy.svg`.
 
+Launch guidance: 1B models follow instructions unreliably (same prompt
+answered "ok" once and "No." another time; occasional hallucinated tool
+calls). Default new users to 3B or larger; treat 1B as experimental
+minimum for tinkerers, never as the first-run experience.
+
 ## The other number on the landing page
 
 The "86% → 100% accuracy" chart (`assets/kb-accuracy.svg`) is a separate,
