@@ -643,25 +643,43 @@ class MemoryStore:
         except (TypeError, ValueError):
             bounded_limit = 20
         tokens_json = json.dumps(tokens, ensure_ascii=False)
-        # Two-phase ranking: cheap SQL prefilter (importance order), then
-        # exact match-count ranking in Python over a bounded candidate set.
+        # Two-phase ranking: SQL prefilter already orders by token-hit count
+        # (recency-only prefetch used to starve KB facts on large stores),
+        # then exact match-count ranking in Python over a bounded candidate set.
         # A correlated COUNT subquery per row scans the whole table at scale.
         prefetch = min(max(bounded_limit * 10, 10), 100)
         rows = self.conn.execute(
-            "SELECT id, session_id, key, value, tags, category, importance, created_at, updated_at "
-            "FROM memory_entries WHERE EXISTS ("
-            "SELECT 1 FROM json_each(?) AS token "
-            "WHERE LOWER(memory_entries.key) LIKE '%' || token.value || '%' "
-            "OR LOWER(memory_entries.value) LIKE '%' || token.value || '%'"
-            ") ORDER BY importance DESC, created_at DESC LIMIT ?",
+            "SELECT e.id, e.session_id, e.key, e.value, e.tags, e.category, "
+            "e.importance, e.created_at, e.updated_at "
+            "FROM memory_entries AS e, json_each(?) AS token "
+            "WHERE LOWER(e.key) LIKE '%' || token.value || '%' "
+            "OR LOWER(e.value) LIKE '%' || token.value || '%' "
+            "GROUP BY e.id "
+            "ORDER BY COUNT(DISTINCT token.value) DESC, e.importance DESC, "
+            "e.updated_at DESC LIMIT ?",
             (tokens_json, prefetch),
         ).fetchall()
         entries = [self._row_to_entry(row) for row in rows]
-        entries.sort(key=lambda e: (
-            -sum(1 for t in tokens if t in ((e.key or "") + " " + (e.value or "")).lower()),
-            -(e.importance or 0),
-        ))
-        return entries[:bounded_limit]
+        # IDF weighting inside the candidate pool: rare tokens (egypt, spider)
+        # outvote glue words (what, does). Pure-Python over prefetched rows so
+        # the SQL surface stays a single bounded statement.
+        import math
+        texts = [((e.key or "") + " " + (e.value or "")).lower() for e in entries]
+        pool = max(1, len(texts))
+        idf = {}
+        for t in tokens:
+            df = sum(1 for text in texts if t in text)
+            idf[t] = math.log(1.0 + pool / (1.0 + df))
+
+        def _score(pair: tuple) -> tuple:
+            _, text, e = pair
+            return (
+                -sum(idf[t] for t in tokens if t in text),
+                -(e.importance or 0),
+            )
+
+        ranked = sorted(zip(range(len(entries)), texts, entries), key=_score)
+        return [e for _, _, e in ranked[:bounded_limit]]
 
     @_locked
     def get_entry_count(self) -> int:

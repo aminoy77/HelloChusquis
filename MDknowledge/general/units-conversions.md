@@ -5,7 +5,7 @@
 - 1 meter equals 3.281 feet; 1 foot equals 30.48 centimeters.
 - 1 kilogram equals 2.205 pounds; 1 pound equals 0.454 kilograms.
 - 1 liter equals 0.264 US gallons; 1 US gallon equals 3.785 liters.
-- 0°C equals 32°F and 100°C equals 212°F; convert with F = C·9/5 + 32.
+- 0°C equals 32°F and 100°C equals 212°F; convert Celsius to Fahrenheit with F = C·9/5 + 32.
 - 0°C equals 273.15 K; kelvin never takes a degree symbol.
 - 1 hectare equals 10,000 square meters (about 2.47 acres).
 - 1 knot equals 1.852 km/h, defined as one nautical mile per hour.
