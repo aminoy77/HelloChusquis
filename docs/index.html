@@ -20,6 +20,17 @@
     <script type="application/ld+json">
     {"@context":"https://schema.org","@type":"SoftwareApplication","name":"HelloChusquis","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, macOS, Linux","softwareVersion":"5.4","license":"https://opensource.org/licenses/MIT","downloadUrl":"https://pypi.org/project/hellochusquis/","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Local-first AI agent for your terminal and browser: chat with your repo, search the web, and automate tools with visible, approval-gated results."}
     </script>
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"Is this an open-source local AI agent for the terminal?","acceptedAnswer":{"@type":"Answer","text":"Yes. HelloChusquis is MIT licensed, runs locally, and starts in your terminal with hellochusquis after python -m pip install hellochusquis. Your code, keys, and memory stay on your machine; only the model calls you configure ever leave it."}},
+    {"@type":"Question","name":"How do I install and start?","acceptedAnswer":{"@type":"Answer","text":"Run python -m pip install hellochusquis (Python 3.10+), then hellochusquis config to set up a provider, then hellochusquis to chat. Prefer a UI? hellochusquis web serves a local workspace on port 7272."}},
+    {"@type":"Question","name":"Which AI providers work?","acceptedAnswer":{"@type":"Answer","text":"Any OpenAI-compatible endpoint plus configured hosted and local providers, managed through one setup flow. Keys live in your local setup store or environment variables, never in the repo."}},
+    {"@type":"Question","name":"Where does my data live?","acceptedAnswer":{"@type":"Answer","text":"On your machine. Memory, sessions, audit records, and config sit under ~/.hellochusquis in SQLite stores. Every chat turn is saved, searchable, and recallable per turn."}},
+    {"@type":"Question","name":"Is it safe to let it run commands?","acceptedAnswer":{"@type":"Answer","text":"High-impact operations can pause for your approval before dispatch. HTTP sessions are isolated per caller, approval records are audit-logged with secrets redacted, and named roles control who may chat, approve, or administer."}},
+    {"@type":"Question","name":"What does it cost? What license?","acceptedAnswer":{"@type":"Answer","text":"HelloChusquis v5.4 is MIT licensed and free. You only pay your model provider, if anything. 452 tests guard every release."}},
+    {"@type":"Question","name":"Which surfaces can I work from?","acceptedAnswer":{"@type":"Answer","text":"Four, sharing one memory: the terminal, the web UI on port 7272, the REST API with streaming responses, and Telegram for allowlisted chats."}}
+    ]}
+    </script>
     <link rel="icon" type="image/x-icon" href="./favicon.ico" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <title>HelloChusquis — Local-first AI agent for your terminal & browser</title>
