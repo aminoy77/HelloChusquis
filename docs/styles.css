@@ -45,7 +45,7 @@ button { font: inherit; }
 .brand { display: inline-flex; align-items: center; gap: 12px; font: 700 0.8rem/1 "JetBrains Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; }
 .brand img { width: 28px; height: 28px; object-fit: contain; border-radius: 50%; box-shadow: 0 0 18px rgba(245, 166, 35, 0.18); }
 .nav-links { display: flex; align-items: center; gap: 10px; }
-.nav-links a { padding: 10px 12px; border-radius: 999px; font: 600 0.72rem/1 "JetBrains Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); transition: background 0.2s ease, color 0.2s ease; }
+.nav-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px; border-radius: 999px; font: 600 0.72rem/1 "JetBrains Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); transition: background 0.2s ease, color 0.2s ease; }
 .nav-links a:hover { background: rgba(255, 255, 255, 0.03); color: var(--text); }
 .nav-links .cta { background: linear-gradient(135deg, var(--amber), #ffca62); color: #140f04 !important; border: 1px solid rgba(255, 211, 123, 0.5); }
 
@@ -171,7 +171,7 @@ h1, h2, h3 { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; let
 .install-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
 .install-card { padding: 20px; }
 .install-card code { display: block; margin: 12px 0 14px; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); color: var(--amber-soft); font: 500 0.78rem/1.6 "JetBrains Mono", monospace; overflow-x: auto; white-space: nowrap; }
-.copy-btn { padding: 9px 16px; border-radius: 10px; border: 1px solid var(--panel-border); background: transparent; color: var(--text); cursor: pointer; font: 700 0.68rem/1 "JetBrains Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s ease, transform 0.2s ease; }
+.copy-btn { min-height: 44px; padding: 9px 16px; border-radius: 10px; border: 1px solid var(--panel-border); background: transparent; color: var(--text); cursor: pointer; font: 700 0.68rem/1 "JetBrains Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s ease, transform 0.2s ease; }
 .copy-btn:hover { background: rgba(245, 166, 35, 0.12); transform: translateY(-1px); }
 .copy-btn.copied { background: rgba(94, 185, 126, 0.15); border-color: rgba(94, 185, 126, 0.4); color: #9ef0b0; }
 
@@ -183,7 +183,7 @@ h1, h2, h3 { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; let
 .footer-shell { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .footer-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
 .footer-actions code { padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.04); color: var(--amber-soft); font: 600 0.72rem/1 "JetBrains Mono", monospace; }
-.footer-actions a { font: 600 0.7rem/1 "JetBrains Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+.footer-actions a { display: inline-flex; align-items: center; min-height: 44px; font: 600 0.7rem/1 "JetBrains Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 .footer-actions a:hover { color: var(--amber-soft); }
 .footer-meta { padding-top: 18px; color: var(--muted); font: 600 0.66rem/1 "JetBrains Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; }
 
