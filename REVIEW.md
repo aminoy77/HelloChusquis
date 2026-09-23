@@ -1,66 +1,66 @@
-# Revisión crítica de producto — HelloChusquis
+# Critical product review — HelloChusquis
 
-**Estado:** revisión técnica posterior a auditoría y recorridos de usuario locales.  
-**Criterio:** fiabilidad operativa, aislamiento entre usuarios, seguridad y coherencia de producto.
+**Status:** technical review after audit and local user walkthroughs.  
+**Criteria:** operational reliability, isolation between users, security, and product coherence.
 
-> El proyecto tiene una ambición fuerte —un agente con terminal, web, API y proveedores múltiples—, pero antes de esta intervención confundía amplitud de catálogo con madurez. Una lista de integraciones no equivale a un producto fiable si el primer arranque puede bloquear un servidor, si la interfaz web queda abierta por defecto o si dos usuarios pueden compartir contexto.
+> The project has strong ambition —an agent with terminal, web, API, and multiple providers— but before this intervention it mistook catalog breadth for maturity. An integration list does not equal a reliable product if first boot can block a server, if the web UI is open by default, or if two users can share context.
 
-| Área | Hallazgo crítico | Impacto | Decisión de producto |
+| Area | Critical finding | Impact | Product decision |
 |---|---|---:|---|
-| Arranque | La API y la web lanzaban un asistente interactivo durante la importación si faltaba configuración. | Alto | Convertir el fallo en estado de preparación recuperable, manteniendo vivo el proceso. |
-| Configuración | El agente recibía una configuración pero volvía a buscarla en disco; además, un proveedor local sin clave podía ser descartado. | Alto | Usar la configuración recibida y aceptar configuraciones locales válidas. |
-| Seguridad web | La web exponía acciones potentes con autenticación desactivada por defecto. | Crítico | Autenticación obligatoria por defecto, con excepción explícita solo para desarrollo aislado. |
-| Concurrencia | La web reemplazaba temporalmente el despachador global de herramientas para registrar llamadas. | Alto | Sustituirlo por callbacks propios de cada solicitud. |
-| Privacidad | El servidor reutilizaba un único historial de conversación para todos los clientes HTTP. | Crítico | Introducir sesiones de agente aisladas y acotadas con LRU. |
-| Operación | Faltaban rutas claras de recuperación tras ejecutar `setup`; los comandos de inspección podían abrir un asistente. | Medio | Añadir recarga en vivo y hacer no interactivos los comandos de diagnóstico. |
-| Coherencia | La versión anunciada, la CLI y la documentación no compartían una fuente única de verdad. | Medio | Centralizar la versión y corregir documentación/ayuda. |
-| Calidad | La cobertura inicial era del 14 % y no validaba web, API ni proveedor real. | Alto | Añadir regresiones y recorridos HTTP autenticados con proveedor local simulado. |
+| Boot | The API and web launched an interactive assistant at import time when configuration was missing. | High | Turn the failure into recoverable readiness state, keeping the process alive. |
+| Configuration | The agent received a configuration but re-read it from disk; also, a keyless local provider could be discarded. | High | Use the received configuration and accept valid local configurations. |
+| Web security | The web exposed powerful actions with authentication disabled by default. | Critical | Mandatory authentication by default, with an explicit exception only for isolated development. |
+| Concurrency | The web temporarily replaced the global tool dispatcher to log calls. | High | Replace it with per-request callbacks. |
+| Privacy | The server reused a single conversation history for all HTTP clients. | Critical | Introduce isolated, bounded agent sessions with LRU. |
+| Operations | No clear recovery paths after running `setup`; inspection commands could open an assistant. | Medium | Add live reload and make diagnostic commands non-interactive. |
+| Coherence | The announced version, the CLI, and the docs did not share a single source of truth. | Medium | Centralize the version and fix docs/help. |
+| Quality | Initial coverage was 14% and validated neither web, API, nor a real provider. | High | Add regressions and authenticated HTTP walkthroughs with a stubbed local provider. |
 
-La conclusión es deliberadamente dura: **no era defendible presentar el sistema como un agente de nivel producción o comparable a un agente maduro mientras fallaban aislamiento, arranque no interactivo y autenticación por defecto**. Esas carencias ya están abordadas en esta rama; las funcionalidades restantes de esta revisión son la recuperación explícita en caliente y la coherencia verificable de versión.
+The conclusion is deliberately harsh: **it was indefensible to present the system as a production-grade agent or comparable to a mature agent while isolation, non-interactive boot, and default authentication were failing**. Those gaps are addressed on this branch; the remaining work from this review is explicit hot recovery and verifiable version coherence.
 
-## Mejoras que se implementan a continuación
+## Improvements implemented next
 
-| Funcionalidad | Resultado esperado | Verificación |
+| Feature | Expected outcome | Verification |
 |---|---|---|
-| Recarga en vivo del runtime | Tras ejecutar la configuración, un operador autorizado puede reconstruir agentes sin reiniciar el proceso. | Ruta protegida y prueba de éxito/error. |
-| Observabilidad de sesiones | El estado informa de sesiones activas en memoria sin filtrar historiales. | Campo de estado y prueba de sesiones aisladas. |
-| Fuente única de versión | CLI, API y web devuelven la misma versión publicada. | Pruebas unitarias y comprobación de comandos. |
-| Contrato de uso actualizado | La ayuda y la guía reflejan puerto real, autenticación por defecto y recuperación. | Revisión de README y salida `--help`. |
+| Live runtime reload | After running configuration, an authorized operator can rebuild agents without restarting the process. | Protected route plus success/error test. |
+| Session observability | Status reports in-memory active sessions without leaking histories. | Status field plus isolated-session test. |
+| Single version source | CLI, API, and web return the same published version. | Unit tests and command checks. |
+| Updated usage contract | Help and guide reflect the real port, default authentication, and recovery. | README review and `--help` output. |
 
-## Límites que siguen siendo reales
+## Limits that remain real
 
-El límite de sesiones protege la memoria, pero no reemplaza autenticación multiusuario, aislamiento de procesos por cliente, auditoría de permisos ni una cola de trabajos. Las más de cien integraciones declaradas requieren pruebas contractuales independientes antes de prometer soporte de producción. Un modelo de lenguaje tampoco vuelve seguro un comando: la política de herramientas necesita pruebas adversariales continuas y controles de aprobación para acciones destructivas o externas.
+The session cap protects memory but does not replace multiuser authentication, per-client process isolation, permission auditing, or a job queue. The hundred-plus declared integrations require independent contract tests before promising production support. A language model does not make a command safe either: tool policy needs continuous adversarial testing and approval controls for destructive or external actions.
 
-## Actualización de madurez — segunda iteración
+## Maturity update — second iteration
 
-La segunda iteración transforma uno de los límites más graves de la primera revisión —la ejecución autónoma de acciones con efectos externos— en un flujo verificable de **propuesta, aprobación explícita y ejecución única**. En las superficies HTTP, las herramientas de shell y código, la mutación de archivos, los envíos del navegador, las llamadas MCP y las acciones externas con verbos mutables dejan de ejecutarse de inmediato. El agente crea una solicitud local a la sesión, caducable y con un identificador opaco; el usuario autenticado debe aprobarla o rechazarla.
+The second iteration turns one of the first review's worst limits —autonomous execution of externally-effective actions— into a verifiable flow of **proposal, explicit approval, and single execution**. On HTTP surfaces, shell and code tools, file mutation, browser submissions, MCP calls, and external actions with mutable verbs no longer execute immediately. The agent creates a session-local, expiring request with an opaque identifier; the authenticated user must approve or reject it.
 
-| Capacidad desarrollada | Garantía implementada | Evidencia de validación |
+| Developed capability | Implemented guarantee | Validation evidence |
 |---|---|---|
-| Aprobaciones humanas | Las acciones de alto impacto requieren decisión explícita en API y web. | Pruebas unitarias de clasificación, denegación y aprobación. |
-| Protección contra repetición | La aprobación pasa a estado de ejecución antes de despachar la herramienta; un segundo intento falla. | Recorrido HTTP: aprobación única seguida de respuesta `409` al repetirla. |
-| Aislamiento de aprobación | Las solicitudes pertenecen al agente de una única sesión HTTP. | Recorrido adversarial: una segunda sesión ve una lista vacía y recibe `404` al intentar decidir. |
-| Caducidad y límite | Las solicitudes pendientes expiran a los cinco minutos y la cola está acotada. | Pruebas con reloj controlado y deduplicación de solicitudes equivalentes. |
-| Secreto mínimo | La vista pública de la aprobación redacta claves, tokens, cookies, contraseñas y secretos. | Prueba de regresión de redacción recursiva. |
-| Streaming estructurado | El agente emite un evento SSE de aprobación con el identificador y motivo exactos. | Recorrido con proveedor local simulado y tarjeta de confirmación en el cliente. |
-| Compatibilidad HTTP | Una aprobación de archivo evita que un servidor se bloquee solicitando confirmación por terminal. | Recorrido de escritura controlada: inexistente antes de aprobar y creada después. |
-| Diagnóstico contractual | `hellochusquis doctor --contracts` importa y comprueba el punto de entrada de las 48 integraciones expuestas por el agente, sin red ni credenciales. | Ejecución local: 48/48 contratos estructurales válidos. |
+| Human approvals | High-impact actions require an explicit decision in API and web. | Unit tests for classification, denial, and approval. |
+| Replay protection | Approval moves to executing state before dispatching the tool; a second attempt fails. | HTTP walkthrough: single approval followed by `409` on repeat. |
+| Approval isolation | Requests belong to a single HTTP session's agent. | Adversarial walkthrough: a second session sees an empty list and gets `404` when deciding. |
+| Expiry and bounds | Pending requests expire after five minutes and the queue is bounded. | Controlled-clock tests plus equivalent-request dedup. |
+| Minimum secret | The public approval view redacts keys, tokens, cookies, passwords, and secrets. | Recursive redaction regression test. |
+| Structured streaming | The agent emits an approval SSE event with the exact identifier and reason. | Walkthrough with stubbed local provider and client confirmation card. |
+| HTTP compatibility | A file approval keeps a server from blocking on a terminal confirmation. | Controlled-write walkthrough: nonexistent before approval, created after. |
+| Contract diagnostics | `hellochusquis doctor --contracts` imports and checks the entry point of the 48 agent-exposed integrations, with no network or credentials. | Local run: 48/48 structural contracts valid. |
 
-> **Veredicto sin maquillaje:** el proyecto ha dado un salto real de "agente que ejecuta" a "agente que pide autorización antes de cambiar cosas". Eso era imprescindible. Sin embargo, esta mejora no convierte por sí sola el producto en equivalente a Hermes Agent ni autoriza a afirmar tal equivalencia.
+> **Unvarnished verdict:** the project made a real leap from "agent that executes" to "agent that asks authorization before changing things". That was essential. Still, this improvement alone does not make the product equivalent to Hermes Agent nor authorize claiming such equivalence.
 
-## Límites pendientes para una paridad seria con un agente de primer nivel
+## Outstanding gaps for serious parity with a top-tier agent
 
-| Brecha restante | Por qué sigue importando | Siguiente inversión necesaria |
+| Remaining gap | Why it still matters | Next investment needed |
 |---|---|---|
-| Aislamiento de procesos | Las sesiones separan historial y aprobaciones, pero comparten proceso, red y almacenamiento local. | Ejecutores efímeros aislados por tarea con límites de CPU, memoria, archivos y red. |
-| Identidad multiusuario | Un único token de API identifica al despliegue, no a personas o roles separados. | Autenticación de usuarios, roles, propietarios de sesión y autorización por herramienta. |
-| Auditoría durable | Las aprobaciones viven en memoria y se pierden al reiniciar. | Registro persistente, inmutable y consultable de decisiones, argumentos redactados y resultados. |
-| Integraciones reales | La verificación contractual garantiza importación y `run`, no credenciales válidas ni comportamiento de cada proveedor. | Suites de contrato con entornos sandbox/mocks por proveedor y pruebas de versión de API. |
-| Política semántica | La clasificación por herramienta y verbo es conservadora, pero no entiende todos los efectos de negocio. | Esquemas de riesgo por acción, límites monetarios y aprobaciones escalonadas. |
-| Recuperación de ejecución | Tras aprobar, la acción se ejecuta y se muestra su resultado; el modelo no reanuda automáticamente el plan con ese resultado. | Orquestación de tareas con estados durables, reanudación y compensación. |
+| Process isolation | Sessions separate history and approvals but share process, network, and local storage. | Ephemeral task-isolated executors with CPU, memory, file, and network limits. |
+| Multiuser identity | A single API token identifies the deployment, not separate people or roles. | User authentication, roles, session owners, and per-tool authorization. |
+| Durable audit | Approvals live in memory and are lost on restart. | Persistent, immutable, queryable record of decisions, redacted arguments, and results. |
+| Real integrations | Contract verification guarantees import and `run`, not valid credentials or per-provider behavior. | Per-provider contract suites with sandbox/mock environments and API-version tests. |
+| Semantic policy | Tool-and-verb classification is conservative but does not understand every business effect. | Per-action risk schemas, monetary limits, and stepped approvals. |
+| Execution recovery | After approval the action runs and shows its result; the model does not automatically resume the plan with that result. | Task orchestration with durable states, resumption, and compensation. |
 
-La validación al cierre de esta iteración incluye **89 pruebas unitarias**, compilación completa, análisis estático de los archivos modificados, revisión de seguridad de alta severidad, pruebas HTTP con proveedor local simulado, prueba de repetición y prueba adversarial de sesión cruzada. Esta evidencia respalda las capacidades descritas; no debe extrapolarse a una garantía sobre APIs externas no probadas.
+Closing validation for this iteration includes **89 unit tests**, full build, static analysis of modified files, high-severity security review, HTTP tests with stubbed local provider, replay test, and cross-session adversarial test. This evidence supports the described capabilities; it must not be extrapolated into a guarantee over untested external APIs.
 
-## Prioridad recomendada
+## Recommended priority
 
-La ruta racional hacia un agente realmente robusto no es añadir más logos de integraciones. Es construir, en este orden: **identidad multiusuario y roles**, **auditoría persistente de decisiones**, **ejecución aislada por tarea** y **pruebas de contrato por proveedor**. Todo lo demás es cosmética hasta que esas cuatro capas estén presentes.
+The rational path to a genuinely robust agent is not adding more integration logos. It is building, in this order: **multiuser identity and roles**, **persistent decision auditing**, **per-task isolated execution**, and **per-provider contract tests**. Everything else is cosmetic until those four layers exist.

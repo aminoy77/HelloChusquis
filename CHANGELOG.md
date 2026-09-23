@@ -61,15 +61,15 @@ All notable changes to HelloChusquis. Older per-release notes previously lived i
 ## 5.3 — 2026-09-11
 
 ### Fixed
-- `hellochusquis web`: el botón Launch app no hacía nada porque el CSP con
-  `nonce` bloquea los `onclick` inline; ahora usa `addEventListener`.
-- `hellochusquis web`: ya no pide access key en local; el loopback
-  (127.0.0.1/::1) entra como owner y el remoto sigue exigiendo Bearer.
+- `hellochusquis web`: the Launch app button did nothing because the `nonce`
+  CSP blocks inline `onclick`; it now uses `addEventListener`.
+- `hellochusquis web`: no longer asks for an access key on local; loopback
+  (127.0.0.1/::1) enters as owner while remote still requires Bearer.
 
 ### Changed
-- Web app minimal en español con la misma paleta: sidebar con providers del
-  usuario (badge listo + contador), Resumen Sesiones/Mensajes/Listos/Tools y
-  welcome con stats de chats. Sin endpoints nuevos.
+- Minimal web app with the same palette: sidebar with the user's providers
+  (ready badge + counter), Sessions/Messages/Ready/Tools summary, and welcome
+  with chat stats. No new endpoints.
 
 ## Unreleased
 

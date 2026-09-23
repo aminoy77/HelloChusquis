@@ -1,39 +1,39 @@
-# Fase 1 Estabilidad Implementation Plan
+# Phase 1 Stability Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Cero tracebacks en onboarding y superficies; recall sin regresión; catálogo congelado.
+**Goal:** Zero tracebacks in onboarding and surfaces; recall without regression; frozen catalog.
 
-**Architecture:** Solo tests nuevos + fixes mínimos si un test revela crash. Sin features, sin deps.
+**Architecture:** New tests only + minimal fixes if a test reveals a crash. No features, no deps.
 
 **Tech Stack:** Python 3.10+, unittest, subprocess+urllib (stdlib), SQLite tmp.
 
-**Spec:** `docs/superpowers/specs/2026-09-13-launch-uneed-design.md` (Fase 1)
+**Spec:** `docs/superpowers/specs/2026-09-13-launch-uneed-design.md` (Phase 1)
 
 ## Global Constraints
 
-- Suite 100% verde antes y después (`python3 -m unittest discover tests -q`).
-- Ruff limpio. Doctor 48/48.
-- Sin dependencias nuevas. Sin features. Sin commits sin orden explícita.
-- Puertos de test fijos 18080 (web) / 18081 (api); si ocupados, el test salta con `skipTest`, no falla.
-- HOME real jamás tocado: subprocess con `HOME=/tmp/...` o `MEMORY_DB_PATH` a tmp.
+- Suite 100% green before and after (`python3 -m unittest discover tests -q`).
+- Ruff clean. Doctor 48/48.
+- No new dependencies. No features. No commits without explicit order.
+- Fixed test ports 18080 (web) / 18081 (api); if busy, the test skips with `skipTest`, does not fail.
+- Real HOME never touched: subprocess with `HOME=/tmp/...` or `MEMORY_DB_PATH` to tmp.
 
 ---
 
-### Task 1: Cold-start onboarding sin tracebacks
+### Task 1: Cold-start onboarding without tracebacks
 
 **Files:**
 - Create: `tests/test_onboarding_coldstart.py`
-- Modify (solo si el test revela crash): `cli.py`, `core/setup.py` — mínimo necesario
+- Modify (only if the test reveals a crash): `cli.py`, `core/setup.py` — minimum necessary
 
 **Interfaces:**
-- Consumes: nada
-- Produces: `test_onboarding_coldstart.py` — 4 comandos fríos verificados
+- Consumes: nothing
+- Produces: `test_onboarding_coldstart.py` — 4 verified cold commands
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-"""Fase 1: comandos fríos con HOME vacío no hacen traceback."""
+"""Phase 1: cold commands with empty HOME produce no traceback."""
 import os
 import subprocess
 import sys
@@ -72,16 +72,16 @@ class ColdStartTest(unittest.TestCase):
             self.assertIn(word, p.stdout)
 ```
 
-- [ ] **Step 2: Run test to verify it fails (o pasa)**
+- [ ] **Step 2: Run test to verify it fails (or passes)**
 
 Run: `python3 -m unittest tests.test_onboarding_coldstart -v`
-Expected: FAIL en el comando que haga traceback — ese crash es el trabajo; si todo pasa, no hay fix.
+Expected: FAIL on the command that produces a traceback — that crash is the work; if everything passes, no fix.
 
-- [ ] **Step 3: Fix mínimo (solo si hay FAIL)**
+- [ ] **Step 3: Minimal fix (only on FAIL)**
 
-Un fix por crash, en el punto exacto del traceback, sin cambiar comportamiento con config existente. Ejemplo de forma (no copiar a ciegas): guardar `if not cfg: usar defaults` donde el código asume config presente.
+One fix per crash, at the exact traceback location, without changing behavior with existing config. Shape example (do not copy blindly): guard `if not cfg: use defaults` where the code assumes config is present.
 
-- [ ] **Step 4: Run suite completa**
+- [ ] **Step 4: Run full suite**
 
 Run: `python3 -m unittest discover tests -q 2>&1 | tail -n 3`
 Expected: OK
@@ -90,11 +90,11 @@ Expected: OK
 
 **Files:**
 - Create: `tests/test_surface_boot_smoke.py`
-- Modify (solo si hay crash): `web/server.py`, `api/main.py`, `cli.py` — mínimo
+- Modify (only on crash): `web/server.py`, `api/main.py`, `cli.py` — minimal
 
 **Interfaces:**
-- Consumes: nada
-- Produces: web/api arrancan y responden `/health` en puertos de test
+- Consumes: nothing
+- Produces: web/api start and respond `/health` on test ports
 
 - [ ] **Step 1: Write the failing test**
 
@@ -175,22 +175,22 @@ class SurfaceBootTest(unittest.TestCase):
 - [ ] **Step 2: Run**
 
 Run: `python3 -m unittest tests.test_surface_boot_smoke -v`
-Expected: PASS; si FAIL por crash real, fix mínimo en el traceback; si FAIL por auth/key en api, usar la env que el repo ya soporte (mirar `api/main.py` lectura de `HELLOCHUSQUIS_API_KEY`, no inventar mecanismo).
+Expected: PASS; on FAIL from a real crash, minimal fix at the traceback; on FAIL from auth/key in api, use the env the repo already supports (check `api/main.py` reading of `HELLOCHUSQUIS_API_KEY`, do not invent a mechanism).
 
-- [ ] **Step 3: Run suite completa**
+- [ ] **Step 3: Run full suite**
 
 Run: `python3 -m unittest discover tests -q 2>&1 | tail -n 3`
 Expected: OK
 
-### Task 3: Telegram sin token = error limpio
+### Task 3: Telegram without token = clean error
 
 **Files:**
-- Create: `tests/test_telegram_no_token.py` (o añadir a test existente si el implementador ve duplicación — una sola ubicación)
-- Modify (solo si hay traceback): `cli.py` rama telegram
+- Create: `tests/test_telegram_no_token.py` (or add to existing test if the implementer sees duplication — single location)
+- Modify (only on traceback): `cli.py` telegram branch
 
 **Interfaces:**
-- Consumes: nada
-- Produces: error limpio documentado sin token
+- Consumes: nothing
+- Produces: documented clean error without token
 
 - [ ] **Step 1: Write the failing test**
 
@@ -220,17 +220,17 @@ class TelegramNoTokenTest(unittest.TestCase):
         self.assertNotEqual(p.returncode, 0)
 ```
 
-- [ ] **Step 2: Run, fix mínimo solo si hay traceback, suite completa**
+- [ ] **Step 2: Run, minimal fix only on traceback, full suite**
 
-### Task 4: Recall sin regresión (cobertura sobre MDknowledge)
+### Task 4: Recall without regression (coverage over MDknowledge)
 
 **Files:**
 - Create: `tests/test_recall_regression.py`
-- Modify: ninguno esperado (si cobertura <95%, es bug de `core/db_memory.py` — fix mínimo ahí)
+- Modify: none expected (if coverage <95%, it is a bug in `core/db_memory.py` — minimal fix there)
 
 **Interfaces:**
-- Consumes: patrón setUp/tearDown de `tests/test_db_memory.py:16-26` (override `MEMORY_DB_PATH` a tmpdb) + la API de escritura que ese mismo fichero usa
-- Produces: cobertura recall ≥95% sobre muestra real
+- Consumes: setUp/tearDown pattern from `tests/test_db_memory.py:16-26` (override `MEMORY_DB_PATH` to tmpdb) + the write API that same file uses
+- Produces: recall coverage ≥95% over real sample
 
 - [ ] **Step 1: Write the failing test**
 
@@ -287,29 +287,29 @@ class RecallRegressionTest(unittest.TestCase):
         self.assertGreaterEqual(hits / total, 0.95, f"cobertura recall {hits}/{total}")
 ```
 
-NOTA implementador: el esqueleto de arriba omite la siembra a propósito parcial — completa el Step 1 leyendo `tests/test_db_memory.py` (qué función de escritura usa: `save_turn`, `add_entry`, `remember`, la que sea) y siembra cada fact ANTES de su `recall_context` en el mismo test. La aserción final queda igual. Si la API de escritura no existe pública, usa el path que `ingest_memory_files` usa para un fact individual.
+Implementer NOTE: the skeleton above partially omits seeding on purpose — complete Step 1 by reading `tests/test_db_memory.py` (which write function it uses: `save_turn`, `add_entry`, `remember`, whichever) and seed each fact BEFORE its `recall_context` in the same test. The final assertion stays the same. If no public write API exists, use the path that `ingest_memory_files` uses for a single fact.
 
 - [ ] **Step 2: Run**
 
 Run: `python3 -m unittest tests.test_recall_regression -v`
-Expected: PASS (1.3s ingest-scale, tmp db). Si <95%, bug real en keyword search — fix mínimo.
+Expected: PASS (1.3s ingest-scale, tmp db). If <95%, real bug in keyword search — minimal fix.
 
-- [ ] **Step 3: Suite completa**
+- [ ] **Step 3: Full suite**
 
-### Task 5: Congelar catálogo (pins 74/131)
+### Task 5: Freeze catalog (pins 74/131)
 
 **Files:**
 - Create: `tests/test_catalog_freeze.py`
-- Modify: ninguno (si falla, es cambio no autorizado — reportar, no "arreglar" el test)
+- Modify: none (if it fails, it is an unauthorized change — report, do not "fix" the test)
 
 **Interfaces:**
-- Consumes: conteos verificados Fase 0 (74 providers, 131 tools)
-- Produces: freeze enforced; descongelar solo con orden owner
+- Consumes: verified Phase 0 counts (74 providers, 131 tools)
+- Produces: freeze enforced; unfreeze only on owner order
 
 - [ ] **Step 1: Write the test**
 
 ```python
-"""Fase 1: catálogo congelado hasta Fase 2. Descongelar = orden owner."""
+"""Phase 1: catalog frozen until Phase 2. Unfreezing = owner order."""
 import glob
 import unittest
 
@@ -328,9 +328,9 @@ class CatalogFreezeTest(unittest.TestCase):
 - [ ] **Step 2: Run**
 
 Run: `python3 -m unittest tests.test_catalog_freeze -v`
-Expected: PASS. Si FAIL, NO tocar el test: reportar como BLOCKED (cambio de catálogo sin orden).
+Expected: PASS. On FAIL, do NOT touch the test: report as BLOCKED (catalog change without order).
 
-- [ ] **Step 3: Suite completa + ruff + doctor**
+- [ ] **Step 3: Full suite + ruff + doctor**
 
 Run: `python3 -m unittest discover tests -q 2>&1 | tail -n 3`
 Run: `python3 -m ruff check . 2>&1 | tail -n 1`
@@ -339,6 +339,6 @@ Expected: OK / clean / 48/48
 
 ## Self-Review
 
-1. **Spec coverage:** onboarding ✓ (T1), web/api/telegram ✓ (T2+T3), memoria ✓ (T4), freeze ✓ (T5), doctor verde ✓ (T5). Skills es Fase 2, fuera.
-2. **Placeholder scan:** comandos, puertos, paths y aserciones exactos. Única zona semi-abierta: API de siembra en T4, resuelta por referencia obligada a `tests/test_db_memory.py` (código real, no placeholder).
-3. **Type consistency:** unittest.TestCase en todos; subprocess+tmp; sin firmas nuevas salvo tests.
+1. **Spec coverage:** onboarding ✓ (T1), web/api/telegram ✓ (T2+T3), memory ✓ (T4), freeze ✓ (T5), green doctor ✓ (T5). Skills is Phase 2, out of scope.
+2. **Placeholder scan:** exact commands, ports, paths and assertions. Only semi-open area: seeding API in T4, resolved by mandatory reference to `tests/test_db_memory.py` (real code, no placeholder).
+3. **Type consistency:** unittest.TestCase everywhere; subprocess+tmp; no new signatures except tests.

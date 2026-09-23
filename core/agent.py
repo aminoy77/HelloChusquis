@@ -1136,11 +1136,11 @@ class Agent:
         self.files = FilesTool(_workspace_dirs)
         self.code = CodeTool()
         self.websearch = WebSearchTool()
-        # Los módulos de herramientas externos se usan directamente via run()
+        # External tool modules are used directly via run()
         self.system_prompt = _agent_cfg.get("system_prompt", "")
         self.workspace_dirs = _workspace_dirs
 
-        # Memoria (estructurada vía SQLite ahora)
+        # Memory (structured via SQLite now)
         summary = memory.load_summary()
         if summary:
             self.system_prompt += f"\n\nWhat you remember from past sessions:\n{summary}"
@@ -1171,7 +1171,7 @@ class Agent:
             self.skills = skills_module.get_registry()
         self.system_prompt += "\n\n" + self.skills.skills_prompt_section()
 
-        # Plugins — schema se construye una vez aquí, no se modifica una lista global
+        # Plugins — schema built once here, no global list mutated
         self.plugins = load_plugins()
         self.tools_schema = _build_tools_schema(self.plugins)
 

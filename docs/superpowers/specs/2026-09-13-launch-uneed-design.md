@@ -1,102 +1,102 @@
-# Diseño lanzamiento HelloChusquis — uneed.best 31/1/2027
+# HelloChusquis launch design — uneed.best 1/31/2027
 
-Fecha: 2026-09-13. Estado: aprobado por owner. Objetivo único: stars + descargas PyPI. OSS, sin revenue. Día D perfecto, cero roto.
+Date: 2026-09-13. Status: owner-approved. Single goal: stars + PyPI downloads. OSS, no revenue. Perfect D-day, zero broken.
 
-## 1. Contexto verificado
+## 1. Verified context
 
-- Repo: HelloChusquis, agente AI local-first (terminal + web 7272 + REST API + Telegram).
-- Versión real código: 5.4 (CHANGELOG). `pyproject.toml` dice 5.2 → drift a corregir en Fase 0.
-- Tests: 398/398 verde (2026-09-13). Badge README dice 359 → corregir.
-- Providers: catálogo 54–74 según superficie; pendiente unificar número público.
-- Memoria: SQLite sesiones/summaries/learnings + `MDknowledge/` 1200+ ficheros (~9900 facts).
-- Skills hoy: `core/skills.py` con formato JSON propio (`skills/*.json`), approval-gated, bounded shell. `skills-lock.json` + `.agents/skills/` son de hyperframes (vídeo), no del runtime.
-- Subagentes: 12 builtins en `agents/`, presupuestos duros (12 steps / 12k tokens / 180s, 8 concurrentes).
-- Vídeo launch 30s existe: `videos/hellochusquis-launch/renders/video.mp4` (1.3 MB, 1920×1080).
+- Repo: HelloChusquis, local-first AI agent (terminal + web 7272 + REST API + Telegram).
+- Real code version: 5.4 (CHANGELOG). `pyproject.toml` said 5.2 → drift to fix in Phase 0.
+- Tests: 398/398 green (2026-09-13). README badge said 359 → fix.
+- Providers: 54–74 catalog depending on surface; unify the public number.
+- Memory: SQLite sessions/summaries/learnings + `MDknowledge/` 1200+ files (~9900 facts).
+- Skills today: `core/skills.py` with its own JSON format (`skills/*.json`), approval-gated, bounded shell. `skills-lock.json` + `.agents/skills/` belong to hyperframes (video), not the runtime.
+- Subagents: 12 builtins in `agents/`, hard budgets (12 steps / 12k tokens / 180s, 8 concurrent).
+- 30s launch video exists: `videos/hellochusquis-launch/renders/video.mp4` (1.3 MB, 1920×1080).
 
-## 2. Reglas uneed.best (investigadas 2026-09-13)
+## 2. uneed.best rules (researched 2026-09-13)
 
-- 85k makers, newsletter 22k (top3 semanal). Hasta 45 lanzamientos/día. Podio diario = visibilidad.
-- Listing permanente solo con 10+ votos (lanzamientos gratis). Lanzamientos de pago conservan backlink dofollow DR75 siempre.
-- Línea gratis cerrada desde ago-2026 (espera 6+ meses). Para asegurar 31/1/2027 hace falta Fast-track (~$15) o Skip-the-line (~$30). Acción Fase 0: reservar fecha YA.
-- 31/1/2027 = domingo. Tráfico bajo (ideal mar–jue). Compensar con pre-launch page + pre-rally. No mover fecha (decisión owner: lanzamiento oficial ese día).
-- Leaderboard rolling: votos valen siempre, también post-launch. Streak 5 días = +1 multiplicador (x2). Pro = +3 votos + relaunch mensual + Discord privado.
-- Página necesita: logo, título, descripción, video preview, screenshots, Deal badge (oferta → badge + clics). Comprar votos = ban.
-- Pre-launch page recoge emails → boost día D.
+- 85k makers, 22k newsletter (weekly top3). Up to 45 launches/day. Daily podium = visibility.
+- Permanent listing only with 10+ votes (free launches). Paid launches keep DR75 dofollow backlink always.
+- Free queue closed since Aug-2026 (6+ month wait). To secure 1/31/2027 you need Fast-track (~$15) or Skip-the-line (~$30). Phase 0 action: reserve the date NOW.
+- 1/31/2027 = Sunday. Low traffic (Tue–Thu ideal). Compensate with pre-launch page + pre-rally. Do not move the date (owner decision: official launch that day).
+- Rolling leaderboard: votes always count, including post-launch. 5-day streak = +1 multiplier (x2). Pro = +3 votes + monthly relaunch + private Discord.
+- Page needs: logo, title, description, video preview, screenshots, Deal badge (offer → badge + clicks). Buying votes = ban.
+- Pre-launch page collects emails → D-day boost.
 
-## 3. Estrategia elegida: A + C + skills acotado
+## 3. Chosen strategy: A + C + scoped skills
 
-- A (estabilidad primero): congelar features en dic. Todo el esfuerzo a install, onboarding, web/API, docs, demo.
-- C (comunidad): streak diario ene, Discord, Reddit/X, HN Show previo, respuesta comentarios <1h.
-- Skills universal: ÚNICA feature nueva. Justificación: imán de stars en votantes AI/dev de uneed; YAGNI pasa porque el ecosistema SKILL.md es estándar de facto y el coste es bajo si se acota.
-- B (feature-blitz: cloud sync, marketplace, móvil) RECHAZADO: rompe meta día-perfecto.
+- A (stability first): freeze features in Dec. All effort on install, onboarding, web/API, docs, demo.
+- C (community): daily streak in Jan, Discord, Reddit/X, prior HN Show, comment replies <1h.
+- Universal skills: ONLY new feature. Justification: star magnet for uneed AI/dev voters; passes YAGNI because the SKILL.md ecosystem is the de-facto standard and cost stays low if scoped.
+- B (feature-blitz: cloud sync, marketplace, mobile) REJECTED: breaks the perfect-day goal.
 
-## 4. Fases y criterios de salida
+## 4. Phases and exit criteria
 
-### Fase 0 — Ahora/Sep 2026: asegurar base
-- [ ] Unificar versión a una sola fuente (pyproject = CHANGELOG = badge).
-- [ ] Corregir badge tests (359 → real) y número providers/tools público.
-- [ ] `pip install hellochusquis` limpio verificado en venv (3.10/11/12, mac/linux). `install.sh` probado.
-- [ ] `python -m unittest discover tests -q` verde + `ruff check .` + `hellochusquis doctor --contracts`.
-- [ ] Reservar fecha uneed (Fast-track/Skip) + publicar pre-launch page.
-- [ ] Recortar preview vídeo para uneed desde render existente.
-- Salida: install limpio 100%, fecha reservada, pre-launch online.
+### Phase 0 — Now/Sep 2026: secure the base
+- [ ] Unify version to a single source (pyproject = CHANGELOG = badge).
+- [ ] Fix tests badge (359 → real) and public providers/tools number.
+- [ ] Clean `pip install hellochusquis` verified in venv (3.10/11/12, mac/linux). `install.sh` tested.
+- [ ] `python -m unittest discover tests -q` green + `ruff check .` + `hellochusquis doctor --contracts`.
+- [ ] Reserve uneed date (Fast-track/Skip) + publish pre-launch page.
+- [ ] Cut uneed preview video from existing render.
+- Exit: 100% clean install, date reserved, pre-launch online.
 
-### Fase 1 — Oct: estabilidad
-- [ ] Onboarding <2min: `config` / `--quick` → primer chat útil.
-- [ ] `web`, `api`, `telegram` sin crash; auth loopback/remoto intacto; roles viewer/operator/owner.
-- [ ] Memoria + MDknowledge sin regresión (probe factual 35q).
-- [ ] Congelar catálogo providers/tools salvo roto.
-- Salida: cero tracebacks en flujo demo, doctor verde.
+### Phase 1 — Oct: stability
+- [ ] Onboarding <2min: `config` / `--quick` → first useful chat.
+- [ ] `web`, `api`, `telegram` crash-free; loopback/remote auth intact; viewer/operator/owner roles.
+- [ ] Memory + MDknowledge with no regression (35q factual probe).
+- [ ] Freeze providers/tools catalog except when broken.
+- Exit: zero tracebacks in demo flow, green doctor.
 
-### Fase 2 — Nov: universal skills (alcance cerrado)
-Diseño mínimo sobre `core/skills.py` existente:
-- [ ] Descubrimiento: `~/.hellochusquis/skills/*/SKILL.md` + `.agents/skills/` repo + workspace. Orden: workspace > home > repo.
-- [ ] Parse frontmatter `name/description` con stdlib (sin deps). Cuerpo MD = prompt_template. Archivos auxiliares del folder accesibles por referencia.
-- [ ] Reusar `SkillRegistry.list/find`, inyección a system prompt, ejecución shell con approval gate existente. Sin marketplace, sin auto-install, sin red.
-- [ ] CLI `hellochusquis skills list/run`, 2 skills demo, docs.
-- [ ] Tests: parse válido/inválido, path traversal bloqueado, approval requerido, prompt inyectado.
-- Corte duro 1-dic: después solo bugfix.
-- `ponytail:` scan recursivo ingenuo O(n), suficiente hasta ~500 skills; índice invertido si hace falta.
+### Phase 2 — Nov: universal skills (closed scope)
+Minimal design over existing `core/skills.py`:
+- [ ] Discovery: `~/.hellochusquis/skills/*/SKILL.md` + repo `.agents/skills/` + workspace. Order: workspace > home > repo.
+- [ ] Parse `name/description` frontmatter with stdlib (no deps). MD body = prompt_template. Folder sidecar files reachable by reference.
+- [ ] Reuse `SkillRegistry.list/find`, system-prompt injection, shell execution with existing approval gate. No marketplace, no auto-install, no network.
+- [ ] CLI `hellochusquis skills list/run`, 2 demo skills, docs.
+- [ ] Tests: valid/invalid parse, blocked path traversal, required approval, injected prompt.
+- [ ] Hard cutoff Dec-1: bugfix only after.
+- `ponytail:` naive recursive O(n) scan, enough up to ~500 skills; inverted index if needed.
 
-### Fase 3 — Dic: freeze + packaging
-- [ ] Cero features. Solo fixes con regresión.
-- [ ] README: banner, GIF demo, quickstart 3 pasos, badges reales, tabla superficies, sección skills, links uneed.
+### Phase 3 — Dec: freeze + packaging
+- [ ] Zero features. Fixes with regression only.
+- [ ] README: banner, demo GIF, 3-step quickstart, real badges, surfaces table, skills section, uneed links.
 - [ ] SEO: `hellochusquis.dev`, sitemap, og.
-- [ ] PyPI dry-runs semanales + matriz install + guía 5-min.
-- [ ] Deal badge uneed (oferta OSS: cheat-sheet/template gratis).
+- [ ] Weekly PyPI dry-runs + install matrix + 5-min guide.
+- [ ] Uneed Deal badge (OSS offer: free cheat-sheet/template).
 
-### Fase 4 — Ene 2027: comunidad + día D
-- [ ] Streak diario desde 1-ene (posts, votos, feedback ajeno).
-- [ ] Pre-rally: emails pre-launch, X, Reddit (r/selfhosted, r/LocalLLaMA), HN Show días antes.
-- [ ] Día D: link voto directo, vídeo, screenshots web/TUI, changelog, responder <1h.
-- [ ] Post: 2 semanas momentum (votos rolling valen), fix <24h, objetivo newsletter top3.
-- Salida: 10+ votos día D (permanencia), objetivo podio top3.
+### Phase 4 — Jan 2027: community + D-day
+- [ ] Daily streak from Jan-1 (posts, votes, others' feedback).
+- [ ] Pre-rally: pre-launch emails, X, Reddit (r/selfhosted, r/LocalLLaMA), HN Show days before.
+- [ ] D-day: direct vote link, video, web/TUI screenshots, changelog, replies <1h.
+- [ ] Post: 2-week momentum (rolling votes count), fixes <24h, top3 newsletter goal.
+- Exit: 10+ D-day votes (permanence), top3 podium goal.
 
-## 5. Métricas
+## 5. Metrics
 
-- Día D: votos, posición diaria, visitas página uneed, installs PyPI semana.
-- Calidad: tests verdes, issues críticos 0, tiempo install→primer chat.
-- Post: stars GitHub, downloads PyPI/mes, votos rolling.
+- D-day: votes, daily rank, uneed page visits, PyPI installs that week.
+- Quality: green tests, 0 critical issues, install→first-chat time.
+- Post: GitHub stars, PyPI downloads/month, rolling votes.
 
-## 6. Riesgos y mitigación
+## 6. Risks and mitigation
 
-| Riesgo | Mitigación |
+| Risk | Mitigation |
 |---|---|
-| Domingo flojo | Pre-launch emails + rally previo + votos rolling |
-| Scope creep skills | Corte 1-dic, sin marketplace |
-| Install roto día D | Matriz + dry-runs dic/ene |
-| Version drift | Fuente única Fase 0 |
-| <10 votos (listing no permanente) | Reserva pagada (dofollow asegurado) + pre-rally |
+| Slow Sunday | Pre-launch emails + pre-rally + rolling votes |
+| Skills scope creep | Dec-1 cutoff, no marketplace |
+| Broken install on D-day | Matrix + dry-runs Dec/Jan |
+| Version drift | Single source in Phase 0 |
+| <10 votes (no permanent listing) | Paid reservation (dofollow secured) + pre-rally |
 
-## 7. Decisiones tomadas
+## 7. Decisions made
 
-- Canal: uneed.best 31/1/2027, fecha fija.
-- Estrategia A+C+skills acotado. B rechazado.
-- Spec en español (petición owner).
+- Channel: uneed.best 1/31/2027, fixed date.
+- Strategy A+C+scoped skills. B rejected.
+- Spec now in English (repo language rule, 2026-09-23).
 
-## 8. Self-review spec (2026-09-13)
+## 8. Spec self-review (2026-09-13)
 
-- Placeholders: ninguno (precios uneed con ~ por posible cambio; verificado sep-2026).
-- Consistencia: fases secuenciales sin solape de features tras 1-dic. OK.
-- Alcance: un solo feature (skills loader). OK, no descomponer.
-- Ambigüedad: "número providers/tools público" queda como tarea Fase 0 con conteo real. OK.
+- Placeholders: none (uneed prices with ~ for possible change; verified Sep-2026).
+- Consistency: sequential phases with no feature overlap after Dec-1. OK.
+- Scope: a single feature (skills loader). OK, no breakdown.
+- Ambiguity: "public providers/tools number" stays as a Phase 0 task with real counting. OK.

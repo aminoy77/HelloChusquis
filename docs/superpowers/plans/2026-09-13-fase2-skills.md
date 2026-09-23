@@ -1,39 +1,39 @@
-# Fase 2 Universal Skills Loader Implementation Plan
+# Phase 2 Universal Skills Loader Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Skills universales SKILL.md (estándar `---` frontmatter) cargadas en el registry existente, visibles en prompt y usables vía tool `skill` solo-lectura.
+**Goal:** Universal SKILL.md skills (standard `---` frontmatter) loaded into the existing registry, visible in prompt and usable via read-only `skill` tool.
 
-**Architecture:** Extender `core/skills.py` (parse+discover+prompt section), cablear en `core/agent.py` calcando el patrón `subagent` (schema + dispatch + prompt), comando CLI `skills`, 2 ejemplos en `examples/skills/`. Prompt-only: las skills MD exponen `list`/`show`; la ejecución shell con approval queda solo para el registry JSON existente, intacto.
+**Architecture:** Extend `core/skills.py` (parse+discover+prompt section), wire into `core/agent.py` copying the `subagent` pattern (schema + dispatch + prompt), `skills` CLI command, 2 examples in `examples/skills/`. Prompt-only: MD skills expose `list`/`show`; shell execution with approval stays only for the existing JSON registry, untouched.
 
-**Tech Stack:** Python 3.10+ stdlib (sin deps). unittest.
+**Tech Stack:** Python 3.10+ stdlib (no deps). unittest.
 
-**Spec:** `docs/superpowers/specs/2026-09-13-launch-uneed-design.md` (Fase 2)
+**Spec:** `docs/superpowers/specs/2026-09-13-launch-uneed-design.md` (Phase 2)
 
 ## Global Constraints
 
-- Suite 100% verde, ruff limpio, doctor 48/48.
-- Sin dependencias nuevas. Sin commits sin orden explícita.
-- Freeze catálogo Fase 1 SIGUE: `tools/*.py` == 131 (NO crear `tools/skill.py`; el tool `skill` va por schema+dispatch como `subagent`), `KNOWN_PROVIDERS` == 76? NO — == 74. Si un test de freeze falla, BLOCKED, no tocar el test.
-- Path traversal bloqueado: solo `*/SKILL.md` directos, sin symlinks fuera, body capado.
-- `.agents/` sigue gitignored: discovery lo lee si existe pero nada del repo depende de él.
+- Suite 100% green, ruff clean, doctor 48/48.
+- No new dependencies. No commits without explicit order.
+- Phase 1 catalog freeze STILL HOLDS: `tools/*.py` == 131 (DO NOT create `tools/skill.py`; the `skill` tool goes via schema+dispatch like `subagent`), `KNOWN_PROVIDERS` == 76? NO — == 74. If a freeze test fails, BLOCKED, do not touch the test.
+- Path traversal blocked: only direct `*/SKILL.md`, no symlinks outside, capped body.
+- `.agents/` stays gitignored: discovery reads it if present but nothing in the repo depends on it.
 
 ---
 
-### Task 1: Parse + discover SKILL.md en `core/skills.py`
+### Task 1: Parse + discover SKILL.md in `core/skills.py`
 
 **Files:**
-- Modify: `core/skills.py` (añadir al final; no tocar JSON existente)
-- Test: `tests/test_skill_md_loader.py` (nuevo)
+- Modify: `core/skills.py` (append at end; do not touch existing JSON)
+- Test: `tests/test_skill_md_loader.py` (new)
 
 **Interfaces:**
-- Consumes: clase `Skill` existente
+- Consumes: existing `Skill` class
 - Produces: `parse_skill_md(text, source="<memory>") -> Skill | None`, `discover_skill_md(dirs) -> int`, `skills_prompt_section() -> str`, consts `SKILL_MD_MAX_CHARS=32768`, `SKILL_MD_MAX_FILES=200`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-"""Fase 2: parse/discover SKILL.md estándar con stdlib."""
+"""Phase 2: standard SKILL.md parse/discover with stdlib."""
 import unittest
 from pathlib import Path
 import tempfile
@@ -79,45 +79,45 @@ class SkillMdTest(unittest.TestCase):
         self.assertIn("alpha", section)
 ```
 
-NOTA: `SkillRegistry(skills_dir=...)` acepta dir (ver `tests/test_skill_registry_execution_security.py:12`). `discover_skill_md` puede ser método (como arriba) o función con registry param — el implementador elige UNA forma y ajusta test+llamadas; `skills_prompt_section` igual (método preferido, espejo de `list_skills`).
+NOTE: `SkillRegistry(skills_dir=...)` accepts a dir (see `tests/test_skill_registry_execution_security.py:12`). `discover_skill_md` can be a method (as above) or a function with a registry param — the implementer picks ONE form and adjusts test+calls; `skills_prompt_section` likewise (method preferred, mirror of `list_skills`).
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_skill_md_loader -v`
-Expected: FAIL (nombres no existen)
+Expected: FAIL (names do not exist yet)
 
-- [ ] **Step 3: Minimal implementation** (append en `core/skills.py`, stdlib solo: `re`, `pathlib`)
+- [ ] **Step 3: Minimal implementation** (append in `core/skills.py`, stdlib only: `re`, `pathlib`)
 
 ```python
 SKILL_MD_MAX_CHARS = 32768
 SKILL_MD_MAX_FILES = 200
 
 def parse_skill_md(text, source="<memory>"):
-    """Parse estándar SKILL.md: frontmatter name/description + body. None si inválido."""
-    # ... (implementador: regex ^---\n(.*?)\n---\n? cuerpo; name:/^[\w-]+$/ tras sanitizar [^A-Za-z0-9_-]→- ; description no vacía ≤500; body strip capado)
+    """Standard SKILL.md parse: name/description frontmatter + body. None if invalid."""
+    # ... (implementer: regex ^---\n(.*?)\n---\n? body; name:/^[\w-]+$/ after sanitizing [^A-Za-z0-9_-]→- ; non-empty description ≤500; stripped body capped)
 ```
 
-Reglas exactas: frontmatter entre primer `---` línea y siguiente `---`; claves `name:`/`description:` (una línea cada una); name sanitizado a `[A-Za-z0-9_-]+` (vacío→None); description strip no vacía; body = resto strip, cap `SKILL_MD_MAX_CHARS`; `Skill(name, description, prompt_template=body, actions=[], requires_approval=True)`.
+Exact rules: frontmatter between first `---` line and next `---`; `name:`/`description:` keys (one line each); name sanitized to `[A-Za-z0-9_-]+` (empty→None); description stripped non-empty; body = remaining stripped, capped at `SKILL_MD_MAX_CHARS`; `Skill(name, description, prompt_template=body, actions=[], requires_approval=True)`.
 
-`discover_skill_md(self, dirs)`: por cada dir existente, `sorted(dir.glob("*/SKILL.md"))` hasta `SKILL_MD_MAX_FILES` total; salta symlinks (`p.is_symlink()`); salta nombres ya registrados (first-wins); `read_text(encoding="utf-8", errors="ignore")` en try/except; cuenta cargados; return count.
+`discover_skill_md(self, dirs)`: for each existing dir, `sorted(dir.glob("*/SKILL.md"))` up to `SKILL_MD_MAX_FILES` total; skip symlinks (`p.is_symlink()`); skip already-registered names (first-wins); `read_text(encoding="utf-8", errors="ignore")` in try/except; count loaded; return count.
 
-`skills_prompt_section(self)`: `"Available skills (use the `skill` tool: `list`, `show`):\n- name: description"` por skill con prompt_template, o `"No skills installed. Drop SKILL.md folders in ~/.hellochusquis/skills/<name>/SKILL.md."` si vacío.
+`skills_prompt_section(self)`: `"Available skills (use the `skill` tool: `list`, `show`):\n- name: description"` per skill with prompt_template, or `"No skills installed. Drop SKILL.md folders in ~/.hellochusquis/skills/<name>/SKILL.md."` if empty.
 
 - [ ] **Step 4: Run test + suite**
 
 Run: `python3 -m unittest tests.test_skill_md_loader -v` → PASS
 Run: `python3 -m unittest discover tests -q 2>&1 | tail -n 3` → OK
 
-### Task 2: Cablear agent (schema + dispatch + prompt)
+### Task 2: Wire agent (schema + dispatch + prompt)
 
 **Files:**
-- Modify: `core/skills.py` — añadir `SKILL_TOOL_SCHEMA` + `handle_skill_tool(agent, args)` (misma zona que SUBAGENT_TOOL_SCHEMA en `core/subagents.py:557`)
-- Modify: `core/agent.py:85` import, `_build_tools_schema` (tras línea 1016 `schema.append(SUBAGENT_TOOL_SCHEMA)`), `_dispatch_tool` (tras líneas 1430-1431), `__init__` (tras línea 1149 bloque knowledge): crear registry, discover, append prompt section
-- Test: `tests/test_skill_tool.py` (nuevo)
+- Modify: `core/skills.py` — add `SKILL_TOOL_SCHEMA` + `handle_skill_tool(agent, args)` (same area as SUBAGENT_TOOL_SCHEMA in `core/subagents.py:557`)
+- Modify: `core/agent.py:85` import, `_build_tools_schema` (after line 1016 `schema.append(SUBAGENT_TOOL_SCHEMA)`), `_dispatch_tool` (after lines 1430-1431), `__init__` (after line 1149 knowledge block): create registry, discover, append prompt section
+- Test: `tests/test_skill_tool.py` (new)
 
 **Interfaces:**
 - Consumes: Task 1 (`discover_skill_md`, `skills_prompt_section`)
-- Produces: tool `skill` funcional list/show solo-lectura
+- Produces: functional read-only `skill` tool with list/show
 
 - [ ] **Step 1: Write the failing test**
 
@@ -164,10 +164,10 @@ class SkillToolTest(unittest.TestCase):
         self.assertFalse(res.success)
 ```
 
-- [ ] **Step 2: Run** → FAIL (falta `handle_skill_tool`)
+- [ ] **Step 2: Run** → FAIL (missing `handle_skill_tool`)
 - [ ] **Step 3: Implement**
 
-`SKILL_TOOL_SCHEMA` (en `core/skills.py`, espejo de `SUBAGENT_TOOL_SCHEMA`): name `skill`, description `"List and read installed SKILL.md skills. list: catalog (no bodies). show: full skill body by name."`, parameters action enum [list, show] + name string.
+`SKILL_TOOL_SCHEMA` (in `core/skills.py`, mirror of `SUBAGENT_TOOL_SCHEMA`): name `skill`, description `"List and read installed SKILL.md skills. list: catalog (no bodies). show: full skill body by name."`, parameters action enum [list, show] + name string.
 
 ```python
 def handle_skill_tool(agent, args):
@@ -185,53 +185,55 @@ def handle_skill_tool(agent, args):
     return ToolResult(success=False, output="", error=f"Unknown skill action: {action}")
 ```
 
-Agent wiring (4 ediciones en `core/agent.py`):
-1. `from core.skills import SKILL_TOOL_SCHEMA, discover_skill_md...` — mejor: `from core import skills as skills_module` y usar `skills_module.*` (evita choques de nombres; `core/registry.py` ya tiene `get_registry` distinto).
-2. En `_build_tools_schema`, tras `schema.append(SUBAGENT_TOOL_SCHEMA)`: `schema.append(skills_module.SKILL_TOOL_SCHEMA)`.
-3. En `_dispatch_tool`, tras bloque subagent: `if name == "skill": return skills_module.handle_skill_tool(self, args)`.
-4. En `__init__` tras bloque knowledge (línea ~1149): `self.skills = skills_module.get_registry(); skills_module... discover en [~/.hellochusquis/skills, <repo>/.agents/skills] BEST-EFFORT try/except; self.system_prompt += "\n\n" + self.skills.skills_prompt_section()` — solo si hay skills con body? NO: siempre append (sección corta avisa dónde instalar). Repo dir = `Path(__file__).resolve().parent.parent / ".agents" / "skills"`.
+Agent wiring (4 edits in `core/agent.py`):
+1. `from core.skills import SKILL_TOOL_SCHEMA, discover_skill_md...` — better: `from core import skills as skills_module` and use `skills_module.*` (avoids name clashes; `core/registry.py` already has a different `get_registry`).
+2. In `_build_tools_schema`, after `schema.append(SUBAGENT_TOOL_SCHEMA)`: `schema.append(skills_module.SKILL_TOOL_SCHEMA)`.
+3. In `_dispatch_tool`, after subagent block: `if name == "skill": return skills_module.handle_skill_tool(self, args)`.
+4. In `__init__` after knowledge block (line ~1149): `self.skills = skills_module.get_registry(); skills_module... discover in [~/.hellochusquis/skills, <repo>/.agents/skills] BEST-EFFORT try/except; self.system_prompt += "\n\n" + self.skills.skills_prompt_section()` — only if there are skills with body? NO: always append (short section tells where to install). Repo dir = `Path(__file__).resolve().parent.parent / ".agents" / "skills"`.
 
 - [ ] **Step 4: Run test → PASS, suite OK**
 
 ### Task 3: CLI `skills list|show`
 
 **Files:**
-- Modify: `cli.py` — `KNOWN_COMMANDS` + rama comando (mirar cómo se despacha `knowledge`/`memory`, reusar ese shape)
-- Test: `tests/test_cli_skills.py` (subprocess frío como Task 1 Fase 1: `skills list` con HOME tmp → exit 0, sin Traceback, contiene "alpha"? NO — HOME tmp no tiene skills; asertar exit 0 + sin Traceback + menciona `~/.hellochusquis/skills`)
+- Modify: `cli.py` — `KNOWN_COMMANDS` + command branch (see how `knowledge`/`memory` is dispatched, reuse that shape)
+- Test: `tests/test_cli_skills.py` (cold subprocess like Phase 1 Task 1: `skills list` with tmp HOME → exit 0, no Traceback, contains "alpha"? NO — tmp HOME has no skills; assert exit 0 + no Traceback + mentions `~/.hellochusquis/skills`)
 
 **Interfaces:**
-- Consumes: Task 1–2
+- Consumes: Tasks 1–2
 - Produces: `hellochusquis skills list|show <name>`
 
-- [ ] **Step 1-3:** test → FAIL → implement (list usa registry+discover mismos dirs que agent; show imprime body capado 8000) → PASS + suite OK. Detalle de despacho CLI lo lee el implementador en `cli.py` (rama `knowledge`).
+- [ ] **Step 1-3:** test → FAIL → implement (list uses registry+discover same dirs as agent; show prints capped 8000 body) → PASS + suite OK. CLI dispatch detail is read by the implementer in `cli.py` (`knowledge` branch).
 
-### Task 4: 2 skills ejemplo + README
+### Task 4: 2 example skills + README
 
 **Files:**
-- Create: `examples/skills/code-review/SKILL.md`, `examples/skills/standup-notes/SKILL.md` (cortas, reales, sin shell)
-- Modify: `README.md` — snippet ≤15 líneas (qué es, dónde instalar, `skills list`, link uneed? NO — solo docs)
-- Test: ninguno nuevo; verificación = `parse_skill_md` las acepta (one-liner en reporte, no test)
+- Create: `examples/skills/code-review/SKILL.md`, `examples/skills/standup-notes/SKILL.md` (short, real, no shell)
+- Modify: `README.md` — snippet ≤15 lines (what it is, where to install, `skills list`, uneed link? NO — docs only)
+- Test: no new tests; verification = `parse_skill_md` accepts them (one-liner in report, not a test)
 
 **Interfaces:**
 - Consumes: Task 1
-- Produces: ejemplos copiables a `~/.hellochusquis/skills/`
+- Produces: examples copyable to `~/.hellochusquis/skills/`
 
-- [ ] **Step 1:** escribir los 2 ficheros (cada uno: frontmatter name/description + body 10-25 líneas útiles de verdad).
-- [ ] **Step 2:** README snippet + `python3 -c` que parsea ambos con `parse_skill_md` OK (evidencia en reporte).
+- [ ] **Step 1:** write the 2 files (each: frontmatter name/description + 10-25 lines of genuinely useful body).
+- [ ] **Step 2:** README snippet + `python3 -c` parsing both with `parse_skill_md` OK (evidence in report).
 
-### Task 5: Cierre (freeze + verde global)
+### Task 5: Closeout (freeze + global green)
 
-**Files:** ninguno
+**Files:** none
 
-- [ ] **Step 1: Run todo**
+- [ ] **Step 1: Run everything**
 
-Run: `python3 -m unittest discover tests -q 2>&1 | tail -n 3` → OK (esperado 407 + ~7 nuevos)
+Run: `python3 -m unittest discover tests -q 2>&1 | tail -n 3` → OK (expected 407 + ~7 new)
 Run: `python3 -m ruff check . 2>&1 | tail -n 1` → clean
-Run: `python3 cli.py doctor --contracts 2>&1 | tail -n 1` → 48/48 (los contracts chequean `run` importable por módulo — NO se añadió módulo tools/, así que nada cambia; si doctor lista tools y exige `skill`, reportar BLOCKED, no parchear doctor)
+Run: `python3 cli.py doctor --contracts 2>&1 | tail -n 1` → 48/48 (contracts check importable `run` per module — NO tools/ module was added, so nothing changes; if doctor lists tools and requires `skill`, report BLOCKED, do not patch doctor)
 Run: `python3 -m unittest tests.test_catalog_freeze tests.test_version_consistency -v 2>&1 | tail -n 4` → freeze holds
 
 ## Self-Review
 
-1. **Spec coverage:** loader ✓ (T1), discover+prompt ✓ (T1–T2), tool bridge ✓ (T2), CLI ✓ (T3), docs+2 demos ✓ (T4), freeze 1-dic n/a aún pero pins intactos ✓ (T5).
-2. **Placeholder scan:** firmas, paths, enums y consts exactos. T3 deja shape CLI al implementador con referencia obligada (rama `knowledge` real).
-3. **Type consistency:** `Skill` existente reusado; `ToolResult` de `tools.base`; prompts section string.
+1. **Spec coverage:** loader ✓ (T1), discover+prompt ✓ (T1–T2), tool bridge ✓ (T2), CLI ✓ (T3), docs+2 demos ✓ (T4), Dec-1 freeze n/a yet but pins intact ✓ (T5).
+2. **Placeholder scan:** signatures, paths, enums and consts exact. T3 leaves CLI shape to implementer with required reference (real `knowledge` branch).
+3. **Type consistency:** existing `Skill` reused; `ToolResult` from `tools.base`; prompts section string.
+
+(End of file - total 237 lines)
