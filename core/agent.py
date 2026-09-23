@@ -1124,14 +1124,21 @@ class Agent:
         self._audited_approval_ids: set[str] = set()
         self.history = History()
         self._pending_tool_results = []
-        self.workspace = WorkspaceManager(config["settings"]["workspace_dirs"])
+        # Hand-made minimal configs (e.g. Ollama-only) may omit settings the
+        # setup wizard always writes; fall back instead of KeyError.
+        _settings = config.get("settings", {}) or {}
+        _agent_cfg = config.get("agent", {}) or {}
+        from pathlib import Path as _Path
+        _workspace_dirs = _settings.get("workspace_dirs") or [
+            str(_Path.home() / ".hellochusquis" / "workspace")]
+        self.workspace = WorkspaceManager(_workspace_dirs)
         self.shell = ShellTool()
-        self.files = FilesTool(config["settings"]["workspace_dirs"])
+        self.files = FilesTool(_workspace_dirs)
         self.code = CodeTool()
         self.websearch = WebSearchTool()
         # Los módulos de herramientas externos se usan directamente via run()
-        self.system_prompt = config["agent"]["system_prompt"]
-        self.workspace_dirs = config["settings"]["workspace_dirs"]
+        self.system_prompt = _agent_cfg.get("system_prompt", "")
+        self.workspace_dirs = _workspace_dirs
 
         # Memoria (estructurada vía SQLite ahora)
         summary = memory.load_summary()
