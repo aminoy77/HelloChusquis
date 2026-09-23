@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Local-first AI agent: terminal, web UI, REST API, Telegram. 421 tests passing, MIT licensed." />
     <meta name="twitter:image" content="https://aminoy77.github.io/HelloChusquis/og.jpg" />
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"SoftwareApplication","name":"HelloChusquis","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, macOS, Linux","softwareVersion":"5.4","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Local-first AI agent for the terminal, browser, and systems around your work. Terminal chat, web UI, REST API, and Telegram with approval-gated tools and SQLite-backed memory."}
+    {"@context":"https://schema.org","@type":"SoftwareApplication","name":"HelloChusquis","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, macOS, Linux","softwareVersion":"5.4","license":"https://opensource.org/licenses/MIT","downloadUrl":"https://pypi.org/project/hellochusquis/","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Local-first AI agent for the terminal, browser, and systems around your work. Terminal chat, web UI, REST API, and Telegram with approval-gated tools and SQLite-backed memory."}
     </script>
     <link rel="icon" type="image/x-icon" href="./favicon.ico" />
     <link rel="icon" type="image/png" href="./favicon.png" />
@@ -58,7 +58,7 @@
           <div class="eyebrow reveal">Local-first AI for builders · v5.4 · MIT</div>
           <div class="hello-kicker reveal" style="--reveal-delay: 80ms" aria-hidden="true"><span class="hello-word" id="hello-word">Hola</span><span class="hello-comma">,</span> Chusquis<span class="hello-dot">.</span></div>
           <h1 class="hero-title reveal" style="--reveal-delay: 140ms">Local-first AI agent for your terminal & browser.</h1>
-          <p class="hero-problem reveal" style="--reveal-delay: 120ms">Tabbing between terminal, docs, and dashboards to finish one task?</p>
+          <p class="hero-problem reveal" style="--reveal-delay: 120ms">Stop context-switching between your editor, browser, and five chatbot tabs to finish one task.</p>
           <p class="hero-sub reveal" style="--reveal-delay: 160ms">
             Chusquis puts your repo, tools, memory, and 131 integrations in one chat that shows its work — and asks before anything risky.
           </p>
@@ -94,7 +94,7 @@
       <section class="section" id="proof" aria-label="Measured results">
         <div class="container proof-grid">
           <div class="proof-card reveal">
-            <img src="./assets/kb-accuracy.svg" alt="Knowledge accuracy: local 3B model from 86 to 100 percent on a 35-question probe" loading="lazy" />
+            <img src="./assets/kb-accuracy.svg" alt="Knowledge accuracy: local 3B model from 86 to 100 percent on a 35-question probe" width="560" height="300" loading="lazy" />
           </div>
           <div class="proof-card proof-copy reveal" style="--reveal-delay: 120ms">
             <div class="eyebrow">Proof</div>
@@ -118,7 +118,7 @@
         <div class="container chart-row">
           <div class="chart-card reveal">
             <div class="chart-label">Latency · v5.2 wins: KB ingest 64s→0.5s</div>
-            <img src="./assets/v52-latency.svg" alt="Latency: KB ingest 64s to 0.5s, browser fail 30s to 0.2s, search worst 9.6s to 6.2s" loading="lazy" />
+            <img src="./assets/v52-latency.svg" alt="Latency: KB ingest 64s to 0.5s, browser fail 30s to 0.2s, search worst 9.6s to 6.2s" width="560" height="264" loading="lazy" />
           </div>
           <div class="chart-card reveal" style="--reveal-delay: 120ms">
             <div class="chart-label">One agent, four surfaces</div>
@@ -230,7 +230,7 @@
         <div class="container">
           <div class="section-heading reveal">
             <div class="eyebrow">Install</div>
-            <h2>One command to start.</h2>
+            <h2>Up and running in three steps.</h2>
           </div>
           <div class="install-grid">
             <div class="install-card reveal">
@@ -259,6 +259,10 @@
           </div>
           <div class="faq-list">
             <details class="faq-item reveal">
+              <summary>Is this an open-source local AI agent for the terminal?</summary>
+              <p>Yes. HelloChusquis is MIT licensed, runs locally, and starts in your terminal with <b>hellochusquis</b> after <b>python -m pip install hellochusquis</b>. Your code, keys, and memory stay on your machine; only the model calls you configure ever leave it.</p>
+            </details>
+            <details class="faq-item reveal" style="--reveal-delay: 60ms">
               <summary>How do I install and start?</summary>
               <p>Run <b>python -m pip install hellochusquis</b> (Python 3.10+), then <b>hellochusquis config</b> to set up a provider, then <b>hellochusquis</b> to chat. Prefer a UI? <b>hellochusquis web</b> serves a local workspace on port 7272.</p>
             </details>
