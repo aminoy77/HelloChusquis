@@ -119,6 +119,7 @@ button { font: inherit; }
 
 /* Sections */
 .section { padding: 72px 0; }
+.section.alt { background: rgba(255, 255, 255, 0.015); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 h1, h2, h3 { margin: 0; font-family: "Space Grotesk", "DM Sans", sans-serif; letter-spacing: -0.06em; }
 .proof-grid, .showcase-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: center; }
 .proof-card, .chart-card, .feature-card, .install-card { border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 20px; background: rgba(12, 12, 10, 0.76); overflow: hidden; }
