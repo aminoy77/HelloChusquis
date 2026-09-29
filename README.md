@@ -1,5 +1,7 @@
 # HelloChusquis
 
+> **Terminal AI agent that builds its own tools — 131 integrations, local-first.**
+
 <p align="center">
   <img src="github-readme-banner.png" alt="HelloChusquis — local-first AI for your workflow" width="100%">
 </p>

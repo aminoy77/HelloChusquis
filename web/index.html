@@ -1011,11 +1011,11 @@
                             </button>
                             <button class="chip" data-prompt="/status">
                                 <svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                                <span>Ver estado de mis providers</span>
+                                <span>Check my provider status</span>
                             </button>
-                            <button class="chip" data-prompt="Crea un ejemplo rápido con Python">
+                            <button class="chip" data-prompt="Create a quick Python example">
                                 <svg class="ic" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                                <span>Ejemplo rápido con Python</span>
+                                <span>Quick Python example</span>
                             </button>
                         </div>
                         <div class="model-note">
@@ -1336,13 +1336,13 @@
         });
     }
 
-    // ---------- auth (local-first: sin prompt; token solo si existe para remoto) ----------
+    // ---------- auth (local-first: no prompt; token only if present for remote) ----------
     async function initAuth() {
         try { await fetchJson('/auth/check'); } catch (e) {}
         try { await loadStatus(); }
         catch (e) {
             connPill.textContent = 'Offline'; connPill.classList.add('off');
-            if (e && e.status !== 401) toast('Servidor no disponible. Revisa hellochusquis web.');
+            if (e && e.status !== 401) toast('Server unavailable. Check hellochusquis web.');
         }
     }
 
