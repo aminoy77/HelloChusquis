@@ -92,6 +92,22 @@ def _run_users_command(subcommand: str, arguments: list[str], role: str) -> int:
     return 1
 
 
+def resolve_login_name(arg: str):
+    """Map a CLI --login argument to an OAUTH_PROVIDERS display name."""
+    from core.oauth import OAUTH_PROVIDERS
+    if not arg:
+        return None
+    aliases = {"copilot": "GitHub Copilot", "ghc": "GitHub Copilot",
+               "github copilot": "GitHub Copilot", "qwen": "Qwen"}
+    low = arg.strip().lower()
+    if low in aliases:
+        return aliases[low]
+    for name in OAUTH_PROVIDERS:
+        if name.lower() == low:
+            return name
+    return None
+
+
 def _print_help():
     """Print CLI usage summary."""
     print("""HelloChusquis — autonomous terminal AI agent
@@ -149,6 +165,7 @@ def main():
     parser.add_argument("--show", action="store_true", help="Show current config")
     parser.add_argument("--api-keys", action="store_true", help="Edit API keys only")
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
+    parser.add_argument("--login", type=str, default=None, metavar="PROVIDER", help="Login to an OAuth provider via browser (copilot, qwen)")
     parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
     parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
     parser.add_argument("--port", type=int, default=None, help="Port for api/web commands (default: 8080 api / 7272 web)")
@@ -207,6 +224,18 @@ def main():
         from core.setup import edit_config
         edit_config("providers")
         return
+
+    # Handle --login flag directly
+    if args.login and args.command is None:
+        name = resolve_login_name(args.login)
+        if not name:
+            from core.oauth import OAUTH_PROVIDERS
+            print(f"Unknown OAuth provider '{args.login}'. Valid: {', '.join(OAUTH_PROVIDERS)}")
+            return 1
+        from core.setup import ensure_config, login_provider
+        config = ensure_config()
+        entry = login_provider(config, name)
+        return 0 if entry else 1
 
     # --- Command dispatch ---
 
