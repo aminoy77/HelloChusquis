@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from urllib.parse import urlsplit, urlunsplit
@@ -8,6 +9,8 @@ from typing import List, Optional, Dict, Any
 
 import httpx
 import yaml
+
+from core.oauth import OAuthError
 
 from core.logger import get_logger
 
@@ -238,7 +241,112 @@ class ProviderPool:
                     )
                     time.sleep(2)
                 continue
-        raise RuntimeError(f"All providers failed after {max_retries} attempts: {last_error}")
+        raise RuntimeError(f"All providers failed. Last error: {last_error}")
+
+    def chat_stream(self, messages: List[dict], tools: Optional[List[dict]] = None,
+                    provider_name: Optional[str] = None, model: Optional[str] = None):
+        """Stream a chat completion as SSE events.
+
+        Yields {"type": "reasoning"|"chunk", "content": str} deltas,
+        {"type": "tool_calls", "tool_calls": [...]} when the model requests
+        tools (stream ends there), or {"type": "error", "message": str}.
+        Fails over to the next provider only before the first chunk.
+        """
+        available = self._available(None if provider_name else tools)
+        if not available:
+            yield {"type": "error", "message": "All providers exhausted. Try again later."}
+            return
+        if provider_name:
+            preferred = [p for p in available if p.name == provider_name]
+            rest = [p for p in available if p.name != provider_name]
+            available = preferred + rest
+
+        for provider in available:
+            use_model = model if (not provider_name or provider.name == provider_name) else None
+            started = False
+            gen = self._call_stream(provider, messages, tools, model=use_model)
+            try:
+                for event in gen:
+                    started = True
+                    yield event
+                return
+            except Exception as e:
+                if isinstance(e, OAuthError):
+                    yield {"type": "error", "message": str(e)}
+                    return
+                if started:
+                    yield {"type": "error", "message": f"{provider.name}: {e}"}
+                    return
+                provider.failed_calls += 1
+                logger.debug("stream error on %s: %s", provider.name, e)
+                continue
+        yield {"type": "error", "message": "All providers failed."}
+
+    def _call_stream(self, provider: Provider, messages: List[dict],
+                     tools: Optional[List[dict]], model: Optional[str] = None):
+        """Yield SSE deltas from *provider*; raises before first chunk on error."""
+        payload: Dict[str, Any] = {
+            "model": model or provider.model,
+            "messages": messages,
+            "stream": True,
+        }
+        supports_tools = "groq.com" not in provider.base_url.lower()
+        if tools and supports_tools:
+            payload["tools"] = tools
+
+        base = (provider.base_url or "").lower()
+        is_local = "localhost" in base or "127.0.0.1" in base
+        timeout = httpx.Timeout(connect=5.0,
+                                read=120.0 if is_local else float(self.timeout),
+                                write=10.0, pool=5.0)
+        tool_calls: Dict[int, dict] = {}
+        with httpx.Client(timeout=timeout) as client:
+            self._refresh_oauth_if_needed(provider)
+            headers = {"Content-Type": "application/json"}
+            if (provider.api_key or "").strip():
+                headers["Authorization"] = f"Bearer {provider.api_key}"
+            if "api.githubcopilot.com" in base:
+                headers["Copilot-Integration-Id"] = "hellochusquis"
+                headers["Editor-Version"] = "hellochusquis/1.0"
+            response = client.post(
+                f"{provider.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            for line in response.iter_lines():
+                line = (line or "").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except ValueError:
+                    continue
+                choices = chunk.get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta") or {}
+                reasoning = delta.get("reasoning_content") or delta.get("reasoning")
+                if reasoning:
+                    yield {"type": "reasoning", "content": reasoning}
+                if delta.get("content"):
+                    yield {"type": "chunk", "content": delta["content"]}
+                for frag in delta.get("tool_calls") or []:
+                    idx = frag.get("index", 0)
+                    acc = tool_calls.setdefault(idx, {"id": "", "function": {"name": "", "arguments": ""}})
+                    if frag.get("id"):
+                        acc["id"] = frag["id"]
+                    fn = frag.get("function") or {}
+                    if fn.get("name"):
+                        acc["function"]["name"] = fn["name"]
+                    if fn.get("arguments"):
+                        acc["function"]["arguments"] += fn["arguments"]
+            if tool_calls:
+                ordered = [tool_calls[i] for i in sorted(tool_calls)]
+                yield {"type": "tool_calls", "tool_calls": ordered}
 
     def chat(self, messages: List[dict], tools: Optional[List[dict]] = None,
              provider_name: Optional[str] = None, model: Optional[str] = None) -> dict:
