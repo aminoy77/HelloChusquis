@@ -12,8 +12,10 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import (
+    Collapsible,
     Footer,
     Label,
+    LoadingIndicator,
     RichLog,
     Static,
     TextArea,
@@ -713,18 +715,86 @@ class HelloChusquisTUI(App):
                 if steps:
                     self.call_from_thread(self._add_plan, steps, text)
                     execute_plan(steps, self.agent)
-                else:
-                    respuesta = self.agent.run(text)
-                    self.call_from_thread(self._add_agent_md, respuesta)
-            else:
-                respuesta = self.agent.run(text)
-                self.call_from_thread(self._add_agent_md, respuesta)
+                    return
+            # Streaming path: spinner → gray thinking box → live answer text.
+            self.call_from_thread(self._start_stream_ui)
+            full: list[str] = []
+            think: list[str] = []
+            last_flush = [time.time()]
+
+            def flush(force=False):
+                now = time.time()
+                if force or now - last_flush[0] > 0.1:
+                    last_flush[0] = now
+                    self.call_from_thread(self._stream_set_text, "".join(full))
+
+            for ev in self.agent.stream_run(text):
+                etype = ev.get("type")
+                if etype == "reasoning":
+                    think.append(ev["content"])
+                    self.call_from_thread(self._stream_set_thinking, "".join(think))
+                elif etype == "chunk":
+                    full.append(ev["content"])
+                    flush()
+                elif etype == "tool_call":
+                    flush(force=True)
+                    self.call_from_thread(self._add_tool_msg,
+                                          ev.get("tool", "?"), str(ev.get("args", {})))
+            flush(force=True)
+            self.call_from_thread(self._finish_stream_ui, "".join(full))
         except RuntimeError as e:
+            self.call_from_thread(self._stream_cleanup)
             self.call_from_thread(self._add_error, str(e))
         except Exception as e:
+            self.call_from_thread(self._stream_cleanup)
             self.call_from_thread(self._add_error, f"Unexpected error: {e}")
         finally:
             self.call_from_thread(self._set_processing, False)
+
+    # ─── Streaming UI helpers (run on UI thread via call_from_thread) ───
+    def _start_stream_ui(self):
+        log = self.query_one("#log", RichLog)
+        area = log.parent  # MessageLog (VerticalScroll) — widgets mount beside RichLog
+        area.mount(LoadingIndicator(id="stream-spinner"))
+
+    def _stream_set_thinking(self, text: str):
+        area = self.query_one("#log", RichLog).parent
+        box = area.query("#think-box")
+        if not box:
+            # Mount carries the text: querying the child in the same tick
+            # races AwaitMount (child not in DOM yet).
+            area.mount(Collapsible(
+                Static(Text(text, style="grey50"), id="think-text"),
+                title="💭 Thinking", collapsed=True, id="think-box"))
+            return
+        area.query("#think-text").first().update(Text(text, style="grey50"))
+
+    def _stream_set_text(self, text: str):
+        area = self.query_one("#log", RichLog).parent
+        for spinner in area.query("#stream-spinner"):
+            spinner.remove()
+        body = area.query("#stream-text")
+        if not body:
+            area.mount(Static(text, id="stream-text"))
+            return
+        body.first().update(text)
+
+    def _finish_stream_ui(self, full_text: str):
+        area = self.query_one("#log", RichLog).parent
+        for wid in ("#stream-spinner", "#stream-text", "#think-box"):
+            for w in area.query(wid):
+                w.remove()
+        if full_text.strip():
+            self._add_agent_md(full_text)
+
+    def _stream_cleanup(self):
+        try:
+            area = self.query_one("#log", RichLog).parent
+            for wid in ("#stream-spinner", "#stream-text", "#think-box"):
+                for w in area.query(wid):
+                    w.remove()
+        except Exception:
+            pass
 
     @work(thread=True)
     def _run_plan(self, task: str):
