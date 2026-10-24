@@ -134,7 +134,8 @@ KNOWN_PROVIDERS = [
     {"name": "Nomic",              "base_url": "https://api-atlas.nomic.ai/v1",                "docs": "nomic.ai",                               "category": "Specialized", "requires_key": True, "models": ["nomic-embed-text-v1.5", "nomic-embed-text-v1"]},
     {"name": "AI21 (Jamba)",       "base_url": "https://api.ai21.com/studio/v1",               "docs": "ai21.com",                               "category": "Specialized", "requires_key": True, "models": ["jamba-1.5-large", "jamba-1.5-mini", "jamba-instruct-preview"]},
     {"name": "TextCortex",         "base_url": "https://api.textcortex.com/v1",                "docs": "textcortex.com",                         "category": "Specialized", "requires_key": True, "models": ["sophos-2", "hermes-2-pro"]},
-    {"name": "GitHub Copilot",     "base_url": "https://api.githubcopilot.com",               "docs": "Copilot OAuth/PAT token required; may need Copilot-Integration-Id header", "category": "Specialized", "requires_key": True, "models": ["gpt-4o", "gpt-4o-mini", "claude-sonnet-4", "gemini-2.5-pro", "o3-mini"]},
+    {"name": "GitHub Copilot",     "base_url": "https://api.githubcopilot.com",               "docs": "Login with browser (OAuth)",              "category": "Specialized", "requires_key": False, "oauth": True, "models": ["gpt-4o", "gpt-4o-mini", "claude-sonnet-4", "o3-mini"]},
+    {"name": "Qwen",               "base_url": "https://portal.qwen.ai/v1",                   "docs": "Login with browser (OAuth)",              "category": "Specialized", "requires_key": False, "oauth": True, "models": ["qwen3-coder-plus", "qwen3-coder-flash"]},
 
     # ============ Custom ============
     {"name": "Custom / Other",     "base_url": "",                                             "docs": "",                                       "category": "Custom", "requires_key": True, "models": []},
@@ -383,7 +384,7 @@ def pick_provider() -> dict:
         base_url = selected["base_url"]
         console.print(f"  [dim]Get your API key at: {selected['docs']}[/dim]")
 
-    return {"name": selected["name"], "base_url": base_url, "requires_key": selected.get("requires_key", True), "models": selected.get("models", [])}
+    return {"name": selected["name"], "base_url": base_url, "requires_key": selected.get("requires_key", True), "oauth": selected.get("oauth", False), "models": selected.get("models", [])}
 
 
 def live_check_provider(provider: dict, timeout: float = 5.0) -> tuple:
@@ -588,6 +589,50 @@ def _prompt_api_key(provider_name: str, existing_key: str = "") -> str:
         return api_key.strip()
 
 
+def login_provider(config: dict, display_name: str):
+    """Run the browser OAuth flow for an OAuth provider and store the entry.
+
+    Appends a new provider or updates the existing one for the same OAuth
+    backend. Returns the entry, or None on OAuth failure (message printed).
+    """
+    from core import oauth as _oauth
+
+    info = _oauth.OAUTH_PROVIDERS.get(display_name)
+    if not info:
+        console.print(f"[red]Unknown OAuth provider: {display_name}[/red]")
+        return None
+    try:
+        tok = info["login"]()
+    except _oauth.OAuthError as e:
+        console.print(f"[red]✗ Login failed: {e}[/red]")
+        return None
+
+    providers = config.setdefault("providers", [])
+    entry = None
+    for p in providers:
+        if (p.get("oauth") or {}).get("provider") == info["oauth_provider"]:
+            entry = p
+            break
+    if entry is None:
+        entry = {"name": f"{display_name}-{len(providers) + 1}",
+                 "priority": len(providers) + 1}
+        providers.append(entry)
+    entry.update({
+        "base_url": tok["base_url"],
+        "api_key": tok["access_token"],
+        "oauth": {"provider": info["oauth_provider"],
+                  "refresh": tok["refresh"],
+                  "expires_at": tok["expires_at"]},
+    })
+    entry["model"] = pick_model(
+        tok["base_url"], tok["access_token"],
+        provider_name=display_name, known_models=tok.get("models", []),
+    )
+    _save_config_securely(config)
+    console.print(f"  [#5eb97e]✓[/#5eb97e] Logged in to [bold]{display_name}[/bold] → [cyan]{entry['model']}[/cyan]")
+    return entry
+
+
 def _is_local_provider(provider: dict) -> bool:
     """Localhost providers work without keys (Ollama uses 'ollama' as placeholder)."""
     base = provider.get("base_url", "").lower()
@@ -624,6 +669,17 @@ def run_setup():
     while True:
         console.print(f"\n[bold]Provider #{priority}[/bold]")
         provider_info = pick_provider()
+        if provider_info.get("oauth"):
+            entry = login_provider({"providers": []}, provider_info["name"])
+            if entry is None:
+                continue
+            providers.append(entry)
+            console.print(f"  [#5eb97e]✓[/#5eb97e] Added: [bold]{provider_info['name']}[/bold] → [cyan]{entry['model']}[/cyan]")
+            priority += 1
+            add_more = Confirm.ask("\n  Add another provider?", default=False)
+            if not add_more:
+                break
+            continue
         if provider_info.get("requires_key") and not _is_local_url(provider_info["base_url"]):
             api_key = _prompt_api_key(provider_info["name"])
         else:
@@ -715,38 +771,14 @@ def run_quick_setup() -> dict:
     # Step 1: pick a provider from the full catalog
     provider_info = pick_provider()
 
-    # Step 2: local providers skip the key; others must have one
-    if not provider_info["requires_key"] or _is_local_url(provider_info["base_url"]):
-        api_key = "ollama" if "ollama" in provider_info["name"].lower() else ""
-        console.print(f"  [dim]✓ {provider_info['name']} runs locally — no API key needed.[/dim]")
-    else:
-        api_key = _prompt_api_key(provider_info["name"])
-
-    # Step 3: local providers auto-pick; others choose from ALL available models
-    if provider_info["requires_key"]:
-        model = pick_model(
-            provider_info["base_url"],
-            api_key,
-            provider_name=provider_info["name"],
-            known_models=provider_info.get("models", []),
-        )
-    else:
-        model = _pick_model_auto(
-            provider_info["base_url"],
-            api_key,
-            provider_name=provider_info["name"],
-            known_models=provider_info.get("models", []),
-        )
-
-    config = {
-        "providers": [{
-            "name": provider_info["name"],
-            "base_url": provider_info["base_url"],
-            "api_key": api_key,
-            "model": model,
-            "priority": 1,
-        }],
-        "settings": {
+    # Step 2: OAuth providers log in via browser; local skip the key; others must have one
+    if provider_info.get("oauth"):
+        entry = login_provider({"providers": []}, provider_info["name"])
+        if entry is None:
+            return ensure_config()
+        config = {
+            "providers": [entry],
+            "settings": {
             "provider_reset_hours": 1,
             "max_retries": 3,
             "timeout_seconds": 15,
@@ -845,6 +877,11 @@ def edit_config(section: str = None):
         for i, p in enumerate(providers):
             console.print(f"\n[bold]Provider #{i+1}: {p['name']}[/bold]")
             
+            if Confirm.ask("  Remove this provider?", default=False):
+                providers[i] = None
+                console.print(f"  [dim]✓ {p['name']} marked for removal.[/dim]")
+                continue
+            
             name = Prompt.ask(f"  Name [{p.get('name', '')}]", default=p.get("name", ""))
             base_url = Prompt.ask(f"  Base URL [{p.get('base_url', '')}]", default=p.get("base_url", ""))
             current_key = p.get("api_key", "")
@@ -862,11 +899,23 @@ def edit_config(section: str = None):
                 "priority": p.get("priority", i + 1),
             }
         
+        providers = [p for p in providers if p is not None]
+        
         # Add new provider
         add_new = Confirm.ask("\n  Add another provider?", default=False)
         priority = len(providers) + 1
         while add_new:
             provider_info = pick_provider()
+            if provider_info.get("oauth"):
+                entry = login_provider({"providers": []}, provider_info["name"])
+                if entry is None:
+                    add_new = Confirm.ask("  Add another?", default=False)
+                    continue
+                entry["priority"] = priority
+                providers.append(entry)
+                priority += 1
+                add_new = Confirm.ask("  Add another?", default=False)
+                continue
             if provider_info.get("requires_key"):
                 api_key = _prompt_api_key(provider_info["name"])
             else:
