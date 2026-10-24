@@ -71,6 +71,7 @@ class Provider:
     avg_response_time: float = 0.0
     total_calls: int = 0
     failed_calls: int = 0
+    oauth: Optional[Dict[str, Any]] = None
 
 
 class ProviderPool:
@@ -172,6 +173,7 @@ class ProviderPool:
                 api_key=provider_config.get("api_key", ""),
                 model=provider_config["model"],
                 priority=provider_config.get("priority", 0),
+                oauth=provider_config.get("oauth"),
             )
             self.providers.append(provider)
         logger.info("Loaded %d providers from %s", len(self.providers), source)
@@ -258,13 +260,19 @@ class ProviderPool:
         if provider_name:
             preferred = [p for p in available if p.name == provider_name]
             if preferred:
-                available = preferred
+                # Preference, not a hard lock: try the selected provider
+                # first, then fall back to the rest (matches docstring).
+                rest = [p for p in available if p.name != provider_name]
+                available = preferred + rest
 
         last_error: Optional[Exception] = None
         for provider in available:
             start = time.time()
             try:
-                result = self._call(provider, messages, tools, model=model)
+                # The requested model belongs to the preferred provider; fallbacks
+                # use their own configured model (a groq model name 404s on Ollama).
+                use_model = model if (not provider_name or provider.name == provider_name) else None
+                result = self._call(provider, messages, tools, model=use_model)
                 # Update timing statistics
                 elapsed = time.time() - start
                 provider.avg_response_time = (
@@ -354,11 +362,15 @@ class ProviderPool:
                                 read=120.0 if is_local else float(self.timeout),
                                 write=10.0, pool=5.0)
         with httpx.Client(timeout=timeout) as client:
+            self._refresh_oauth_if_needed(provider)
             # Keyless local servers (Ollama, LM Studio, llama.cpp) need no
             # auth header at all; an empty "Bearer " value makes httpx fail.
             headers = {"Content-Type": "application/json"}
             if (provider.api_key or "").strip():
                 headers["Authorization"] = f"Bearer {provider.api_key}"
+            if "api.githubcopilot.com" in (provider.base_url or "").lower():
+                headers["Copilot-Integration-Id"] = "hellochusquis"
+                headers["Editor-Version"] = "hellochusquis/1.0"
             response = client.post(
                 f"{provider.base_url}/chat/completions",
                 headers=headers,
@@ -426,6 +438,30 @@ class ProviderPool:
                 logger.info("Updated API key for %s", name)
                 return True
         return False
+
+    def _refresh_oauth_if_needed(self, provider: Provider) -> None:
+        """Refresh an expired OAuth token in memory before a call.
+
+        ponytail: refresh is in-memory only — config keeps the long-lived
+        refresh credential, so a restart just refreshes again. Persisting
+        rotated refresh tokens needs a save path provider.py doesn't have.
+        """
+        if not provider.oauth:
+            return
+        if time.time() < float(provider.oauth.get("expires_at", 0)) - 60:
+            return
+        try:
+            from core.oauth import OAuthError, refresh_oauth
+
+            fresh = refresh_oauth({"oauth": provider.oauth})
+        except OAuthError as e:
+            logger.warning("OAuth refresh failed for %s: %s", provider.name, e)
+            raise
+        provider.api_key = fresh["access_token"]
+        provider.oauth["expires_at"] = fresh["expires_at"]
+        if fresh.get("refresh"):
+            provider.oauth["refresh"] = fresh["refresh"]
+        logger.info("Refreshed OAuth token for %s", provider.name)
 
     def update_base_url(self, name: str, base_url: str):
         """Update base URL for a provider."""
