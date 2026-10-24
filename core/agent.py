@@ -1448,6 +1448,33 @@ class Agent:
                 error=f"{tool_name} call failed: missing or invalid arguments.",
             )
 
+    def _known_tool_names(self) -> set:
+        """Names the model may legally call: schema + external modules + plugins."""
+        names = set()
+        try:
+            for fn in self.tools_schema or []:
+                n = (fn.get("function") or {}).get("name")
+                if n:
+                    names.add(n)
+        except Exception:
+            pass
+        try:
+            names.update(getattr(self, "_external_tool_modules", {}) or {})
+        except Exception:
+            pass
+        try:
+            for p in getattr(self, "plugins", []) or []:
+                if isinstance(p, dict) and p.get("name"):
+                    names.add(p["name"])
+        except Exception:
+            pass
+        return names
+
+    def _unknown_tool_result(self, tool_name: str) -> ToolResult:
+        return ToolResult(success=False, output="", error=(
+            f"Unknown tool: {tool_name}. I can create this tool for you! "
+            "Run `hellochusquis build` to create it with AI."))
+
     def _dispatch_tool(
         self,
         name: str,
@@ -1716,7 +1743,7 @@ class Agent:
                 except Exception as exc:
                     return safe_tool_failure(name, exc)
 
-        return ToolResult(success=False, output="", error=f"Unknown tool: {name}. I can create this tool for you! Run `hellochusquis build` to create it with AI.")
+        return self._unknown_tool_result(name)
 
 
     def _propose_tool_creation(self, tool_name: str, args: dict) -> str:
@@ -1736,14 +1763,18 @@ class Agent:
         system = (
             self.system_prompt
             + f"\n\nWorkspace directories: {', '.join(self.workspace_dirs)}. "
-            "ALWAYS use the available tools to complete tasks - do NOT respond with text explanations when tools can do the work. "
+            "Answer directly in text when no tool is needed (greetings, small talk, "
+            "questions you can already answer) — never call tools for those. "
+            "A greeting gets one friendly sentence and nothing else. "
+            "Use tools only when the task needs "
+            "external action or information you don't have. "
             "For file operations, use the 'files' tool. "
             "For running commands, use the 'shell' tool. "
             "For executing code, use the 'code' tool. "
-            "NEVER say 'I cannot' or 'I don't have' - use the tools instead.\n\n"
+            "NEVER say 'I cannot' or 'I don't have' when a tool can do the work.\n\n"
             "You must follow this thought process for every turn:\n"
-            "1. <thought>: Analyze what tool is needed.\n"
-            "2. <call>: Execute the tool immediately.\n"
+            "1. <thought>: Decide if a tool is needed; if not, answer directly.\n"
+            "2. <call>: Execute the tool immediately (only when needed).\n"
             "3. <verify>: Check if the result solves the request.\n"
         )
 
@@ -1765,6 +1796,25 @@ class Agent:
             )
 
         return [{"role": "system", "content": system}, *self.history.get()]
+
+    def _handle_active_learning_trigger(self, tool_name: str, result):
+        """Internal hook to trigger active learning on strategic failures."""
+        import core.learning as learning
+        if not result.success:
+            # Strategic failures: Loops, Security, or repeated errors
+            error_msg = result.error or ""
+            is_strategic = any(kw in error_msg for kw in ["Loop detected", "Security audit", "denied by policy", "ERROR:"])
+            
+            if is_strategic:
+                # The 'Analyst' loop: trigger analysis of current history
+                import threading
+                def analysis_task():
+                    try:
+                        learning.analyze_and_learn(self.history.get(), self.pool)
+                    except Exception:
+                        pass
+                
+                threading.Thread(target=analysis_task, daemon=True).start()
 
     def run(
         self,
@@ -1854,6 +1904,20 @@ class Agent:
                     tool_args = {}
 
                 safe_tool_args = redact_sensitive_data(tool_args)
+                if tool_name not in self._known_tool_names():
+                    # Hallucinated tool: no UI event, no console noise — the
+                    # model just gets the error back and self-corrects.
+                    logger.debug("Unknown tool requested: %s", tool_name)
+                    result = self._unknown_tool_result(tool_name)
+                    self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+                    tool_msg = {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": f"ERROR: {result.error}"
+                    }
+                    messages.append(tool_msg)
+                    step_tool_results.append(tool_msg)
+                    continue
                 print_tool_call(tool_name, safe_tool_args)
                 logger.info(
                     "Tool call: %s(%s)",
@@ -1911,6 +1975,7 @@ class Agent:
 
                 if not result.success:
                     logger.error("Tool error: %s — %s", tool_name, result.error)
+                    self._handle_active_learning_trigger(tool_name, result)
                 print_tool_result(result.success, result.output)
                 if callable(tool_result_callback):
                     try:
@@ -1970,19 +2035,30 @@ class Agent:
                 messages.append(tr)
 
         while True:
-            response = self.pool.chat_with_retry(
+            content_parts: list[str] = []
+            tool_calls: list[dict] = []
+            stream_error = None
+            for event in self.pool.chat_stream(
                 messages, tools=self.tools_schema, provider_name=provider, model=model
-            )
-            choices = response.get("choices", [])
-            if not choices:
-                yield {"type": "chunk", "content": "Error: No response from AI provider"}
+            ):
+                etype = event.get("type")
+                if etype == "reasoning":
+                    yield {"type": "reasoning", "content": event["content"]}
+                elif etype == "chunk":
+                    content_parts.append(event["content"])
+                    yield {"type": "chunk", "content": event["content"]}
+                elif etype == "tool_calls":
+                    tool_calls = event["tool_calls"]
+                elif etype == "error":
+                    stream_error = event.get("message", "stream failed")
+
+            if stream_error and not content_parts and not tool_calls:
+                yield {"type": "chunk", "content": f"Error: {stream_error}"}
                 yield {"type": "done"}
                 return
-            message = choices[0].get("message", {})
-            message = with_fenced_tools(message)
 
-            if not message.get("tool_calls"):
-                content = message.get("content") or ""
+            if not tool_calls:
+                content = "".join(content_parts)
                 self.history.add("assistant", content)
                 self.session_manager.append_message(self._session_id, "assistant", content)
                 self._pending_tool_results = []
@@ -1994,13 +2070,19 @@ class Agent:
                         )
                 except Exception:
                     pass
-
-                # Yield content in ~50 char chunks to simulate streaming
-                chunk_size = 50
-                for i in range(0, len(content), chunk_size):
-                    yield {"type": "chunk", "content": content[i:i + chunk_size]}
                 yield {"type": "done"}
                 return
+
+            message = {
+                "role": "assistant",
+                "content": "".join(content_parts) or None,
+                "tool_calls": [
+                    {"id": tc.get("id") or f"call_{i}", "type": "function",
+                     "function": tc.get("function", {})}
+                    for i, tc in enumerate(tool_calls)
+                ],
+            }
+            message = with_fenced_tools(message)
 
             messages.append(message)
             step_tool_results = []
@@ -2015,6 +2097,18 @@ class Agent:
 
                 # Yield tool call status event
                 safe_tool_args = redact_sensitive_data(tool_args)
+                if tool_name not in self._known_tool_names():
+                    logger.debug("Unknown tool requested: %s", tool_name)
+                    result = self._unknown_tool_result(tool_name)
+                    self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+                    tool_msg = {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": f"ERROR: {result.error}"
+                    }
+                    messages.append(tool_msg)
+                    step_tool_results.append(tool_msg)
+                    continue
                 yield {
                     "type": "tool_call",
                     "tool": tool_name,
@@ -2084,6 +2178,7 @@ class Agent:
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
                 if not result.success:
                     logger.error("Stream tool error: %s — %s", tool_name, result.error)
+                    self._handle_active_learning_trigger(tool_name, result)
 
                 print_tool_result(result.success, result.output)
 
