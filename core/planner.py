@@ -66,26 +66,43 @@ def confirm_plan(steps: list[str], pool, user_input: str) -> list[str] | None:
                 return None
 
 
-def execute_plan(steps: list[str], agent) -> None:
-    console.print(f"\n[dim]Executing {len(steps)} steps...[/dim]\n")
+def execute_plan(steps: list[str], agent, notify=None, depth: int = 0,
+                 quiet: bool = False) -> None:
+    """Execute plan steps; *notify* receives progress strings (for TUIs).
+
+    Re-planning is capped at depth 2: without a cap a failing plan recursed
+    forever, generating new plans endlessly (field bug: hours at ~100% CPU).
+    *quiet* suppresses stdout prints (they corrupt a textual screen).
+    """
+    def say(msg: str) -> None:
+        if notify:
+            notify(msg)
+        else:
+            console.print(msg)
+
+    say(f"\nExecuting {len(steps)} steps...\n")
     for i, step in enumerate(steps, 1):
-        console.print(f"[bold #f5a623]Step {i}/{len(steps)}:[/bold #f5a623] {step}")
+        say(f"Step {i}/{len(steps)}: {step}")
         try:
             result = agent.run(step)
-            from ui.terminal import print_assistant
-            print_assistant(result)
+            if not quiet:
+                from ui.terminal import print_assistant
+                print_assistant(result)
         except RuntimeError as e:
-            console.print(f"[yellow]⚠ Step {i} failed. Attempting to re-plan...[/yellow]")
+            if depth >= 2:
+                say(f"[red]Step {i} failed and re-plan limit reached. Stopping.[/red]")
+                return
+            say(f"[yellow]⚠ Step {i} failed. Attempting to re-plan...[/yellow]")
             try:
                 new_plan = generate_plan(f"The step '{step}' failed. The original goal was: {agent.history.get_user_inputs()[-1]}. Please generate a new plan to achieve the goal, avoiding the previous error.", agent.pool)
                 if new_plan:
-                    console.print("[bold green]New plan generated. Continuing execution.[/bold green]")
-                    execute_plan(new_plan, agent)
+                    say("[bold green]New plan generated. Continuing execution.[/bold green]")
+                    execute_plan(new_plan, agent, notify=notify, depth=depth + 1)
                     return # Exit the current execution loop
                 else:
-                    console.print("[red]Could not generate a new plan. Skipping step.[/red]")
+                    say("[red]Could not generate a new plan. Skipping step.[/red]")
                     continue
             except Exception as e2:
-                console.print(f"[red]Failed to generate a new plan: {e2}. Skipping step.[/red]")
+                say(f"[red]Failed to generate a new plan: {e2}. Skipping step.[/red]")
                 continue
-    console.print("\n[#5eb97e]✓ Plan completed.[/#5eb97e]")
+    say("\n[#5eb97e]✓ Plan completed.[/#5eb97e]")

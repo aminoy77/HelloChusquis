@@ -15,13 +15,13 @@ from textual.widgets import (
     Collapsible,
     Footer,
     Label,
-    LoadingIndicator,
     RichLog,
     Static,
     TextArea,
 )
 
 from rich.markup import escape
+from rich.spinner import Spinner as RichSpinner
 from rich.text import Text
 from rich.panel import Panel
 from rich.table import Table
@@ -342,6 +342,21 @@ class CommandPalette(Widget):
             if self._filter in title.lower() or self._filter in desc.lower()
         ]
         self._selected = 0
+
+
+class CircularSpinner(Widget):
+    """Small circular arc spinner shown next to the agent label while streaming."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._frames = RichSpinner("arc", text="").frames
+        self._frame = 0
+        self.set_interval(0.08, self.refresh)
+
+    def render(self):
+        self._frame += 1
+        return Text(self._frames[self._frame % len(self._frames)],
+                    style="bold #5eb97e")
 
 
 class MessageLog(VerticalScroll):
@@ -714,7 +729,13 @@ class HelloChusquisTUI(App):
                 steps = generate_plan(text, self.agent.pool)
                 if steps:
                     self.call_from_thread(self._add_plan, steps, text)
-                    execute_plan(steps, self.agent)
+                    # notify → visible in TUI (execute_plan's stdout is
+                    # invisible here); quiet skips stdout prints that would
+                    # corrupt the textual screen.
+                    execute_plan(steps, self.agent,
+                                 notify=lambda msg: self.call_from_thread(
+                                     self._add_agent_msg, msg),
+                                 quiet=True)
                     return
             # Streaming path: spinner → gray thinking box → live answer text.
             self.call_from_thread(self._start_stream_ui)
@@ -755,7 +776,13 @@ class HelloChusquisTUI(App):
     def _start_stream_ui(self):
         log = self.query_one("#log", RichLog)
         area = log.parent  # MessageLog (VerticalScroll) — widgets mount beside RichLog
-        area.mount(LoadingIndicator(id="stream-spinner"))
+        label = Text()
+        label.append(" │ ", style=f"bold {GREEN}")
+        label.append("agent ", style=f"bold {GREEN}")
+        area.mount(Horizontal(
+            Static(label, id="stream-label"),
+            CircularSpinner(id="stream-spinner"),
+            id="stream-row"))
 
     def _stream_set_thinking(self, text: str):
         area = self.query_one("#log", RichLog).parent
@@ -781,7 +808,7 @@ class HelloChusquisTUI(App):
 
     def _finish_stream_ui(self, full_text: str):
         area = self.query_one("#log", RichLog).parent
-        for wid in ("#stream-spinner", "#stream-text", "#think-box"):
+        for wid in ("#stream-row", "#stream-text", "#think-box"):
             for w in area.query(wid):
                 w.remove()
         if full_text.strip():
@@ -790,7 +817,7 @@ class HelloChusquisTUI(App):
     def _stream_cleanup(self):
         try:
             area = self.query_one("#log", RichLog).parent
-            for wid in ("#stream-spinner", "#stream-text", "#think-box"):
+            for wid in ("#stream-row", "#stream-text", "#think-box"):
                 for w in area.query(wid):
                     w.remove()
         except Exception:

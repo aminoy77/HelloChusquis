@@ -1865,7 +1865,17 @@ class Agent:
             for tr in self._pending_tool_results:
                 messages.append(tr)
 
+        # Hard cap on LLM round-trips per turn: a model that keeps emitting
+        # tool calls (or tools that fail instantly) must not spin forever —
+        # this was burning ~100% CPU for hours in the field.
+        max_tool_iterations = 30
+        iterations = 0
         while True:
+            iterations += 1
+            if iterations > max_tool_iterations:
+                self._pending_tool_results = []
+                return ("Error: Turn stopped after 30 tool iterations without a final "
+                        "answer. Try breaking the task into smaller steps.")
             response = self.pool.chat_with_retry(
                 messages, tools=self.tools_schema, provider_name=provider, model=model
             )
@@ -2034,7 +2044,18 @@ class Agent:
             for tr in self._pending_tool_results:
                 messages.append(tr)
 
+        # Same hard cap as run(): bounded LLM round-trips per turn.
+        max_tool_iterations = 30
+        iterations = 0
         while True:
+            iterations += 1
+            if iterations > max_tool_iterations:
+                self._pending_tool_results = []
+                yield {"type": "chunk", "content": (
+                    "Error: Turn stopped after 30 tool iterations without a final "
+                    "answer. Try breaking the task into smaller steps.")}
+                yield {"type": "done"}
+                return
             content_parts: list[str] = []
             tool_calls: list[dict] = []
             stream_error = None
