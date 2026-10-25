@@ -2057,6 +2057,14 @@ class Agent:
                 yield {"type": "done"}
                 return
 
+            if stream_error:
+                # Mid-stream drop with partial output: surface it instead of
+                # silently saving a truncated answer as a complete turn.
+                yield {"type": "error", "message": stream_error}
+                yield {"type": "chunk", "content": f"\n\n⚠ Error: {stream_error}"}
+                yield {"type": "done"}
+                return
+
             if not tool_calls:
                 content = "".join(content_parts)
                 self.history.add("assistant", content)

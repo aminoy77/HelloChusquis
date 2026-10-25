@@ -36,10 +36,13 @@ def device_flow(device_url: str, token_url: str, client_id: str, scope: str,
 
     Raises OAuthError on timeout, denial, or expiry.
     """
-    resp = httpx.post(device_url, data={"client_id": client_id, "scope": scope},
-                      timeout=15)
-    resp.raise_for_status()
-    dev = resp.json()
+    try:
+        resp = httpx.post(device_url, data={"client_id": client_id, "scope": scope},
+                          timeout=15)
+        resp.raise_for_status()
+        dev = resp.json()
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        raise OAuthError(f"Could not reach the login server: {e}") from e
     user_code = dev.get("user_code", "")
     verification_uri = dev.get("verification_uri", "")
     interval = int(dev.get("interval", poll_interval))
@@ -52,13 +55,16 @@ def device_flow(device_url: str, token_url: str, client_id: str, scope: str,
     interval = max(interval, 1)
     while time.time() < deadline:
         time.sleep(interval)
-        tok = httpx.post(token_url, data={
-            "client_id": client_id,
-            "device_code": dev["device_code"],
-            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-        }, timeout=15)
-        tok.raise_for_status()
-        payload = tok.json()
+        try:
+            tok = httpx.post(token_url, data={
+                "client_id": client_id,
+                "device_code": dev["device_code"],
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            }, timeout=15)
+            tok.raise_for_status()
+            payload = tok.json()
+        except (httpx.HTTPError, ValueError, KeyError) as e:
+            raise OAuthError(f"Lost connection to the login server: {e}") from e
         if "access_token" in payload:
             return payload
         error = payload.get("error")
@@ -98,14 +104,17 @@ def login_copilot(open_browser: Optional[Callable[[str], None]] = None) -> dict:
         scope="read:user",
         open_browser=open_browser or webbrowser.open,
     )
-    resp = httpx.get(
-        "https://api.github.com/copilot_internal/v2/token",
-        headers={"Authorization": f"token {gh['access_token']}",
-                 "User-Agent": "HelloChusquis"},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    data = resp.json()
+    try:
+        resp = httpx.get(
+            "https://api.github.com/copilot_internal/v2/token",
+            headers={"Authorization": f"token {gh['access_token']}",
+                     "User-Agent": "HelloChusquis"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        raise OAuthError(f"Copilot token exchange failed: {e}") from e
     if not data.get("token"):
         raise OAuthError("Copilot token exchange failed — is Copilot enabled on this account?")
     return {
@@ -140,3 +149,50 @@ OAUTH_PROVIDERS = {
     "GitHub Copilot": {"oauth_provider": "copilot", "login": login_copilot},
     "Qwen": {"oauth_provider": "qwen", "login": login_qwen},
 }
+
+
+def refresh_oauth(entry: dict) -> dict:
+    """Refresh an expired OAuth token using stored credentials.
+
+    entry: provider config dict with an "oauth" key. Returns the same shape
+    as the login flows: {access_token, refresh, expires_at}. Raises
+    OAuthError telling the user to re-login when refresh fails.
+    """
+    meta = entry.get("oauth") or {}
+    kind, secret = meta.get("provider"), meta.get("refresh")
+    if not secret:
+        raise OAuthError("No stored OAuth credentials — please re-login to this provider.")
+    if kind == "copilot":
+        try:
+            resp = httpx.get(
+                "https://api.github.com/copilot_internal/v2/token",
+                headers={"Authorization": f"token {secret}",
+                         "User-Agent": "HelloChusquis"},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except (httpx.HTTPError, ValueError, KeyError) as e:
+            raise OAuthError(f"Copilot token refresh failed: {e} — please re-login.") from e
+        if not data.get("token"):
+            raise OAuthError("Copilot token refresh failed — please re-login.")
+        return {"access_token": data["token"], "refresh": secret,
+                "expires_at": float(data.get("expires_at", time.time() + 1500))}
+    if kind == "qwen":
+        try:
+            resp = httpx.post(
+                "https://chat.qwen.ai/api/v1/oauth2/token",
+                data={"grant_type": "refresh_token", "client_id": "f0304373b74a44d2b584a3fb70ca9f56",
+                      "refresh_token": secret},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except (httpx.HTTPError, ValueError, KeyError) as e:
+            raise OAuthError(f"Qwen token refresh failed: {e} — please re-login.") from e
+        if not data.get("access_token"):
+            raise OAuthError("Qwen token refresh failed — please re-login.")
+        return {"access_token": data["access_token"],
+                "refresh": data.get("refresh_token", secret),
+                "expires_at": time.time() + float(data.get("expires_in", 3600))}
+    raise OAuthError(f"Unknown OAuth provider: {kind} — please re-login.")

@@ -898,6 +898,10 @@ def edit_config(section: str = None):
                 "model": model,
                 "priority": p.get("priority", i + 1),
             }
+            if p.get("oauth"):
+                # OAuth metadata must survive edits or the next re-login
+                # creates a duplicate provider entry.
+                providers[i]["oauth"] = p["oauth"]
         
         providers = [p for p in providers if p is not None]
         

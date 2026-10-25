@@ -10,6 +10,7 @@ from typing import List, Optional, Dict, Any
 import httpx
 import yaml
 
+from core import oauth as oauth_module
 from core.oauth import OAuthError
 
 from core.logger import get_logger
@@ -395,6 +396,10 @@ class ProviderPool:
                 self._handle_http_error(provider, e)
                 last_error = e
                 continue
+            except oauth_module.OAuthError as e:
+                provider.failed_calls += 1
+                last_error = e
+                continue
             except (httpx.TimeoutException, httpx.ConnectError) as e:
                 provider.failed_calls += 1
                 logger.debug("%s error for provider %s: %s", e.__class__.__name__, provider.name, e)
@@ -565,6 +570,10 @@ class ProviderPool:
         except OAuthError as e:
             logger.warning("OAuth refresh failed for %s: %s", provider.name, e)
             raise
+        except httpx.HTTPError as e:
+            # Network failure during refresh must fail over like any other
+            # provider error, not escape as a raw traceback.
+            raise OAuthError(f"OAuth refresh network error: {e}") from e
         provider.api_key = fresh["access_token"]
         provider.oauth["expires_at"] = fresh["expires_at"]
         if fresh.get("refresh"):
