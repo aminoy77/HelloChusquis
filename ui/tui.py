@@ -347,6 +347,14 @@ class CommandPalette(Widget):
 class CircularSpinner(Widget):
     """Small circular arc spinner shown next to the agent label while streaming."""
 
+    DEFAULT_CSS = """
+    CircularSpinner {
+        width: 3;
+        height: 1;
+        color: #5eb97e;
+    }
+    """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._frames = RichSpinner("arc", text="").frames
@@ -726,6 +734,9 @@ class HelloChusquisTUI(App):
             if is_complex(text):
                 self.call_from_thread(self._add_agent_msg, "Complex task — generating plan...")
                 from core.planner import generate_plan, execute_plan
+                # Spinner row stays up through plan generation + execution:
+                # this path has no streaming, so without it the UI looks dead.
+                self.call_from_thread(self._start_stream_ui)
                 steps = generate_plan(text, self.agent.pool)
                 if steps:
                     self.call_from_thread(self._add_plan, steps, text)
@@ -736,7 +747,8 @@ class HelloChusquisTUI(App):
                                  notify=lambda msg: self.call_from_thread(
                                      self._add_agent_msg, msg),
                                  quiet=True)
-                    return
+                self.call_from_thread(self._finish_stream_ui, "")
+                return
             # Streaming path: spinner → gray thinking box → live answer text.
             self.call_from_thread(self._start_stream_ui)
             full: list[str] = []
