@@ -2209,7 +2209,13 @@ class Agent:
                     logger.error("Stream tool error: %s — %s", tool_name, result.error)
                     self._handle_active_learning_trigger(tool_name, result)
 
-                print_tool_result(result.success, result.output)
+                # TUI consumes this; stdout print would corrupt the textual screen.
+                yield {
+                    "type": "tool_result",
+                    "tool": tool_name,
+                    "success": result.success,
+                    "output": result.output if result.success else result.error,
+                }
 
                 tool_msg = {
                     "role": "tool",

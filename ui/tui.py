@@ -1,7 +1,6 @@
-"""HelloChusquis TUI v2 — better than opencode."""
+"""HelloChusquis TUI v3 — widget-per-message, auto-scroll, live streaming."""
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import Optional
 
@@ -13,20 +12,14 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import (
     Collapsible,
-    Footer,
-    Label,
-    RichLog,
+    Input,
+    Markdown,
     Static,
     TextArea,
 )
 
-from rich.markup import escape
 from rich.spinner import Spinner as RichSpinner
 from rich.text import Text
-from rich.panel import Panel
-from rich.table import Table
-from rich.syntax import Syntax
-from rich.markdown import Markdown
 
 # ─── Palette ───
 AMBER = "#f5a623"
@@ -44,7 +37,6 @@ BORDER = "#1e1d1a"
 TUI_CSS = """
 Screen {
     background: #050504;
-    align-horizontal: center;
 }
 
 #top-bar {
@@ -58,13 +50,9 @@ Screen {
 #messages {
     height: 1fr;
     background: #050504;
-    padding: 0 1;
+    padding: 0 1 1 1;
     overflow-y: auto;
     scrollbar-size: 0 0;
-}
-
-#messages RichLog {
-    background: #050504;
 }
 
 #bottom {
@@ -219,6 +207,7 @@ class SideBar(Widget):
     _tools = reactive(0)
     _plan_task = reactive("")
     _plan_steps = reactive(tuple())
+    _plan_done = reactive(tuple())  # booleans per step
 
     def render(self) -> Text:
         t = Text()
@@ -241,17 +230,27 @@ class SideBar(Widget):
             t.append(" /plan <task>\n", style="dim")
         else:
             t.append(f" {self._plan_task[:28]}\n", style=f"bold {AMBER}")
-            for i, step in enumerate(self._plan_steps, 1):
-                t.append(f" {i}. {step[:30]}\n", style="dim")
+            for i, step in enumerate(self._plan_steps):
+                mark = "✓" if i < len(self._plan_done) and self._plan_done[i] else "·"
+                style = GREEN if mark == "✓" else "dim"
+                t.append(f" {mark} {i + 1}. {step[:28]}\n", style=style)
         return t
 
     def set_plan(self, task: str, steps: list[str]) -> None:
         self._plan_task = task or ""
         self._plan_steps = tuple(steps or [])
+        self._plan_done = tuple()
+
+    def mark_step(self, index: int) -> None:
+        done = list(self._plan_done)
+        while len(done) <= index:
+            done.append(False)
+        done[index] = True
+        self._plan_done = tuple(done)
 
 
 class CommandPalette(Widget):
-    """Command palette overlay like opencode."""
+    """Command palette overlay: real Input + filtered list."""
     CSS = """
     CommandPalette {
         layer: overlay;
@@ -270,7 +269,6 @@ class CommandPalette(Widget):
     """
     _visible = reactive(False)
     _selected = reactive(0)
-    _filter = reactive("")
     _commands = reactive(list[tuple[str, str, str]]())  # (id, title, desc)
 
     def __init__(self, **kwargs):
@@ -287,61 +285,70 @@ class CommandPalette(Widget):
         ]
         self._filtered = list(self._commands)
 
+    def compose(self) -> ComposeResult:
+        yield Input(placeholder="Type to filter commands...", id="palette-input")
+        yield Static(id="palette-list")
+
     def render(self) -> Text:
-        if not self._visible:
-            return Text()
+        return Text()
 
+    def _refresh_list(self) -> None:
+        lst = self.query_one("#palette-list", Static)
         t = Text()
-        t.append(" Commands\n", style=f"bold {AMBER}")
-        t.append(" ──────────────────────────────────\n", style="dim")
-
         for i, (cmd_id, title, desc) in enumerate(self._filtered):
             if i == self._selected:
                 t.append(f" ▸ {title}\n", style=f"bold {AMBER}")
                 t.append(f"   {desc}\n", style="dim")
             else:
                 t.append(f"   {title}\n", style="dim")
-
+        if not self._filtered:
+            t.append(" No matching commands.\n", style="dim")
         t.append("\n ", style="dim")
         t.append("↑↓ navigate", style="dim")
         t.append(" · ", style="dim")
         t.append("enter select", style="dim")
         t.append(" · ", style="dim")
         t.append("esc close", style="dim")
+        lst.update(t)
 
-        return t
+    def on_mount(self) -> None:
+        self._refresh_list()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        query = event.value.lower()
+        self._filtered = [
+            (cid, title, desc)
+            for cid, title, desc in self._commands
+            if query in title.lower() or query in desc.lower()
+        ]
+        self._selected = 0
+        self._refresh_list()
 
     def toggle(self):
         self._visible = not self._visible
         if self._visible:
             self._selected = 0
-            self._filter = ""
             self._filtered = list(self._commands)
+            self._refresh_list()
             self.add_class("visible")
+            self.query_one("#palette-input", Input).focus()
         else:
             self.remove_class("visible")
 
     def move_up(self):
         if self._selected > 0:
             self._selected -= 1
+            self._refresh_list()
 
     def move_down(self):
         if self._selected < len(self._filtered) - 1:
             self._selected += 1
+            self._refresh_list()
 
     def get_selected(self) -> Optional[str]:
         if self._visible and self._filtered:
             return self._filtered[self._selected][0]
         return None
-
-    def filter(self, query: str):
-        self._filter = query.lower()
-        self._filtered = [
-            (cid, title, desc)
-            for cid, title, desc in self._commands
-            if self._filter in title.lower() or self._filter in desc.lower()
-        ]
-        self._selected = 0
 
 
 class CircularSpinner(Widget):
@@ -368,7 +375,7 @@ class CircularSpinner(Widget):
 
 
 class MessageLog(VerticalScroll):
-    """Scrollable message area."""
+    """Scrollable message area — one widget per message, auto-scrolls."""
     CSS = """
     MessageLog {
         height: 1fr;
@@ -379,8 +386,9 @@ class MessageLog(VerticalScroll):
     }
     """
 
-    def compose(self) -> ComposeResult:
-        yield RichLog(id="log", markup=True, wrap=True, highlight=False)
+    def add(self, widget: Widget) -> None:
+        self.mount(widget)
+        self.scroll_end(animate=False)
 
 
 class ChatInput(TextArea):
@@ -429,7 +437,7 @@ class InputArea(Widget):
 
 
 class HelloChusquisTUI(App):
-    """Full-screen TUI app — better than opencode."""
+    """Full-screen TUI app."""
     CSS = TUI_CSS
     TITLE = "HelloChusquis"
 
@@ -499,80 +507,63 @@ class HelloChusquisTUI(App):
         except Exception:
             pass
 
-    def _add_user_msg(self, text: str):
-        log = self.query_one("#log", RichLog)
+    # ─── Message widgets ───
+    def _label(self, name: str, color: str) -> Text:
         t = Text()
-        t.append(" │ ", style=f"bold {AMBER}")
-        t.append("you\n", style=f"bold {AMBER}")
-        t.append(" │ ", style=f"bold {AMBER}")
-        t.append(text)
-        log.write(t)
+        t.append(" │ ", style=f"bold {color}")
+        t.append(f"{name}\n", style=f"bold {color}")
+        return t
+
+    def _add_user_msg(self, text: str):
+        self.query_one("#messages", MessageLog).add(
+            Static(self._label("you", AMBER) + Text(text)))
         self._msg_count += 1
         self._update_topbar()
 
     def _add_agent_msg(self, text: str):
-        log = self.query_one("#log", RichLog)
-        t = Text()
-        t.append(" │ ", style=f"bold {GREEN}")
-        t.append("agent\n", style=f"bold {GREEN}")
-        t.append(" │ ", style=f"bold {GREEN}")
-        t.append(text)
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(
+            Static(self._label("agent", GREEN) + Text(text)))
         self._msg_count += 1
         self._update_topbar()
 
     def _add_agent_md(self, text: str):
-        """Render agent response as markdown."""
-        log = self.query_one("#log", RichLog)
-        # Write the label
-        t = Text()
-        t.append(" │ ", style=f"bold {GREEN}")
-        t.append("agent\n", style=f"bold {GREEN}")
-        log.write(t)
-        # Write markdown
-        md = Markdown(text)
-        log.write(md)
+        log = self.query_one("#messages", MessageLog)
+        log.add(Static(self._label("agent", GREEN)))
+        log.add(Markdown(text))
         self._msg_count += 1
         self._update_topbar()
 
     def _add_tool_msg(self, tool: str, params: str):
-        log = self.query_one("#log", RichLog)
         t = Text()
         t.append(" │ ", style="dim")
         t.append(f"{tool} ", style=f"bold {BLUE}")
         t.append(params, style="dim")
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(Static(t))
         self._tool_count += 1
         self._update_topbar()
 
-    def _add_tool_result(self, success: bool, output: str):
-        log = self.query_one("#log", RichLog)
+    def _add_tool_result(self, tool: str, success: bool, output: str):
         t = Text()
         t.append(" │ ", style="dim")
-        icon = "✓" if success else "✗"
-        t.append(f" {icon} ", style=GREEN if success else RED)
+        t.append(f" {'✓' if success else '✗'} ", style=GREEN if success else RED)
         truncated = output.strip()[:400]
         if len(output.strip()) > 400:
             truncated += "..."
         t.append(truncated, style="dim")
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(Static(t))
 
     def _add_system_msg(self, text: str):
-        log = self.query_one("#log", RichLog)
-        t = Text()
-        t.append(f" {text}", style="dim")
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(
+            Static(Text(f" {text}", style="dim")))
 
     def _add_error(self, text: str):
-        log = self.query_one("#log", RichLog)
         t = Text()
         t.append(" │ ", style=f"bold {RED}")
         t.append("error ", style=f"bold {RED}")
         t.append(text, style=RED)
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(Static(t))
 
     def _add_help(self):
-        log = self.query_one("#log", RichLog)
         t = Text()
         t.append(" Commands\n", style=f"bold {AMBER}")
         t.append(" │ /help      Show this help\n", style="dim")
@@ -582,21 +573,19 @@ class HelloChusquisTUI(App):
         t.append(" │ remember … Save a fact: remember my editor is vim\n", style="dim")
         t.append(" │ forget …   Drop memories matching a key\n", style="dim")
         t.append(" │ exit       Exit\n", style="dim")
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(Static(t))
 
     def _add_status(self):
         if not self.agent:
             self._add_error("No agent configured.")
             return
-        log = self.query_one("#log", RichLog)
         t = Text()
         t.append(" Provider Status\n", style=f"bold {AMBER}")
         try:
             statuses = self.agent.pool.status()
             for p in statuses:
                 color = GREEN if p["status"] == "ready" else RED
-                icon = "●"
-                t.append(f" │ {icon} ", style=color)
+                t.append(" │ ● ", style=color)
                 t.append(f"{p['name']}", style="bold")
                 t.append(f" — {p['model']}", style="dim")
                 if p.get("avg_ms"):
@@ -604,39 +593,44 @@ class HelloChusquisTUI(App):
                 t.append("\n")
         except Exception as e:
             t.append(f" │ Error: {e}\n", style=RED)
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(Static(t))
 
     def _add_plan(self, steps: list[str], task: str):
         try:
             self.query_one("#sidebar", SideBar).set_plan(task, steps)
         except Exception:
             pass
-        log = self.query_one("#log", RichLog)
         t = Text()
         t.append(" │ plan ", style=f"bold {AMBER}")
         t.append(f"{task} → sidebar ({len(steps)} steps)", style="dim")
-        log.write(t)
+        self.query_one("#messages", MessageLog).add(Static(t))
         self._msg_count += 1
         self._update_topbar()
+
+    def _mark_plan_step(self, index: int):
+        try:
+            self.query_one("#sidebar", SideBar).mark_step(index)
+        except Exception:
+            pass
 
     # ─── Command Palette ───
     def action_command_palette(self):
         palette = self.query_one("#command-palette")
         palette.toggle()
         self._palette_open = palette._visible
-        if self._palette_open:
-            self.query_one("#input").disabled = True
-        else:
-            self.query_one("#input").disabled = False
+        if not self._palette_open:
             self.query_one("#input").focus()
 
-    def _execute_palette_command(self, cmd_id: str):
-        """Execute a command from the palette."""
+    def _close_palette(self):
         palette = self.query_one("#command-palette")
-        palette.toggle()
+        if palette._visible:
+            palette.toggle()
         self._palette_open = False
         self.query_one("#input").disabled = False
         self.query_one("#input").focus()
+
+    def _execute_palette_command(self, cmd_id: str):
+        self._close_palette()
 
         if cmd_id == "status":
             self._add_status()
@@ -715,10 +709,7 @@ class HelloChusquisTUI(App):
                     self._execute_palette_command(cmd_id)
                 event.stop()
             elif event.key == "escape":
-                palette.toggle()
-                self._palette_open = False
-                self.query_one("#input").disabled = False
-                self.query_one("#input").focus()
+                self._close_palette()
                 event.stop()
 
     # ─── Agent Execution ───
@@ -732,22 +723,7 @@ class HelloChusquisTUI(App):
         try:
             from main import is_complex
             if is_complex(text):
-                self.call_from_thread(self._add_agent_msg, "Complex task — generating plan...")
-                from core.planner import generate_plan, execute_plan
-                # Spinner row stays up through plan generation + execution:
-                # this path has no streaming, so without it the UI looks dead.
-                self.call_from_thread(self._start_stream_ui)
-                steps = generate_plan(text, self.agent.pool)
-                if steps:
-                    self.call_from_thread(self._add_plan, steps, text)
-                    # notify → visible in TUI (execute_plan's stdout is
-                    # invisible here); quiet skips stdout prints that would
-                    # corrupt the textual screen.
-                    execute_plan(steps, self.agent,
-                                 notify=lambda msg: self.call_from_thread(
-                                     self._add_agent_msg, msg),
-                                 quiet=True)
-                self.call_from_thread(self._finish_stream_ui, "")
+                self._run_plan_task(text)
                 return
             # Streaming path: spinner → gray thinking box → live answer text.
             self.call_from_thread(self._start_stream_ui)
@@ -773,6 +749,11 @@ class HelloChusquisTUI(App):
                     flush(force=True)
                     self.call_from_thread(self._add_tool_msg,
                                           ev.get("tool", "?"), str(ev.get("args", {})))
+                elif etype == "tool_result":
+                    self.call_from_thread(self._add_tool_result,
+                                          ev.get("tool", "?"),
+                                          ev.get("success", False),
+                                          ev.get("output", ""))
             flush(force=True)
             self.call_from_thread(self._finish_stream_ui, "".join(full))
         except RuntimeError as e:
@@ -784,56 +765,37 @@ class HelloChusquisTUI(App):
         finally:
             self.call_from_thread(self._set_processing, False)
 
-    # ─── Streaming UI helpers (run on UI thread via call_from_thread) ───
-    def _start_stream_ui(self):
-        log = self.query_one("#log", RichLog)
-        area = log.parent  # MessageLog (VerticalScroll) — widgets mount beside RichLog
-        label = Text()
-        label.append(" │ ", style=f"bold {GREEN}")
-        label.append("agent ", style=f"bold {GREEN}")
-        area.mount(Horizontal(
-            Static(label, id="stream-label"),
-            CircularSpinner(id="stream-spinner"),
-            id="stream-row"))
+    def _run_plan_task(self, task: str):
+        """Shared plan path: generate + execute with visible progress."""
+        self.call_from_thread(self._add_agent_msg, "Complex task — generating plan...")
+        from core.planner import generate_plan, execute_plan
+        # Spinner row stays up through plan generation + execution:
+        # this path has no streaming, so without it the UI looks dead.
+        self.call_from_thread(self._start_stream_ui)
+        steps = generate_plan(task, self.agent.pool)
+        if steps:
+            self.call_from_thread(self._add_plan, steps, task)
+            step_idx = [0]
 
-    def _stream_set_thinking(self, text: str):
-        area = self.query_one("#log", RichLog).parent
-        box = area.query("#think-box")
-        if not box:
-            # Mount carries the text: querying the child in the same tick
-            # races AwaitMount (child not in DOM yet).
-            area.mount(Collapsible(
-                Static(Text(text, style="grey50"), id="think-text"),
-                title="💭 Thinking", collapsed=True, id="think-box"))
-            return
-        area.query("#think-text").first().update(Text(text, style="grey50"))
+            def notify(msg: str):
+                # "Step N/M:" lines mark step completion in the sidebar.
+                if msg.startswith("Step "):
+                    try:
+                        n = int(msg.split()[1].split("/")[0])
+                        if n > 1:
+                            self.call_from_thread(self._mark_plan_step, n - 2)
+                    except Exception:
+                        pass
+                self.call_from_thread(self._add_agent_msg, msg)
 
-    def _stream_set_text(self, text: str):
-        area = self.query_one("#log", RichLog).parent
-        for spinner in area.query("#stream-spinner"):
-            spinner.remove()
-        body = area.query("#stream-text")
-        if not body:
-            area.mount(Static(text, id="stream-text"))
-            return
-        body.first().update(text)
-
-    def _finish_stream_ui(self, full_text: str):
-        area = self.query_one("#log", RichLog).parent
-        for wid in ("#stream-row", "#stream-text", "#think-box"):
-            for w in area.query(wid):
-                w.remove()
-        if full_text.strip():
-            self._add_agent_md(full_text)
-
-    def _stream_cleanup(self):
-        try:
-            area = self.query_one("#log", RichLog).parent
-            for wid in ("#stream-row", "#stream-text", "#think-box"):
-                for w in area.query(wid):
-                    w.remove()
-        except Exception:
-            pass
+            # notify → visible in TUI (execute_plan's stdout is invisible
+            # here); quiet skips stdout prints that would corrupt the screen.
+            execute_plan(steps, self.agent, notify=notify, quiet=True)
+            if steps:
+                self.call_from_thread(self._mark_plan_step, len(steps) - 1)
+        else:
+            self.call_from_thread(self._add_error, "Could not generate plan.")
+        self.call_from_thread(self._finish_stream_ui, "")
 
     @work(thread=True)
     def _run_plan(self, task: str):
@@ -843,17 +805,63 @@ class HelloChusquisTUI(App):
 
         self.call_from_thread(self._set_processing, True)
         try:
-            from core.planner import generate_plan, execute_plan
-            steps = generate_plan(task, self.agent.pool)
-            if steps:
-                self.call_from_thread(self._add_plan, steps, task)
-                execute_plan(steps, self.agent)
-            else:
-                self.call_from_thread(self._add_error, "Could not generate plan.")
+            self._run_plan_task(task)
         except Exception as e:
+            self.call_from_thread(self._stream_cleanup)
             self.call_from_thread(self._add_error, f"Plan error: {e}")
         finally:
             self.call_from_thread(self._set_processing, False)
+
+    # ─── Streaming UI helpers (run on UI thread via call_from_thread) ───
+    def _start_stream_ui(self):
+        label = Text()
+        label.append(" │ ", style=f"bold {GREEN}")
+        label.append("agent ", style=f"bold {GREEN}")
+        self.query_one("#messages", MessageLog).add(Horizontal(
+            Static(label, id="stream-label"),
+            CircularSpinner(id="stream-spinner"),
+            id="stream-row"))
+
+    def _stream_set_thinking(self, text: str):
+        log = self.query_one("#messages", MessageLog)
+        box = log.query("#think-box")
+        if not box:
+            # Mount carries the text: querying the child in the same tick
+            # races AwaitMount (child not in DOM yet).
+            log.add(Collapsible(
+                Static(Text(text, style="grey50"), id="think-text"),
+                title="💭 Thinking", collapsed=True, id="think-box"))
+            return
+        log.query("#think-text").first().update(Text(text, style="grey50"))
+        log.scroll_end(animate=False)
+
+    def _stream_set_text(self, text: str):
+        log = self.query_one("#messages", MessageLog)
+        for spinner in log.query("#stream-spinner"):
+            spinner.remove()
+        body = log.query("#stream-text")
+        if not body:
+            log.add(Static(text, id="stream-text"))
+            return
+        body.first().update(text)
+        log.scroll_end(animate=False)
+
+    def _finish_stream_ui(self, full_text: str):
+        log = self.query_one("#messages", MessageLog)
+        for wid in ("#stream-row", "#stream-text", "#think-box"):
+            for w in log.query(wid):
+                w.remove()
+        if full_text.strip():
+            self._add_agent_md(full_text)
+
+    def _stream_cleanup(self):
+        try:
+            log = self.query_one("#messages", MessageLog)
+            for wid in ("#stream-row", "#stream-text", "#think-box"):
+                for w in log.query(wid):
+                    w.remove()
+        except Exception:
+            pass
 
     def _set_processing(self, processing: bool):
         self._processing = processing
@@ -868,8 +876,9 @@ class HelloChusquisTUI(App):
         self._update_topbar()
 
     def action_clear(self):
-        log = self.query_one("#log", RichLog)
-        log.clear()
+        log = self.query_one("#messages", MessageLog)
+        for w in list(log.children):
+            w.remove()
         self._msg_count = 0
         self._tool_count = 0
         self._update_topbar()
