@@ -11,4 +11,4 @@ class CatalogFreezeTest(unittest.TestCase):
 
     def test_tool_count_frozen(self):
         files = [f for f in glob.glob("tools/*.py") if not f.endswith("__init__.py")]
-        self.assertEqual(len(files), 133)
+        self.assertEqual(len(files), 134)

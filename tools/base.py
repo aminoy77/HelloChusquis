@@ -1,12 +1,17 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
 class ToolResult:
     success: bool
-    output: str
+    output: str = ""
     error: str = ""
+    # Structured payload from auto-generated API tools (petstore et al);
+    # agent loop reads .output, so run() should also fill output when it
+    # matters — data is for callers that want the raw response.
+    data: Any = None
 
 
 class BaseTool(ABC):
