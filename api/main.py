@@ -450,6 +450,15 @@ def _sse_generator(agent, message: str, release_turn: bool = False,
             if event.get("type") == "done":
                 terminal_emitted = True
             yield f"data: {json.dumps(event)}\n\n"
+    except RuntimeError as exc:
+        logger.exception("SSE stream error")
+        if not terminal_emitted:
+            if "All providers failed" in str(exc):
+                msg = ("All providers failed. Check API keys (hellochusquis config) "
+                       "or start a local model (Ollama).")
+            else:
+                msg = "Stream failed. Check server logs."
+            yield f'data: {json.dumps({"type": "error", "content": msg})}\n\n'
     except Exception:
         logger.exception("SSE stream error")
         if not terminal_emitted:

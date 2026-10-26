@@ -82,6 +82,16 @@ Use the built-in shell, code, file, browser, and web-search tools from one conve
 
 The `tools/` package contains integrations for services such as GitHub, Slack, Discord, Docker, Notion, AWS, Gmail, Jira, PostgreSQL, MongoDB, Stripe, Twilio, Supabase, Vercel, HubSpot, Shopify, Mailchimp, Airtable, Linear, Kubernetes, and Terraform. Provider-specific SDKs are kept optional where possible.
 
+### Autonomous Self-Improvement ⭐ NEW
+
+HelloChusquis evolves on its own—without human intervention. Two breakthrough capabilities make it smarter with every interaction:
+
+**1. Active Learning:** Automatically learns from failures and saves rules to avoid repeating mistakes. When it hits a security block, tool loop, or hallucination, the agent analyzes the failure in the background and injects learnings into future prompts.
+
+**2. Tool Synthesis:** Generates production-ready API integrations on-demand. When you ask it to use a service it doesn't have, it researches the API, generates working Python code with proper auth and error handling, and saves it as an immediately-usable tool—no restart needed.
+
+See [AUTONOMOUS_FEATURES.md](AUTONOMOUS_FEATURES.md) for full details and examples.
+
 ### Keep context useful
 
 Conversation history is bounded and can be compressed. SQLite-backed memory stores sessions, summaries, learnings, and search indexes locally so the agent can retain useful context without turning every prompt into a transcript dump.

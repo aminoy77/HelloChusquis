@@ -177,3 +177,28 @@ def analyze_and_learn(messages: list[dict], pool, max_retries: int = 3) -> None:
 
     except Exception:
         pass  # Learning extraction must not disrupt the primary agent turn.
+
+def save_active_learning(candidate: dict) -> None:
+    """
+    Saves a structured learning candidate from the Analyst.
+    Candidate shape: {'type': 'AVOID'|'PROCEDURE', 'trigger': str, 'instruction': str}
+    """
+    with _LEARNING_LOCK:
+        learnings = load_learnings()
+        
+        if candidate.get('type') == 'AVOID':
+            entry = f"Avoid {candidate.get('trigger')}: {candidate.get('instruction')}"
+            errors = learnings.setdefault("errors", [])
+            if entry not in errors:
+                errors.append(entry)
+            learnings["errors"] = errors[-20:]
+        
+        elif candidate.get('type') == 'PROCEDURE':
+            entry = f"When {candidate.get('trigger')}, {candidate.get('instruction')}"
+            improvements = learnings.setdefault("system_prompt_improvements", [])
+            if entry not in improvements:
+                improvements.append(entry)
+            learnings["system_prompt_improvements"] = improvements[-20:]
+            
+        save_learnings(learnings)
+

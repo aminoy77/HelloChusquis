@@ -498,9 +498,16 @@ def chat_stream(req: MessageRequest, http_request: Request):
             for ev in agent.stream_run(user_input, provider=req.provider, model=req.model):
                 payload = json.dumps(ev, ensure_ascii=False)
                 yield f"data: {payload}\n\n"
-        except RuntimeError:
-            logger.warning("Stream execution failed")
-            yield f"data: {json.dumps({'type': 'error', 'content': 'Stream failed. Check server logs.'})}\n\n"
+        except RuntimeError as exc:
+            # Provider outage (bad key, local model down): say so plainly.
+            # No secrets here — just the actionable next step.
+            logger.warning("Stream execution failed: %s", exc)
+            if "All providers failed" in str(exc):
+                msg = ("All providers failed. Check API keys (hellochusquis config) "
+                       "or start a local model (Ollama).")
+            else:
+                msg = "Stream failed. Check server logs."
+            yield f"data: {json.dumps({'type': 'error', 'content': msg})}\n\n"
         except Exception:
             logger.exception("Stream failed")
             yield f"data: {json.dumps({'type': 'error', 'content': 'Stream failed. Check server logs.'})}\n\n"
