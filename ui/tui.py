@@ -450,6 +450,7 @@ class HelloChusquisTUI(App):
 
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", show=True),
+        Binding("ctrl+x", "cancel", "Cancel", show=True),
         Binding("ctrl+l", "clear", "Clear", show=True),
         Binding("ctrl+s", "status", "Status", show=True),
         Binding("ctrl+p", "command_palette", "Commands", show=True),
@@ -465,6 +466,7 @@ class HelloChusquisTUI(App):
         self._tool_count = 0
         self._processing = False
         self._palette_open = False
+        self._cancel_requested = False
 
     def compose(self) -> ComposeResult:
         yield TopBar(id="top-bar")
@@ -673,6 +675,10 @@ class HelloChusquisTUI(App):
         if not text:
             return
 
+        if self._processing:
+            self._add_system_msg("Busy — wait or press Ctrl+X to cancel.")
+            return
+
         self._add_user_msg(text)
 
         if text in ("exit", "quit"):
@@ -742,6 +748,10 @@ class HelloChusquisTUI(App):
                     self.call_from_thread(self._stream_set_text, "".join(full))
 
             for ev in self.agent.stream_run(text):
+                if self._cancel_requested:
+                    self._cancel_requested = False
+                    self.call_from_thread(self._add_system_msg, "Cancelled.")
+                    break
                 etype = ev.get("type")
                 if etype == "reasoning":
                     think.append(ev["content"])
@@ -890,6 +900,11 @@ class HelloChusquisTUI(App):
 
     def action_status(self):
         self._add_status()
+
+    def action_cancel(self):
+        """Request cancellation of the current stream (checked between events)."""
+        if self._processing:
+            self._cancel_requested = True
 
     def action_quit(self):
         self._cleanup()
