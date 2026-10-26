@@ -33,8 +33,9 @@ class TestIsComplex(unittest.TestCase):
         self.assertFalse(is_complex("hello"))
 
     def test_analyze_keyword(self):
-        """'analyze' in FORCE_PLAN_KEYWORDS → True."""
-        self.assertTrue(is_complex("analyze this code please"))
+        """'analyze' is a plan hint — needs >5 words to trigger."""
+        self.assertFalse(is_complex("analyze this code please"))
+        self.assertTrue(is_complex("analyze this code please and write a detailed report"))
 
     def test_boundary_five_words(self):
         """Exactly 5 words, no keywords → False."""

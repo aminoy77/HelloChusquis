@@ -26,11 +26,17 @@ def _cleanup(agent, retention_days):
     console.print("[dim]Goodbye.[/dim]")
 
 
-# Keywords that always mean complex tasks — no LLM call needed
+# Explicit multi-step deliverables — always plan, regardless of length
 FORCE_PLAN_KEYWORDS = [
-    "informe", "report", "analiza", "analyze", "investiga", "research",
     "crea un pdf", "crea un word", "crea un documento", "haz un estudio",
-    "busca y", "busca las", "compara", "compare", "cada", "every",
+    "informe", "report",
+]
+
+# Plan hints — only trigger plan when the request is long enough to
+# plausibly need multiple steps (avoids "analiza el error" → full plan)
+PLAN_HINT_KEYWORDS = [
+    "analiza", "analyze", "investiga", "research",
+    "compara", "compare",
     "paso a paso", "step by step", "lista de", "plan de"
 ]
 
@@ -52,10 +58,15 @@ def is_complex(text: str) -> bool:
         if kw in lower:
             return True
 
-    if len(text.split()) <= 5:
+    words = text.split()
+    if len(words) <= 5:
         return False
 
-    if len(text.split()) > 10:
+    for kw in PLAN_HINT_KEYWORDS:
+        if kw in lower:
+            return True
+
+    if len(words) > 10:
         return True
 
     return False
