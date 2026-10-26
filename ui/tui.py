@@ -324,6 +324,13 @@ class CommandPalette(Widget):
         self._selected = 0
         self._refresh_list()
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        # Input consumes Enter; app.on_key never sees it.
+        app = self.app
+        cmd_id = self.get_selected()
+        if cmd_id:
+            app._execute_palette_command(cmd_id)
+
     def toggle(self):
         self._visible = not self._visible
         if self._visible:
@@ -703,14 +710,11 @@ class HelloChusquisTUI(App):
             elif event.key == "down":
                 palette.move_down()
                 event.stop()
-            elif event.key == "enter":
-                cmd_id = palette.get_selected()
-                if cmd_id:
-                    self._execute_palette_command(cmd_id)
-                event.stop()
             elif event.key == "escape":
                 self._close_palette()
                 event.stop()
+            # enter: handled by CommandPalette.on_input_submitted (Input
+            # consumes it; handling here too would execute the command twice).
 
     # ─── Agent Execution ───
     @work(thread=True)
@@ -882,6 +886,7 @@ class HelloChusquisTUI(App):
         self._msg_count = 0
         self._tool_count = 0
         self._update_topbar()
+        self._add_system_msg("History cleared.")
 
     def action_status(self):
         self._add_status()
