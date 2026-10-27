@@ -5,15 +5,24 @@ import signal
 
 console = Console()
 
-# Graceful shutdown flag — checked by main loop
-_shutdown_requested = False
-
 
 def _request_shutdown(signum, frame):
-    """Handle SIGTERM/SIGHUP — request graceful shutdown."""
-    global _shutdown_requested
-    _shutdown_requested = True
-    console.print(f"\n[yellow]Signal {signum} received — shutting down gracefully...[/yellow]")
+    """Handle SIGTERM/SIGHUP — exit for real.
+
+    A flag nobody checks left zombie processes spinning in the background
+    every time the terminal window was closed (SIGHUP). Ask the Textual app
+    to exit gracefully; if there is no app or it doesn't answer, exit hard.
+    """
+    console.print(f"\n[yellow]Signal {signum} received — shutting down...[/yellow]")
+    try:
+        from textual._context import active_app
+        app = active_app.get(None)
+        if app is not None:
+            app.exit(return_code=0)
+            return
+    except Exception:
+        pass
+    os._exit(0)
 
 
 def _cleanup(agent, retention_days):
