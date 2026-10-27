@@ -458,7 +458,11 @@ class HelloChusquisTUI(App):
     ]
 
     def __init__(self, agent=None, config=None):
-        super().__init__()
+        # Light driver: avoids Textual's 100% CPU spin when stdin is EOF/piped
+        # (launchers, `open`, background jobs). Passed directly because
+        # TEXTUAL_DRIVER env is read at textual.constants import time.
+        from ui.light_driver import LightInputDriver
+        super().__init__(driver_class=LightInputDriver)
         self.agent = agent
         self.config = config
         self._t0 = time.time()
