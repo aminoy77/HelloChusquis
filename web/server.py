@@ -53,7 +53,13 @@ def _load_or_create_api_key() -> str:
         if existing:
             return existing
     token = secrets.token_urlsafe(32)
-    _AUTH_KEY_FILE.write_text(token + "\n")
+    try:
+        # O_EXCL create: api/ and web/ may boot together; if the other
+        # process won the race, use ITS key so both agree.
+        with open(_AUTH_KEY_FILE, "x") as f:
+            f.write(token + "\n")
+    except FileExistsError:
+        return _AUTH_KEY_FILE.read_text().strip()
     os.chmod(_AUTH_KEY_FILE, 0o600)
     return token
 
@@ -125,16 +131,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        # Explicit local-development override only.
+        # Explicit local-development override only — enforced in start():
+        # binding beyond loopback re-enables auth (see start()).
         if not AUTH_ENABLED:
             return await call_next(request)
 
-        # Local loopback = trusted owner (hellochusquis web local). Remote keeps Bearer auth.
-        # ponytail: IP allowlist, upgrade to token-only when binding 0.0.0.0 publicly
-        client = request.client.host if request.client else ""
-        if client in ("127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost"):
-            request.state.principal = legacy_owner()
-            return await call_next(request)
+        # Every caller authenticates with a Bearer token, local included.
+        # (The old loopback=owner shortcut let the agent itself — or any
+        # local process, or a reverse proxy — reach owner with no token.)
 
         # Skip auth for static/login endpoints
         if request.method == "GET" and path == "/":
@@ -724,6 +728,15 @@ def update_provider(data: ProviderUpdate, http_request: Request):
 
 
 def start(host: str = "127.0.0.1", port: int = 8000):
+    global AUTH_ENABLED
+    loopback_only = host in ("127.0.0.1", "localhost", "::1")
+    if not AUTH_ENABLED and not loopback_only:
+        # HELLOCHUSQUIS_AUTH=0 is a local-dev convenience; binding beyond
+        # loopback must never serve an unauthenticated agent.
+        AUTH_ENABLED = True
+        logger.warning(
+            "HELLOCHUSQUIS_AUTH=0 ignored: host '%s' is not loopback — auth re-enabled", host
+        )
     if AUTH_ENABLED:
         logger.info("Auth enabled — API key configured (%s)", _auth_hint())
     else:

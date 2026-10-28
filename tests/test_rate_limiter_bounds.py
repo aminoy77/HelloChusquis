@@ -23,7 +23,9 @@ class TestRateLimiterBounds(unittest.TestCase):
         self.limiters.append(limiter)
         return limiter
 
-    def test_unique_clients_are_bounded_by_recent_activity(self):
+    def test_active_clients_are_not_evicted_mid_window(self):
+        # Audit #20: evicting an active client resets a victim's counter
+        # mid-brute-force. Capacity pressure may only drop idle clients.
         limiter = self._limiter(requests_per_minute=2, max_clients=2)
 
         self.assertTrue(limiter.is_allowed("first"))
@@ -32,10 +34,18 @@ class TestRateLimiterBounds(unittest.TestCase):
         self.now += 1
         self.assertTrue(limiter.is_allowed("third"))
 
-        self.assertEqual(limiter.client_count, 2)
-        self.assertNotIn("first", limiter._hits)
+        self.assertEqual(limiter.client_count, 3)
+        self.assertIn("first", limiter._hits)
         self.assertIn("second", limiter._hits)
         self.assertIn("third", limiter._hits)
+
+    def test_idle_clients_are_evicted_under_capacity_pressure(self):
+        limiter = self._limiter(requests_per_minute=2, max_clients=2)
+        self.assertTrue(limiter.is_allowed("stale"))
+        self.now += 61  # stale's window fully elapsed
+        self.assertTrue(limiter.is_allowed("a"))
+        self.assertTrue(limiter.is_allowed("b"))
+        self.assertNotIn("stale", limiter._hits)
 
     def test_read_only_queries_do_not_allocate_new_client_state(self):
         limiter = self._limiter(requests_per_minute=2, max_clients=2)

@@ -33,6 +33,16 @@ class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
             except ValueError:
                 return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
 
-        # For chunked/streamed bodies, let it through and rely on downstream
-        # Starlette/FastAPI to enforce limits during parsing.
+        # Chunked/streamed bodies have no Content-Length: cap them ourselves.
+        # Starlette enforces no default max, so an unauthenticated chunked
+        # POST could otherwise stream unbounded bytes into memory. Reading
+        # with a cap and caching the body keeps downstream parsing unchanged.
+        if clen is None:
+            body = bytearray()
+            async for chunk in request.stream():
+                body += chunk
+                if len(body) > self.max_body_bytes:
+                    return JSONResponse(status_code=413, content={"detail": "Request body too large"})
+            request._body = bytes(body)  # _CachedRequest serves this downstream
+
         return await call_next(request)

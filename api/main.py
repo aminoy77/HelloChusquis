@@ -47,7 +47,13 @@ def _load_or_generate_api_key() -> str:
     if API_KEY_FILE.exists():
         return API_KEY_FILE.read_text().strip()
     key = secrets.token_urlsafe(32)
-    API_KEY_FILE.write_text(key + "\n")
+    try:
+        # O_EXCL create: api/ and web/ may boot together; if the other
+        # process won the race, use ITS key so both agree.
+        with open(API_KEY_FILE, "x") as f:
+            f.write(key + "\n")
+    except FileExistsError:
+        return API_KEY_FILE.read_text().strip()
     os.chmod(API_KEY_FILE, 0o600)
     return key
 

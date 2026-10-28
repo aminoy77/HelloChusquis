@@ -19,6 +19,7 @@ import logging
 import os
 import pty
 import re
+import shlex
 import signal
 import subprocess
 import sys
@@ -388,9 +389,12 @@ class SafeBinPolicy:
                 suggestions=["Consider using a safer alternative", "Review command intent"],
             )
 
-        # Phase 3: profile-based checks
+        # Phase 3: profile-based checks — scan EVERY token, not just the
+        # first: `echo hi && curl ...` must not slip past a no-network profile.
+        tokens = set(shlex.split(command))
+
         if not self.profile.get("allow_shell", True):
-            if any(sh in first_token for sh in ["sh", "bash", "zsh"]):
+            if any(tok in ("sh", "bash", "zsh") for tok in tokens):
                 return ExecReviewResult(
                     decision=ExecDecision.DENY,
                     risk=ExecRisk.MEDIUM,
@@ -399,7 +403,7 @@ class SafeBinPolicy:
 
         if not self.profile.get("allow_network", True):
             net_bins = {"curl", "wget", "ssh", "scp", "rsync", "nc", "ncat", "telnet"}
-            if first_token in net_bins:
+            if tokens & net_bins:
                 return ExecReviewResult(
                     decision=ExecDecision.DENY,
                     risk=ExecRisk.MEDIUM,
@@ -408,7 +412,7 @@ class SafeBinPolicy:
 
         if not self.profile.get("allow_privileged", True):
             priv_bins = {"sudo", "su", "mount", "umount", "fdisk", "parted"}
-            if first_token in priv_bins:
+            if tokens & priv_bins:
                 return ExecReviewResult(
                     decision=ExecDecision.DENY,
                     risk=ExecRisk.HIGH,
@@ -1094,7 +1098,9 @@ class ShellTool(BaseTool):
 
         # 2. Safe-bin policy (catastrophic → DENY, medium → ASK/DENY)
         policy_result = self.safe_policy.evaluate(command)
-        if policy_result.decision == ExecDecision.DENY:
+        if policy_result.decision in (ExecDecision.DENY, ExecDecision.ASK):
+            # ASK means "needs a human decision" — with no inline approval
+            # flow in this path, blocking is the only safe outcome.
             return ToolResult(
                 success=False,
                 output="",

@@ -64,11 +64,14 @@ class RateLimiter:
     def _ensure_capacity_locked(self) -> None:
         if len(self._hits) < self._max_clients:
             return
-        oldest_client = min(
-            self._hits,
-            key=lambda client: self._hits[client][-1] if self._hits[client] else float("-inf"),
-        )
-        self._hits.pop(oldest_client, None)
+        # Evict only clients whose window has fully elapsed — evicting an
+        # active client would reset an attacker's victim mid-brute-force.
+        # (Single-process limiter: with --workers N each worker keeps its
+        # own counters, so effective limits multiply by N. Documented.)
+        cutoff = self._clock() - self._window
+        idle = [c for c, ts in self._hits.items() if not ts or ts[-1] <= cutoff]
+        for client in idle:
+            self._hits.pop(client, None)
 
     def is_allowed(self, client: str) -> bool:
         """Record a request and return whether it fits the client's window."""
