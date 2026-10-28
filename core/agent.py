@@ -1845,25 +1845,15 @@ class Agent:
             self.session_manager.append_message(self._session_id, "assistant", reply)
             return reply
 
+        # A failed previous turn can leave tool messages whose assistant
+        # tool_calls partner was never persisted — sending them first makes
+        # strict providers 400 every following turn. Start each turn clean.
+        self._pending_tool_results = []
+
         messages = self._build_messages()
         recall = memory.recall_context(user_input)
         if recall:
             messages.insert(1, {"role": "system", "content": recall})
-
-        # Preserve tool results across turns - don't optimize history during execution
-        # This ensures tool responses from previous steps remain available
-        self._pending_tool_results = getattr(self, '_pending_tool_results', [])
-        
-        # Add any pending tool results to the messages
-        for tr in self._pending_tool_results:
-            messages.append(tr)
-        
-        # Only optimize if we have too many messages (not during multi-step execution)
-        if self.history.get_token_count(messages) > 8000:
-            messages = self.history.optimize_context(max_tokens=4000)
-            # Re-add tool results after optimization
-            for tr in self._pending_tool_results:
-                messages.append(tr)
 
         # Hard cap on LLM round-trips per turn: a model that keeps emitting
         # tool calls (or tools that fail instantly) must not spin forever —
@@ -1897,7 +1887,7 @@ class Agent:
                             key=key, value=value, category="fact", importance=6
                         )
                 except Exception:
-                    pass
+                    logger.exception("Memory autolog failed")
                 # Clear pending tool results on successful completion
                 self._pending_tool_results = []
                 return content
@@ -1920,6 +1910,10 @@ class Agent:
                     logger.debug("Unknown tool requested: %s", tool_name)
                     result = self._unknown_tool_result(tool_name)
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+                    self.loop_detector.record_outcome(
+                        self._loop_session_state, tool_name, tool_args,
+                        error=result.error,
+                    )
                     tool_msg = {
                         "role": "tool",
                         "tool_call_id": tc["id"],
@@ -1979,13 +1973,21 @@ class Agent:
                                             hook_fn(tool_name, tool_args, result)
                                         except Exception:
                                             pass
-
-                    # --- Record tool call for loop detector ---
-                    self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
-
                 if not result.success:
                     logger.error("Tool error: %s — %s", tool_name, result.error)
                     self._handle_active_learning_trigger(tool_name, result)
+
+                # --- Loop detector: record call AND its outcome for every
+                # path (denied/blocked calls included, so a model cannot
+                # spam a denied tool; outcomes let polling tools progress).
+                self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+                self.loop_detector.record_outcome(
+                    self._loop_session_state,
+                    tool_name,
+                    tool_args,
+                    result=result.output if result.success else None,
+                    error=None if result.success else result.error,
+                )
                 print_tool_result(result.success, result.output)
                 if callable(tool_result_callback):
                     try:
@@ -2030,19 +2032,16 @@ class Agent:
             yield {"type": "done"}
             return
 
+        # Same rationale as run(): start each turn clean (audit #4).
+        self._pending_tool_results = []
+
         messages = self._build_messages()
         recall = memory.recall_context(user_input)
         if recall:
             messages.insert(1, {"role": "system", "content": recall})
 
-        self._pending_tool_results = getattr(self, '_pending_tool_results', [])
-        for tr in self._pending_tool_results:
-            messages.append(tr)
-
         if self.history.get_token_count(messages) > 8000:
             messages = self.history.optimize_context(max_tokens=4000)
-            for tr in self._pending_tool_results:
-                messages.append(tr)
 
         # Same hard cap as run(): bounded LLM round-trips per turn.
         max_tool_iterations = 30
@@ -2098,7 +2097,7 @@ class Agent:
                             key=key, value=value, category="fact", importance=6
                         )
                 except Exception:
-                    pass
+                    logger.exception("Memory autolog failed")
                 yield {"type": "done"}
                 return
 
@@ -2130,6 +2129,10 @@ class Agent:
                     logger.debug("Unknown tool requested: %s", tool_name)
                     result = self._unknown_tool_result(tool_name)
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+                    self.loop_detector.record_outcome(
+                        self._loop_session_state, tool_name, tool_args,
+                        error=result.error,
+                    )
                     tool_msg = {
                         "role": "tool",
                         "tool_call_id": tc["id"],
@@ -2203,8 +2206,15 @@ class Agent:
                                             hook_fn(tool_name, tool_args, result)
                                         except Exception:
                                             pass
-                    # --- Record tool call for loop detector ---
+                    # --- Record tool call AND outcome for loop detector ---
                     self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+                    self.loop_detector.record_outcome(
+                        self._loop_session_state,
+                        tool_name,
+                        tool_args,
+                        result=result.output if result.success else None,
+                        error=None if result.success else result.error,
+                    )
                 if not result.success:
                     logger.error("Stream tool error: %s — %s", tool_name, result.error)
                     self._handle_active_learning_trigger(tool_name, result)
@@ -2237,7 +2247,7 @@ class Agent:
             try:
                 self.session_manager.close_session(self._session_id)
             except Exception:
-                pass
+                logger.exception("Session close failed")
             return
 
         summary_prompt = (
@@ -2262,7 +2272,7 @@ class Agent:
                 summary = choices[0].get("message", {}).get("content", "")
                 memory.save_summary(summary)
         except Exception:
-            pass
+            logger.exception("Summary save failed")
         finally:
             learn_thread.join(timeout=90)
 
@@ -2270,4 +2280,4 @@ class Agent:
         try:
             self.session_manager.close_session(self._session_id)
         except Exception:
-            pass
+            logger.exception("Session close failed")

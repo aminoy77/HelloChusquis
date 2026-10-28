@@ -59,7 +59,8 @@ def test_stream_run_yields_tool_result_events(monkeypatch):
     agent.security_auditor = type("A", (), {"audit_tool_call": lambda self, n, a: []})()
     agent.loop_detector = type("L", (), {
         "detect": lambda self, s, n, a: type("R", (), {"stuck": False})(),
-        "record_call": lambda self, s, n, a: None})()
+        "record_call": lambda self, s, n, a: None,
+        "record_outcome": lambda self, s, n, a, **k: None})()
     agent.plugins = []
     agent._loop_session_state = {}
     agent._authorization_denied_result = lambda *a, **k: None

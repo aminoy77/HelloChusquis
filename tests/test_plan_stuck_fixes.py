@@ -36,7 +36,9 @@ def test_run_tool_loop_capped(monkeypatch):
     agent.tool_policy = SimpleNamespace(is_tool_allowed=lambda t: False)
     agent.security_auditor = SimpleNamespace(audit_tool_call=lambda *a: [])
     agent.loop_detector = SimpleNamespace(detect=lambda *a: SimpleNamespace(stuck=False),
-                                          record_call=lambda *a: None)
+                                          record_call=lambda *a: None,
+                                          record_outcome=lambda *a, **k: None)
+    agent._loop_session_state = None
     agent._authorization_denied_result = lambda *a: None
     agent._approval_required_result = lambda *a: None
     agent._safe_dispatch = lambda *a, **k: SimpleNamespace(success=False, output="", error="denied")
