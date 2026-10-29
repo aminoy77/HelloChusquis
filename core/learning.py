@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import fcntl
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 import tempfile
@@ -16,6 +18,9 @@ console = Console()
 LEARNING_DIR = Path.home() / ".hellochusquis"
 LEARNING_FILE = LEARNING_DIR / "learnings.json"
 _LEARNING_LOCK = threading.RLock()
+# Cross-process advisory lock: api/ and web/ both write learnings.json;
+# the in-process RLock cannot stop a last-writer-wins race between them.
+_LEARNING_FILE_LOCK = LEARNING_DIR / ".learnings.lock"
 
 
 def _empty_learnings() -> dict:
@@ -66,17 +71,29 @@ def init() -> None:
             os.chmod(LEARNING_FILE, 0o600)
 
 
+@contextmanager
+def _file_lock():
+    """Acquire the cross-process advisory lock."""
+    _secure_storage_dir()
+    handle = open(_LEARNING_FILE_LOCK, "w")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(handle, fcntl.LOCK_UN)
+        handle.close()
+
+
 def load_learnings() -> dict:
     """Load learnings from the protected local JSON store."""
-    with _LEARNING_LOCK:
+    with _LEARNING_LOCK, _file_lock():
         init()
         return json.loads(LEARNING_FILE.read_text(encoding="utf-8"))
 
 
 def save_learnings(data: dict) -> None:
     """Atomically replace local learnings after a complete serialization."""
-    with _LEARNING_LOCK:
-        _secure_storage_dir()
+    with _LEARNING_LOCK, _file_lock():
         data["updated_at"] = datetime.now().isoformat()
         _write_atomically(data)
 

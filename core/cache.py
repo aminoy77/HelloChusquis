@@ -12,6 +12,10 @@ from typing import Optional
 class Cache:
     """Intelligent response cache for similar queries."""
 
+    # Audit #19: never-read entries lived forever; cap the directory and
+    # evict oldest-by-mtime when it grows past this.
+    MAX_FILES = 500
+
     def __init__(self, cache_dir: str | None = None, ttl: int = 3600):
         self.cache_dir = Path(cache_dir or str(Path.home() / ".hellochusquis" / "cache"))
         self.cache_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -51,6 +55,16 @@ class Cache:
         finally:
             if os.path.exists(temporary_path):
                 os.unlink(temporary_path)
+        self._evict_overflow()
+
+    def _evict_overflow(self) -> None:
+        """Keep the cache directory bounded: drop oldest files past MAX_FILES."""
+        try:
+            files = sorted(self.cache_dir.glob("*.json"), key=lambda f: f.stat().st_mtime)
+            for stale in files[: max(0, len(files) - self.MAX_FILES)]:
+                stale.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def clear(self) -> int:
         """Clear all cache files owned by this cache directory."""

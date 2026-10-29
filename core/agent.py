@@ -2243,6 +2243,12 @@ class Agent:
             return
 
         memory.save_session(messages)
+        # Apply retention on shutdown so turn entries don't grow unbounded
+        # (audit #7: memory.db hit 200 MB with no TTL).
+        try:
+            memory.prune_sessions_older_than(retention_days)
+        except Exception:
+            logger.exception("Memory retention prune failed")
         if len(messages) < 2:
             try:
                 self.session_manager.close_session(self._session_id)

@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS memory_entries (
 
 CREATE INDEX IF NOT EXISTS idx_me_category ON memory_entries(category);
 CREATE INDEX IF NOT EXISTS idx_me_created  ON memory_entries(created_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_ts ON sessions(timestamp);
 
 CREATE TABLE IF NOT EXISTS embeddings (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1465,14 +1466,24 @@ def kb_ingested_count() -> int:
 
 
 def prune_sessions_older_than(days: int) -> int:
-    """Delete sessions older than N days. Returns rows removed."""
+    """Delete sessions older than N days. Returns rows removed.
+
+    Also prunes per-turn memory entries (category='turn') past the same
+    cutoff — without this the entries table grows unbounded (audit #7:
+    memory.db reached 200 MB).
+    """
     from datetime import datetime, timedelta
     try:
         cutoff = (datetime.now() - timedelta(days=max(0, int(days)))).isoformat()
-        cur = _get_store().conn.execute(
+        store = _get_store()
+        cur = store.conn.execute(
             "DELETE FROM sessions WHERE timestamp < ?", (cutoff,))
-        _get_store().conn.commit()
-        return cur.rowcount or 0
+        removed = cur.rowcount or 0
+        store.conn.execute(
+            "DELETE FROM memory_entries WHERE category = 'turn' AND created_at < ?",
+            (cutoff,))
+        store.conn.commit()
+        return removed
     except Exception:
         return 0
 
