@@ -65,6 +65,7 @@ def _trim_foreground(text: str, session_id: str = "") -> str:
     return text[:half] + hint + text[-half:]
 DEFAULT_QUEUE_CAPACITY = 100
 DEFAULT_MAX_CONCURRENT = 4
+MAX_TRACKED_SESSIONS = 64
 DEFAULT_KILL_GRACE_MS = 2000
 POLL_INTERVAL_MS = 10  # tight quantum: short commands dominate; long ones don't care
 DEFAULT_LOG_TAIL_LINES = 200
@@ -653,65 +654,72 @@ class ProcessManager:
         session.truncated = True
 
     def poll_output(self, session_id: str, timeout_s: float = 0.1) -> Optional[str]:
+        # Hold the lock across read+append: two concurrent pollers would
+        # otherwise both consume the same fd chunk or interleave appends
+        # (audit #16). Reads are bounded (select timeout / 64 KiB), so the
+        # critical section stays short.
         with self._lock:
+            return self._poll_output_locked(session_id, timeout_s)
+
+    def _poll_output_locked(self, session_id: str, timeout_s: float) -> Optional[str]:
             session = self._sessions.get(session_id)
-        if not session or not session.process:
-            return None
+            if not session or not session.process:
+                return None
 
-        new_output = ""
+            new_output = ""
 
-        if session.pty_master is not None:
-            try:
-                data = os.read(session.pty_master, 65536)
-                if data:
-                    text = data.decode("utf-8", errors="replace")
-                    new_output += text
-                    self._append_output(session, "stdout_buffer", text)
-            except OSError:
-                pass
-        else:
-            proc = session.process
-            if proc.stdout and hasattr(proc.stdout, "fileno"):
+            if session.pty_master is not None:
                 try:
-                    import select
-                    fd = proc.stdout.fileno()
-                    if select.select([fd], [], [], timeout_s)[0]:
-                        chunk = os.read(fd, 65536)
-                        if chunk:
-                            text = chunk.decode("utf-8", errors="replace")
-                            new_output += text
-                            session.stdout_buffer += text
-                except (BlockingIOError, ValueError, OSError):
+                    data = os.read(session.pty_master, 65536)
+                    if data:
+                        text = data.decode("utf-8", errors="replace")
+                        new_output += text
+                        self._append_output(session, "stdout_buffer", text)
+                except OSError:
                     pass
+            else:
+                proc = session.process
+                if proc.stdout and hasattr(proc.stdout, "fileno"):
+                    try:
+                        import select
+                        fd = proc.stdout.fileno()
+                        if select.select([fd], [], [], timeout_s)[0]:
+                            chunk = os.read(fd, 65536)
+                            if chunk:
+                                text = chunk.decode("utf-8", errors="replace")
+                                new_output += text
+                                self._append_output(session, "stdout_buffer", text)
+                    except (BlockingIOError, ValueError, OSError):
+                        pass
 
-            if proc.stderr and hasattr(proc.stderr, "fileno"):
-                try:
-                    import select
-                    fd = proc.stderr.fileno()
-                    if select.select([fd], [], [], 0)[0]:
-                        chunk = os.read(fd, 65536)
-                        if chunk:
-                            text = chunk.decode("utf-8", errors="replace")
-                            new_output += text
-                            self._append_output(session, "stderr_buffer", text)
-                except (BlockingIOError, ValueError, OSError):
-                    pass
+                if proc.stderr and hasattr(proc.stderr, "fileno"):
+                    try:
+                        import select
+                        fd = proc.stderr.fileno()
+                        if select.select([fd], [], [], 0)[0]:
+                            chunk = os.read(fd, 65536)
+                            if chunk:
+                                text = chunk.decode("utf-8", errors="replace")
+                                new_output += text
+                                self._append_output(session, "stderr_buffer", text)
+                    except (BlockingIOError, ValueError, OSError):
+                        pass
 
-        if new_output:
-            self._append_output(session, "aggregated", new_output)
+            if new_output:
+                self._append_output(session, "aggregated", new_output)
 
-        if session.process.poll() is not None and not session.ended_at:
-            session.ended_at = time.time()
-            session.exit_code = session.process.returncode
-            session.status = (
-                ProcessStatus.COMPLETED
-                if session.exit_code == 0
-                else ProcessStatus.FAILED
-            )
-            self._drain_pipes(session)
-            self._finalize(session_id)
+            if session.process.poll() is not None and not session.ended_at:
+                session.ended_at = time.time()
+                session.exit_code = session.process.returncode
+                session.status = (
+                    ProcessStatus.COMPLETED
+                    if session.exit_code == 0
+                    else ProcessStatus.FAILED
+                )
+                self._drain_pipes(session)
+                self._finalize(session_id)
 
-        return new_output if new_output else None
+            return new_output if new_output else None
 
     def _drain_pipes(self, session: ProcessSession) -> None:
         """Read pipe leftovers to EOF after exit; the wait loop may stop early."""
@@ -943,7 +951,18 @@ class CommandQueue:
             lane_state.queue.sort(key=lambda e: (-e.priority, e.enqueued_at))
 
         self._drain_lane(lane)
-        event.wait(timeout=timeout)
+        timed_out = not event.wait(timeout=timeout)
+
+        if timed_out and "value" not in result_container and "error" not in result_container:
+            # Timeout while still queued (audit #18): dequeue the orphaned
+            # entry so it doesn't consume a concurrency slot later. If it
+            # already started running, let it finish — the wrapper's
+            # finally still releases the slot.
+            with self._lock:
+                lane_state = self._get_lane(lane)
+                if entry in lane_state.queue:
+                    lane_state.queue.remove(entry)
+            raise TimeoutError(f"Task {entry.id} timed out before starting")
 
         if "error" in result_container:
             raise result_container["error"]
@@ -1113,6 +1132,22 @@ class ShellTool(BaseTool):
     # Backward-compatible interface
     # ------------------------------------------------------------------
 
+    def _bound_sessions(self) -> None:
+        """Cap the session index (audit #17): drop oldest finished entries.
+
+        ProcessManager already bounds _finished; this mirror dict grew
+        without limit when a model kept backgrounding commands.
+        """
+        if len(self._sessions) <= MAX_TRACKED_SESSIONS:
+            return
+        with self.process_manager._lock:
+            finished_ids = [
+                sid for sid, s in self._sessions.items() if s.ended_at
+            ]
+            finished_ids.sort(key=lambda sid: self._sessions[sid].ended_at or 0)
+            for sid in finished_ids[: len(self._sessions) - MAX_TRACKED_SESSIONS]:
+                self._sessions.pop(sid, None)
+
     def run(self, action: str = "list", **kwargs) -> ToolResult:
         """
         Backward-compatible entry point.
@@ -1194,6 +1229,7 @@ class ShellTool(BaseTool):
             return ToolResult(success=False, output="", error=f"Failed to start process: {e}")
 
         self._sessions[session.id] = session
+        self._bound_sessions()
 
         if background or (not self.allow_background and False):
             session.backgrounded = True
@@ -1266,6 +1302,7 @@ class ShellTool(BaseTool):
             )
             session.backgrounded = True
             self._sessions[session.id] = session
+            self._bound_sessions()
             return ToolResult(
                 success=True,
                 output=(
