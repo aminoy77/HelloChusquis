@@ -537,6 +537,46 @@ class SessionManager:
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
             conn.commit()
 
+    def replace_history(self, session_id: str, messages: list[dict[str, Any]]) -> None:
+        """Swap the full message list atomically (audit #3).
+
+        Compaction used to clear-then-reappend with a commit per message; a
+        crash in between truncated the conversation permanently. One
+        transaction makes the swap all-or-nothing.
+        """
+        now = time.time()
+        with self._lock:
+            conn = self._ensure_connection()
+            try:
+                conn.execute("BEGIN")
+                conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+                for msg in messages:
+                    tokens = estimate_tokens(msg.get("content", ""))
+                    priority = msg.get("priority") or PRIORITY_WEIGHTS.get(
+                        msg.get("role", "user"), 1.0)
+                    conn.execute(
+                        """INSERT INTO messages
+                           (session_id, role, content, timestamp, token_count, priority, metadata)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            session_id,
+                            msg.get("role", "user"),
+                            msg.get("content", ""),
+                            now,
+                            tokens,
+                            priority,
+                            json.dumps(msg.get("metadata") or {}),
+                        ),
+                    )
+                conn.execute(
+                    "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
+                    (now, session_id),
+                )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+
     # -- audit log -----------------------------------------------------------
 
     def log_audit_event(
@@ -1531,16 +1571,19 @@ class AutoCompactingSession:
             summarize_fn=self.summarize_fn,
         )
 
-        # Persist: clear old, write compacted
-        self._mgr.clear_history(self.session_id)
-        for msg in result.messages:
-            self._mgr.append_message(
-                self.session_id,
-                msg.get("role", "user"),
-                msg.get("content", ""),
-                metadata=msg.get("metadata"),
-                priority=msg.get("priority"),
-            )
+        # Persist: atomic swap (audit #3) — crash-safe, single commit
+        self._mgr.replace_history(
+            self.session_id,
+            [
+                {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                    "metadata": msg.get("metadata"),
+                    "priority": msg.get("priority"),
+                }
+                for msg in result.messages
+            ],
+        )
 
         self._mgr.log_compaction(
             self.session_id,
