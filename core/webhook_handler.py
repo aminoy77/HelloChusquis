@@ -14,6 +14,7 @@ class WebhookEvent:
     payload: dict
     received_at: str
     processed: bool = False
+    error: str | None = None
 
 
 class WebhookHandler:

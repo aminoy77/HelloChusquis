@@ -211,7 +211,9 @@ def cache_clear() -> int:
 
 def _cache_key(subdef: SubAgentDef, task: str, model, provider) -> str:
     tools = "ALL" if subdef.tools is None else ",".join(sorted(subdef.tools))
-    return json.dumps([subdef.name, task, model, provider, tools])
+    # Instructions in the key: same name + different instructions must not
+    # return the old definition's cached answer.
+    return json.dumps([subdef.name, subdef.instructions, task, model, provider, tools])
 
 
 def _cache_get(key: str):

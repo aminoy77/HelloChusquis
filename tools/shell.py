@@ -388,7 +388,16 @@ class SafeBinPolicy:
 
         # Phase 3: profile-based checks — scan EVERY token, not just the
         # first: `echo hi && curl ...` must not slip past a no-network profile.
-        tokens = set(shlex.split(command))
+        try:
+            tokens = set(shlex.split(command))
+        except ValueError:
+            # Unbalanced quotes are common LLM output; deny cleanly instead
+            # of crashing the gate.
+            return ExecReviewResult(
+                decision=ExecDecision.DENY,
+                rationale="Command has unbalanced quotes and cannot be parsed safely",
+                suggestions=["Fix quoting and retry"],
+            )
 
         if not self.profile.get("allow_shell", True):
             if any(tok in ("sh", "bash", "zsh") for tok in tokens):
@@ -1376,7 +1385,7 @@ class ShellTool(BaseTool):
 
         lines = session.aggregated.split("\n")
         total = len(lines)
-        sliced = lines[offset:offset + limit] if limit else lines[offset:]
+        sliced = lines[-limit:] if (offset == 0 and limit) else lines[offset:offset + limit]
         text = "\n".join(sliced) or "(no output yet)"
         if offset == 0 and limit == DEFAULT_LOG_TAIL_LINES and total > limit:
             text += f"\n\n[showing last {limit} of {total} lines; pass offset/limit to page]"

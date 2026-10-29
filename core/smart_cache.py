@@ -51,7 +51,7 @@ class SmartCache:
             self._evict_lru()
 
         now = time.time()
-        expires_at = now + (ttl if ttl is not None else self.default_ttl) if ttl is not None else None
+        expires_at = now + (ttl if ttl is not None else self.default_ttl)
         self._cache[key] = CacheEntry(
             key=key,
             value=value,

@@ -71,7 +71,7 @@ def redact_sensitive_data(value: Any) -> Any:
     return value
 
 
-_MUTATING_FILE_ACTIONS = frozenset({"write", "delete", "create_dir"})
+_MUTATING_FILE_ACTIONS = frozenset({"write", "delete", "create_dir", "move", "append"})
 _MUTATING_BROWSER_ACTIONS = frozenset({
     "submit_form",
     "upload_file",

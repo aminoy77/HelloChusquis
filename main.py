@@ -1,6 +1,7 @@
 from core.setup import ensure_config
 from core.agent import Agent
 from rich.console import Console
+import os
 import signal
 
 console = Console()

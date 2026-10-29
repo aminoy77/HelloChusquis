@@ -2019,7 +2019,8 @@ class Agent:
                 print_tool_result(result.success, result.output)
                 if callable(tool_result_callback):
                     try:
-                        tool_result_callback(tool_name, tool_args, result)
+                        # Redact: HTTP callers log these args verbatim.
+                        tool_result_callback(tool_name, redact_sensitive_data(tool_args), result)
                     except Exception as exc:
                         logger.warning("Tool result callback failed: %s", exc)
 
@@ -2069,7 +2070,9 @@ class Agent:
             messages.insert(1, {"role": "system", "content": recall})
 
         if self.history.get_token_count(messages) > 8000:
-            messages = self.history.optimize_context(max_tokens=4000)
+            # Keep messages[0] (system prompt): optimize_context rebuilds
+            # from history.messages, which never contains it.
+            messages = [messages[0]] + self.history.optimize_context(max_tokens=4000)
 
         # Same hard cap as run(): bounded LLM round-trips per turn.
         max_tool_iterations = 30
