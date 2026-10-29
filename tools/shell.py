@@ -560,6 +560,14 @@ class ProcessManager:
         self._cleanup_thread = threading.Thread(target=_cleanup_loop, daemon=True)
         self._cleanup_thread.start()
 
+    # Audit #3: these vars make bash/python/perl source or execute attacker
+    # scripts before the command runs — the safety gate only scans the
+    # command string, so they must never pass through from LLM args.
+    _SCRIPT_INJECTION_ENV_KEYS = frozenset({
+        "BASH_ENV", "ENV", "PYTHONSTARTUP", "PROMPT_COMMAND",
+        "CDPATH", "TEXINPUTS", "PERL5OPT", "ZDOTDIR",
+    })
+
     def create_session(
         self,
         command: str,
@@ -572,6 +580,10 @@ class ProcessManager:
         effective_cwd = cwd or os.getcwd()
         effective_env = os.environ.copy()
         if env:
+            for key in list(env):
+                if key in self._SCRIPT_INJECTION_ENV_KEYS or key.startswith("BASH_FUNC_"):
+                    logger.warning("Dropped script-injection env var: %s", key)
+                    env = {k: v for k, v in env.items() if k != key}
             effective_env.update(env)
 
         session = ProcessSession(

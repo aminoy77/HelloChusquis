@@ -1475,6 +1475,30 @@ class Agent:
             f"Unknown tool: {tool_name}. I can create this tool for you! "
             "Run `hellochusquis build` to create it with AI."))
 
+    def _gated_dispatch(self, name: str, args: dict) -> ToolResult:
+        """Dispatch with the same policy/audit/approval gates as run().
+
+        Subagents previously called _dispatch_tool directly, bypassing every
+        gate (audit #1): a nested call could mutate without approval or role
+        authorization. Loop detection stays in the parent turn loop.
+        """
+        if not self.tool_policy.is_tool_allowed(name):
+            logger.warning("Tool denied by policy (nested): %s", name)
+            return ToolResult(success=False, output="",
+                              error=f"Tool '{name}' denied by policy")
+        findings = self.security_auditor.audit_tool_call(name, args)
+        critical = [f for f in findings if f.severity == Severity.CRITICAL]
+        if critical:
+            msg = "; ".join(f.title for f in critical)
+            logger.warning("Security audit blocked nested %s: %s", name, msg)
+            return ToolResult(success=False, output="",
+                              error=f"Security audit: {msg}")
+        approval = (self._authorization_denied_result(name, args)
+                    or self._approval_required_result(name, args))
+        if approval is not None:
+            return approval
+        return self._safe_dispatch(name, args)
+
     def _dispatch_tool(
         self,
         name: str,

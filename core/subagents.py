@@ -613,7 +613,7 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
                 return ToolResult(success=False, output="", error=f"Unknown subagent '{name}'. Use action=list.")
             if not task:
                 return ToolResult(success=False, output="", error="task is required")
-            r = run_one(agent.pool, agent.tools_schema, agent._dispatch_tool, subdef, task,
+            r = run_one(agent.pool, agent.tools_schema, agent._gated_dispatch, subdef, task,
                         max_steps=args.get("max_steps"), max_tokens=args.get("max_tokens"),
                         timeout_s=args.get("timeout_s"), model=args.get("model"),
                         provider=args.get("provider"),
@@ -627,7 +627,7 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
             if not isinstance(jobs, list) or not jobs:
                 return ToolResult(success=False, output="", error="jobs (non-empty list) is required")
             t0 = time.perf_counter()
-            results = fanout(agent.pool, agent.tools_schema, agent._dispatch_tool,
+            results = fanout(agent.pool, agent.tools_schema, agent._gated_dispatch,
                              None, jobs,
                              max_concurrent=args.get("max_concurrent") or DEFAULT_MAX_CONCURRENT,
                              fail_fast=bool(args.get("fail_fast", False)),
@@ -643,7 +643,7 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
             jobs = args.get("jobs") or []
             if not isinstance(jobs, list) or not jobs:
                 return ToolResult(success=False, output="", error="jobs (non-empty list) is required")
-            results = chain(agent.pool, agent.tools_schema, agent._dispatch_tool,
+            results = chain(agent.pool, agent.tools_schema, agent._gated_dispatch,
                             jobs, repo=os.getcwd())
             out = "\n\n".join(f"[{r.name}] {r.output}" for r in results)
             ok = all(r.ok for r in results)
@@ -656,7 +656,7 @@ def handle_subagent_tool(agent, args: dict) -> ToolResult:
             task = str(args.get("task", "")).strip()
             if not task:
                 return ToolResult(success=False, output="", error="task is required")
-            r = run_one(agent.pool, agent.tools_schema, agent._dispatch_tool, subdef, task,
+            r = run_one(agent.pool, agent.tools_schema, agent._gated_dispatch, subdef, task,
                         max_steps=args.get("max_steps"), max_tokens=args.get("max_tokens"),
                         timeout_s=args.get("timeout_s"), model=args.get("model"),
                         provider=args.get("provider"),

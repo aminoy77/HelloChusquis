@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -23,7 +24,7 @@ def synthesize_basic_tool(service_name: str, description: str) -> bool:
     Synthesize a basic REST API tool for a service.
     Returns True if successful, False otherwise.
     """
-    file_name = service_name.lower().replace(" ", "_").replace("-", "_")
+    file_name = re.sub(r"[^a-z0-9_]", "_", service_name.lower().strip("/"))
     tool_file = TOOLS_DIR / f"{file_name}.py"
 
     # Don't overwrite existing tools
@@ -183,6 +184,20 @@ def synthesize_from_openapi(spec_source: str, service_name: str = None) -> bool:
     
     # Get operations
     operations = parser.get_operations()
+    # Audit #7: spec text is attacker-controlled. Sanitize every string
+    # that gets embedded in generated code — newlines/control chars in a
+    # summary or description can break out of comments/docstrings and
+    # inject code into the generated tool.
+    def _clean(text, limit=200):
+        return re.sub(r"[\x00-\x1f\x7f`\\]", " ", str(text or ""))[:limit]
+
+    for op in operations:
+        op['operation_id'] = re.sub(r"[^A-Za-z0-9_]", "_", str(op.get('operation_id', '')))[:80]
+        op['path'] = _clean(op.get('path', ''), 300)
+        if op.get('summary'):
+            op['summary'] = _clean(op['summary'])
+        if op.get('description'):
+            op['description'] = _clean(op['description'])
     console.print(f"[dim]Found {len(operations)} operations[/dim]")
     
     # Get suggested actions
@@ -190,7 +205,9 @@ def synthesize_from_openapi(spec_source: str, service_name: str = None) -> bool:
     console.print(f"[dim]Suggested actions: {', '.join(suggested_actions)}[/dim]")
     
     # Generate the tool code
-    file_name = service_name.lower().replace(" ", "_").replace("-", "_")
+    # Audit #7: file_name comes from the spec title — strip everything
+    # outside [a-z0-9_] so "../x" can't write outside tools/.
+    file_name = re.sub(r"[^a-z0-9_]", "_", service_name.lower().strip("/"))
     tool_file = TOOLS_DIR / f"{file_name}.py"
     
     if tool_file.exists():

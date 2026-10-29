@@ -427,9 +427,23 @@ class PersistentBrowser:
         return {'success': success}
 
     async def _handle_upload_file(self, **kwargs) -> dict:
+        file_path = kwargs.get('file_path', '')
+        # Audit #4: an LLM-chosen path must not exfiltrate arbitrary local
+        # files (e.g. ~/.ssh keys) through the open page. Allowlist: the
+        # workspace dir and the current working directory.
+        import os
+        from pathlib import Path
+        resolved = Path(file_path).expanduser().resolve()
+        allowed_roots = [
+            Path.home() / ".hellochusquis" / "workspace",
+            Path(os.getcwd()).resolve(),
+        ]
+        if not any(resolved.is_relative_to(root) for root in allowed_roots):
+            return {'success': False,
+                    'error': 'upload_file path outside workspace/cwd blocked'}
         success = await self._agent.upload_file(
             kwargs.get('selector', ''),
-            kwargs.get('file_path', ''),
+            str(resolved),
         )
         return {'success': success}
 
@@ -446,6 +460,15 @@ class PersistentBrowser:
 
     async def _handle_get_cookies(self, **kwargs) -> dict:
         cookies = await self._agent.get_cookies()
+        # Audit #4: cookie values are session tokens — return names only
+        # unless the caller explicitly asks for values.
+        if not kwargs.get('include_values'):
+            cookies = [
+                {k: ('***' if k in ('value', 'expires', 'httpOnly', 'sameSite')
+                     else v) for k, v in c.items()}
+                if isinstance(c, dict) else '***'
+                for c in (cookies or [])
+            ]
         return {'success': True, 'cookies': cookies}
 
     async def _handle_clear_cookies(self, **kwargs) -> dict:
@@ -461,7 +484,22 @@ class PersistentBrowser:
         return {'success': success}
 
     async def _handle_open_new_tab(self, **kwargs) -> dict:
-        success = await self._agent.open_new_tab(kwargs.get('url'))
+        url = kwargs.get('url')
+        # Audit #4: same SSRF/scheme validation as _handle_navigate — a new
+        # tab is just another navigation.
+        if not isinstance(url, str) or not url.strip():
+            return {'success': False, 'error': 'URL required'}
+        url = url.strip()
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        try:
+            parsed = urlsplit(url)
+            if parsed.username is not None or parsed.password is not None:
+                raise ValueError("Navigation URL must not include credentials")
+            url = validate_url_safety(url)
+        except (SsrFBlockedError, ValueError):
+            return {'success': False, 'error': 'Unsafe navigation URL blocked'}
+        success = await self._agent.open_new_tab(url)
         return {'success': success}
 
     async def _handle_close_current_tab(self, **kwargs) -> dict:
