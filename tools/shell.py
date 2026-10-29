@@ -321,10 +321,6 @@ class SafeBinPolicy:
             for pattern, desc in DANGEROUS_PATTERNS
         ]
 
-    def is_safe_binary(self, bin_name: str) -> bool:
-        base = os.path.basename(bin_name)
-        return base in self.safe_bins
-
     def check_dangerous_patterns(self, command: str) -> List[Tuple[str, str]]:
         violations = []
         seen = set()

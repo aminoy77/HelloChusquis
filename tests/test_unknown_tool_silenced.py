@@ -17,6 +17,9 @@ class _FakeLoop:
     def record_call(self, *args):
         pass
 
+    def record_outcome(self, *args, **kwargs):
+        pass
+
 
 def _agent(pool):
     agent = Agent.__new__(Agent)

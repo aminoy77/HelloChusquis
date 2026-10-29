@@ -758,6 +758,11 @@ class CronJob:
             elapsed = now_s - self.state.last_run_at_s
             if elapsed < self.pacing_min_interval_s:
                 return False
+        # Honor the persisted next_run_at_s (audit #5): the scheduler
+        # writes it at 1541 but should_run ignored it, so a job whose
+        # next run is in the future could still fire.
+        if self.state.next_run_at_s is not None and now_s < self.state.next_run_at_s:
+            return False
         # Check schedule
         return self.schedule.next_run_after(now_s) is not None
 
