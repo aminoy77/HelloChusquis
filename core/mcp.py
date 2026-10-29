@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -214,6 +215,9 @@ class StdioTransport(MCPTransport):
                 stderr=subprocess.PIPE,
                 env=process_env,
                 cwd=self.cwd,
+                # Own process group: terminate()/kill() must reach the node
+                # grandchild under npx, not just the npx wrapper (audit #9).
+                start_new_session=True,
             ),
         )
         self._connected = True
@@ -276,11 +280,18 @@ class StdioTransport(MCPTransport):
                 pass
         if self._process:
             try:
-                self._process.terminate()
+                # Kill the whole process group (npx spawns node children).
+                try:
+                    os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
+                except (ProcessLookupError, PermissionError):
+                    self._process.terminate()
                 try:
                     self._process.wait(timeout=MCP_STDIO_STOP_TIMEOUT_SECONDS)
                 except subprocess.TimeoutExpired:
-                    self._process.kill()
+                    try:
+                        os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
+                    except (ProcessLookupError, PermissionError):
+                        self._process.kill()
                     self._process.wait(timeout=MCP_STDIO_STOP_TIMEOUT_SECONDS)
             except Exception:
                 pass
@@ -1008,6 +1019,13 @@ class MCPClient:
                 }
             except Exception as exc:
                 results[server_name] = {"success": False, "error": str(exc)}
+                # Don't leak the spawned npx/node process on a failed
+                # handshake (audit #9).
+                try:
+                    await conn.transport.close()
+                except Exception:
+                    pass
+                conn.connected = False
 
         if name is None:
             self._connected = any(c.connected for c in self._connections.values())

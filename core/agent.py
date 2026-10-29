@@ -1707,9 +1707,37 @@ class Agent:
                     tool = args.get("tool", "")
                     arguments = args.get("arguments", {})
                     import asyncio
-                    result = asyncio.get_event_loop().run_until_complete(
-                        self.mcp_client.call_tool(server, tool, arguments)
-                    )
+                    import threading
+
+                    # get_event_loop().run_until_complete() breaks under
+                    # uvicorn (loop already running) — run on a dedicated
+                    # loop in a worker thread instead (audit #10).
+                    def _call_mcp():
+                        loop = asyncio.new_event_loop()
+                        try:
+                            return loop.run_until_complete(
+                                self.mcp_client.call_tool(server, tool, arguments)
+                            )
+                        finally:
+                            loop.close()
+
+                    exc_holder: list[Exception] = []
+                    holder: dict = {}
+
+                    def _runner():
+                        try:
+                            holder["result"] = _call_mcp()
+                        except Exception as e:  # noqa: BLE001
+                            exc_holder.append(e)
+
+                    thread = threading.Thread(target=_runner, daemon=True)
+                    thread.start()
+                    thread.join(timeout=60)
+                    if thread.is_alive():
+                        return safe_tool_result_failure("MCP")
+                    if exc_holder:
+                        raise exc_holder[0]
+                    result = holder.get("result") or {}
                     if not result.get("success", False):
                         return safe_tool_result_failure("MCP")
                     return ToolResult(success=True, output=str(result.get("data", "")))
