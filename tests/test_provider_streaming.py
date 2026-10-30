@@ -39,6 +39,19 @@ class FakeClient:
     def post(self, url, headers=None, json=None, timeout=None):
         return self._post(url, headers=headers, json=json, timeout=timeout)
 
+    class _StreamCtx:
+        def __init__(self, resp):
+            self._resp = resp
+
+        def __enter__(self):
+            return self._resp
+
+        def __exit__(self, *a):
+            return False
+
+    def stream(self, method, url, headers=None, json=None, timeout=None):
+        return self._StreamCtx(self._post(url, headers=headers, json=json, timeout=timeout))
+
 
 def _pool(*providers):
     pool = ProviderPool.__new__(ProviderPool)

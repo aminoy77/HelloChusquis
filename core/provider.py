@@ -279,6 +279,8 @@ class ProviderPool:
                     yield {"type": "error", "message": f"{provider.name}: {e}"}
                     return
                 provider.failed_calls += 1
+                if isinstance(e, httpx.HTTPStatusError):
+                    self._handle_http_error(provider, e)
                 logger.debug("stream error on %s: %s", provider.name, e)
                 continue
         yield {"type": "error", "message": "All providers failed."}
@@ -309,42 +311,46 @@ class ProviderPool:
             if "api.githubcopilot.com" in base:
                 headers["Copilot-Integration-Id"] = "hellochusquis"
                 headers["Editor-Version"] = "hellochusquis/1.0"
-            response = client.post(
+            # client.stream(): with plain client.post() httpx downloads the
+            # whole body before iter_lines runs — no incremental deltas ever
+            # reached the UI and every answer appeared at once.
+            with client.stream(
+                "POST",
                 f"{provider.base_url}/chat/completions",
                 headers=headers,
                 json=payload,
-            )
-            response.raise_for_status()
-            for line in response.iter_lines():
-                line = (line or "").strip()
-                if not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    chunk = json.loads(data)
-                except ValueError:
-                    continue
-                choices = chunk.get("choices") or []
-                if not choices:
-                    continue
-                delta = choices[0].get("delta") or {}
-                reasoning = delta.get("reasoning_content") or delta.get("reasoning")
-                if reasoning:
-                    yield {"type": "reasoning", "content": reasoning}
-                if delta.get("content"):
-                    yield {"type": "chunk", "content": delta["content"]}
-                for frag in delta.get("tool_calls") or []:
-                    idx = frag.get("index", 0)
-                    acc = tool_calls.setdefault(idx, {"id": "", "function": {"name": "", "arguments": ""}})
-                    if frag.get("id"):
-                        acc["id"] = frag["id"]
-                    fn = frag.get("function") or {}
-                    if fn.get("name"):
-                        acc["function"]["name"] = fn["name"]
-                    if fn.get("arguments"):
-                        acc["function"]["arguments"] += fn["arguments"]
+            ) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    line = (line or "").strip()
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                    except ValueError:
+                        continue
+                    choices = chunk.get("choices") or []
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta") or {}
+                    reasoning = delta.get("reasoning_content") or delta.get("reasoning")
+                    if reasoning:
+                        yield {"type": "reasoning", "content": reasoning}
+                    if delta.get("content"):
+                        yield {"type": "chunk", "content": delta["content"]}
+                    for frag in delta.get("tool_calls") or []:
+                        idx = frag.get("index", 0)
+                        acc = tool_calls.setdefault(idx, {"id": "", "function": {"name": "", "arguments": ""}})
+                        if frag.get("id"):
+                            acc["id"] = frag["id"]
+                        fn = frag.get("function") or {}
+                        if fn.get("name"):
+                            acc["function"]["name"] = fn["name"]
+                        if fn.get("arguments"):
+                            acc["function"]["arguments"] += fn["arguments"]
             if tool_calls:
                 ordered = [tool_calls[i] for i in sorted(tool_calls)]
                 yield {"type": "tool_calls", "tool_calls": ordered}
@@ -431,8 +437,15 @@ class ProviderPool:
             # Mark as exhausted silently - no user-visible output
             provider.exhausted = True
             provider.exhausted_at = time.time()
-        elif status in (400, 404):
-            # Bad request / model not found — provider is healthy, don't penalize
+        elif status in (404, 405):
+            # Model removed / endpoint not supported: this provider can never
+            # serve this request. Exhaust it (the reset window brings it back
+            # if the config changes) instead of paying the round-trip on
+            # every message.
+            provider.exhausted = True
+            provider.exhausted_at = time.time()
+        elif status in (400,):
+            # Bad request — provider is healthy, don't penalize
             pass
         else:
             # Mark other errors as exhausted silently
