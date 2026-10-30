@@ -363,11 +363,17 @@ def run_one(pool, tools_schema: list, dispatch_fn: Callable,
     dispatch = dispatch_fn
     if isolated:
         if wt is None:
-            notes.append("isolation requested but no git worktree available; ran unisolated.")
-        else:
-            dispatch = scoped_dispatch(dispatch_fn, wt)
-            system += (f"\nWork ONLY inside worktree {wt} (absolute paths). "
-                       f"shell/code tools are disabled; use files.")
+            # Audit #17: isolation was requested and cannot be provided —
+            # running unisolated would let the subagent write the real
+            # workspace while the contract promised containment. Fail hard.
+            _ctx.__exit__(None, None, None)
+            return SubAgentResult(
+                name=subdef.name, task=task, ok=False,
+                output="isolation requested but no git worktree available "
+                       "(not a git repo?) — refusing to run unisolated")
+        dispatch = scoped_dispatch(dispatch_fn, wt)
+        system += (f"\nWork ONLY inside worktree {wt} (absolute paths). "
+                   f"shell/code tools are disabled; use files.")
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": task}]
     _emit(on_event, {"type": "run_start", "name": subdef.name,

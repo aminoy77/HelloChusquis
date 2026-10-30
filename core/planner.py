@@ -81,6 +81,10 @@ def execute_plan(steps: list[str], agent, notify=None, depth: int = 0,
             console.print(msg)
 
     say(f"\nExecuting {len(steps)} steps...\n")
+    # Audit #15: capture the goal BEFORE running steps — after agent.run(step)
+    # the last user input IS the failed step, so re-plans churned on the
+    # sub-step instead of the original goal.
+    original_goal = (agent.history.get_user_inputs() or [steps[0] if steps else ""])[-1]
     for i, step in enumerate(steps, 1):
         say(f"Step {i}/{len(steps)}: {step}")
         try:
@@ -88,13 +92,13 @@ def execute_plan(steps: list[str], agent, notify=None, depth: int = 0,
             if not quiet:
                 from ui.terminal import print_assistant
                 print_assistant(result)
-        except RuntimeError as e:
+        except Exception as e:
             if depth >= 2:
                 say(f"[red]Step {i} failed and re-plan limit reached. Stopping.[/red]")
                 return
             say(f"[yellow]⚠ Step {i} failed. Attempting to re-plan...[/yellow]")
             try:
-                new_plan = generate_plan(f"The step '{step}' failed. The original goal was: {agent.history.get_user_inputs()[-1]}. Please generate a new plan to achieve the goal, avoiding the previous error.", agent.pool)
+                new_plan = generate_plan(f"The step '{step}' failed. The original goal was: {original_goal}. Please generate a new plan to achieve the goal, avoiding the previous error.", agent.pool)
                 if new_plan:
                     say("[bold green]New plan generated. Continuing execution.[/bold green]")
                     execute_plan(new_plan, agent, notify=notify, depth=depth + 1)

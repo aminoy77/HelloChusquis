@@ -19,6 +19,8 @@ import re
 import sqlite3
 import threading
 import time
+
+import yaml
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -1432,8 +1434,16 @@ RECALL_TOP_K = 3
 RECALL_MAX_CHARS = 800
 
 
+_AUTOLOG_TURN_CHARS = 4000
+# Audit #10: web/api processes never exit through the TUI, so retention
+# only ran there. Prune lazily here at most once an hour instead.
+_PRUNE_INTERVAL_S = 3600
+_last_prune_ts = 0.0
+
+
 def save_turn(user_text: str, assistant_text: str) -> None:
     """Persist one chat turn as a session row + one searchable entry."""
+    global _last_prune_ts
     try:
         user = (user_text or "")[:AUTOLOG_TURN_CHARS]
         assistant = (assistant_text or "")[:AUTOLOG_TURN_CHARS]
@@ -1452,8 +1462,25 @@ def save_turn(user_text: str, assistant_text: str) -> None:
             # ponytail: no per-turn embedding — recall is keyword-only.
             auto_embed=False,
         )
+        now = time.time()
+        if now - _last_prune_ts > _PRUNE_INTERVAL_S:
+            _last_prune_ts = now
+            days = _retention_days()
+            if days > 0:
+                prune_sessions_older_than(days)
     except Exception:
         pass
+
+
+def _retention_days() -> int:
+    """Read memory_retention_days from config; 0 disables pruning."""
+    try:
+        config_path = Path.home() / ".hellochusquis" / "config.yaml"
+        with open(config_path, "r", encoding="utf-8") as handle:
+            data = yaml.safe_load(handle) or {}
+        return int(data.get("settings", {}).get("memory_retention_days", 30))
+    except Exception:
+        return 30
 
 
 def kb_ingested_count() -> int:

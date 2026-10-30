@@ -84,18 +84,38 @@ def _file_lock():
         handle.close()
 
 
+def _load_unlocked() -> dict:
+    init()
+    return json.loads(LEARNING_FILE.read_text(encoding="utf-8"))
+
+
+def _save_unlocked(data: dict) -> None:
+    data["updated_at"] = datetime.now().isoformat()
+    _write_atomically(data)
+
+
 def load_learnings() -> dict:
     """Load learnings from the protected local JSON store."""
     with _LEARNING_LOCK, _file_lock():
-        init()
-        return json.loads(LEARNING_FILE.read_text(encoding="utf-8"))
+        return _load_unlocked()
 
 
 def save_learnings(data: dict) -> None:
     """Atomically replace local learnings after a complete serialization."""
     with _LEARNING_LOCK, _file_lock():
-        data["updated_at"] = datetime.now().isoformat()
-        _write_atomically(data)
+        _save_unlocked(data)
+
+
+def _update_learnings(mutate) -> None:
+    """Read-modify-write under ONE cross-process lock (audit #12).
+
+    load→mutate→save with the flock released in between loses concurrent
+    updates: two processes both load, both save, first writer erased.
+    """
+    with _LEARNING_LOCK, _file_lock():
+        learnings = _load_unlocked()
+        mutate(learnings)
+        _save_unlocked(learnings)
 
 
 def build_learning_prompt(learnings: dict) -> str:
@@ -121,13 +141,13 @@ def build_learning_prompt(learnings: dict) -> str:
 
 def add_feedback(feedback_type: str, context: str) -> None:
     """Append bounded feedback without losing concurrent updates."""
-    with _LEARNING_LOCK:
-        learnings = load_learnings()
+    def _mutate(learnings):
         entry = {"context": context[:200], "timestamp": datetime.now().isoformat()}
         feedback = learnings.setdefault("feedback", {"positive": [], "negative": []})
         feedback.setdefault(feedback_type, []).append(entry)
         feedback[feedback_type] = feedback[feedback_type][-50:]
-        save_learnings(learnings)
+
+    _update_learnings(_mutate)
 
 
 def analyze_and_learn(messages: list[dict], pool, max_retries: int = 3) -> None:
@@ -168,9 +188,7 @@ def analyze_and_learn(messages: list[dict], pool, max_retries: int = 3) -> None:
         content = content.replace("```json", "").replace("```", "").strip()
         new_learnings = json.loads(content)
 
-        with _LEARNING_LOCK:
-            learnings = load_learnings()
-
+        def _mutate(learnings):
             for task, tools in new_learnings.get("tool_patterns", {}).items():
                 existing_tools = learnings.setdefault("tool_patterns", {}).setdefault(task, [])
                 for tool in tools:
@@ -189,7 +207,7 @@ def analyze_and_learn(messages: list[dict], pool, max_retries: int = 3) -> None:
                     improvements.append(improvement)
             learnings["system_prompt_improvements"] = improvements[-20:]
 
-            save_learnings(learnings)
+        _update_learnings(_mutate)
         console.print("[dim]✓ Learnings updated.[/dim]")
 
     except Exception:
@@ -200,22 +218,20 @@ def save_active_learning(candidate: dict) -> None:
     Saves a structured learning candidate from the Analyst.
     Candidate shape: {'type': 'AVOID'|'PROCEDURE', 'trigger': str, 'instruction': str}
     """
-    with _LEARNING_LOCK:
-        learnings = load_learnings()
-        
+    def _mutate(learnings):
         if candidate.get('type') == 'AVOID':
             entry = f"Avoid {candidate.get('trigger')}: {candidate.get('instruction')}"
             errors = learnings.setdefault("errors", [])
             if entry not in errors:
                 errors.append(entry)
             learnings["errors"] = errors[-20:]
-        
+
         elif candidate.get('type') == 'PROCEDURE':
             entry = f"When {candidate.get('trigger')}, {candidate.get('instruction')}"
             improvements = learnings.setdefault("system_prompt_improvements", [])
             if entry not in improvements:
                 improvements.append(entry)
             learnings["system_prompt_improvements"] = improvements[-20:]
-            
-        save_learnings(learnings)
+
+    _update_learnings(_mutate)
 

@@ -776,9 +776,31 @@ def run_quick_setup() -> dict:
         entry = login_provider({"providers": []}, provider_info["name"])
         if entry is None:
             return ensure_config()
-        config = {
-            "providers": [entry],
-            "settings": {
+        providers = [entry]
+        model = entry.get("model", "")
+    else:
+        if provider_info.get("requires_key") and not _is_local_url(provider_info["base_url"]):
+            api_key = _prompt_api_key(provider_info["name"])
+        else:
+            api_key = "ollama" if "ollama" in provider_info["name"].lower() else ""
+            console.print(f"  [dim]✓ {provider_info['name']} runs locally — no API key needed.[/dim]")
+        model = pick_model(
+            provider_info["base_url"],
+            api_key,
+            provider_name=provider_info["name"],
+            known_models=provider_info.get("models", []),
+        )
+        providers = [{
+            "name": provider_info["name"],
+            "base_url": provider_info["base_url"],
+            "api_key": api_key,
+            "model": model,
+            "priority": 1,
+        }]
+
+    config = {
+        "providers": providers,
+        "settings": {
             "provider_reset_hours": 1,
             "max_retries": 3,
             "timeout_seconds": 15,

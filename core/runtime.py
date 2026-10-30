@@ -127,9 +127,17 @@ class AgentRuntime:
             agent = self._new_agent(self._config, session_key=session_id, role=role)
             self._session_agents[session_id] = agent
             if len(self._session_agents) > self._max_sessions:
-                evicted_session, evicted_agent = self._session_agents.popitem(last=False)
-                self._dispose_agent(evicted_agent)
-                logger.info("Evicted inactive agent session %s", evicted_session)
+                # Audit #14: never evict an agent mid-turn — dispose wipes
+                # its history/approvals while run() still holds _turn_lock.
+                evictable = [
+                    (sid, a) for sid, a in self._session_agents.items()
+                    if not getattr(getattr(a, "_turn_lock", None), "locked", lambda: False)()
+                ]
+                if evictable:
+                    evicted_session, evicted_agent = evictable[0]
+                    self._session_agents.pop(evicted_session, None)
+                    self._dispose_agent(evicted_agent)
+                    logger.info("Evicted inactive agent session %s", evicted_session)
             return agent
 
     @staticmethod

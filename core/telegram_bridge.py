@@ -9,6 +9,7 @@ import json
 import logging
 import threading
 import urllib.request
+from pathlib import Path
 from typing import Callable
 
 from core.logger import get_logger
@@ -78,15 +79,35 @@ class TelegramBridge:
         self.transport = transport
         self.handle_text = handle_text
         self.allow = {int(c) for c in (allow_chats or [])}
+        if not self.allow:
+            # Audit #13: an empty allowlist silently drops every message —
+            # fail fast instead of shipping a dead bot.
+            raise ValueError("TelegramBridge: allow_chats is empty — no chat would ever be answered")
         self.poll_timeout = poll_timeout
         self.backoff_s = backoff_s
-        self.offset = 0
+        # Audit #13: persist the offset — in-memory only meant every restart
+        # re-processed (and re-answered) up to 24h of old updates.
+        self._offset_path = Path.home() / ".hellochusquis" / "telegram_offset"
+        self.offset = self._load_offset()
 
     def _api(self, method: str, params: dict) -> dict:
         fn = getattr(self.transport, "call", None)
         if callable(fn):
             return fn(method, params)
         return self.transport(method, params)
+
+    def _load_offset(self) -> int:
+        try:
+            return int(self._offset_path.read_text().strip())
+        except (OSError, ValueError):
+            return 0
+
+    def _save_offset(self) -> None:
+        try:
+            self._offset_path.parent.mkdir(parents=True, exist_ok=True)
+            self._offset_path.write_text(str(self.offset))
+        except OSError:
+            pass
 
     def run_once(self) -> None:
         updates = self._api("getUpdates", {"offset": self.offset,
@@ -96,6 +117,7 @@ class TelegramBridge:
         for update in results or []:
             try:
                 self.offset = max(self.offset, int(update.get("update_id", -1)) + 1)
+                self._save_offset()
             except (TypeError, ValueError):
                 continue
             msg = update.get("message") or {}
