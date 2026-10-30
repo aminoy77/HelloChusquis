@@ -1336,8 +1336,14 @@
         });
     }
 
-    // ---------- auth (ask for the key when the server requires one) ----------
+    // ---------- auth (instant on loopback: server embeds the token) ----------
     async function initAuth() {
+        // Loopback pages get the token server-side via <meta name="hc-token">:
+        // no prompt, instant connect. Remote clients fall through to the prompt.
+        const embedded = document.querySelector('meta[name="hc-token"]');
+        if (embedded && embedded.content && !state.token) {
+            state.token = embedded.content;
+        }
         let authRequired = false;
         try {
             const j = await fetchJson('/auth/check');

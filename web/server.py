@@ -307,11 +307,16 @@ class ConfigRequest(BaseModel):
 # --- Routes ---
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
+async def root(http_request: Request):
     """Serve the UI with a per-response nonce for its single inline script."""
     nonce = secrets.token_urlsafe(18)
     html_path = Path(__file__).parent / "index.html"
     html = html_path.read_text(encoding="utf-8").replace("<script>", f'<script nonce="{nonce}">', 1)
+    # Instant local start: a loopback browser gets the token embedded in the
+    # page, so no manual key prompt. Remote clients still must authenticate.
+    host = (http_request.client.host if http_request.client else "")
+    if AUTH_ENABLED and host in ("127.0.0.1", "::1", "localhost"):
+        html = html.replace("</head>", f'<meta name="hc-token" content="{REQUIRED_API_KEY}"></head>', 1)
     csp = (
         "default-src 'self'; "
         f"script-src 'nonce-{nonce}'; "
