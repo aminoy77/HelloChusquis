@@ -900,7 +900,10 @@ class ConversationCompactor:
                 continue  # never drop system messages
             if msg in kept:
                 kept.remove(msg)
-                total = estimate_messages_tokens(kept)
+                # Subtract the dropped message's tokens instead of
+                # re-encoding the whole kept list every drop (audit #20:
+                # O(n²) tiktoken passes blocked append() for seconds).
+                total -= estimate_messages_tokens([msg])
                 dropped += 1
 
         summary = None

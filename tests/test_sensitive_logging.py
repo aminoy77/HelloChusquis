@@ -16,16 +16,6 @@ class TestSensitiveLogging(unittest.TestCase):
         self.assertNotIn('"Blocked unsafe command: %s — %s"', source)
         self.assertNotIn('Blocked unsafe command:[/bold red] {cmd}', source)
 
-    def test_sandbox_timeout_log_omits_the_command(self):
-        source = (Path(__file__).parent.parent / "core" / "tool_policy.py").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertNotIn('"Sandbox command timed out after %.1fs: %s"', source)
-        self.assertIn('"Sandbox command timed out after %.1fs"', source)
-        self.assertNotIn('stderr=f"Command denied by sandbox policy: {command}"', source)
-        self.assertIn('stderr="Command denied by sandbox policy."', source)
-
 
 if __name__ == "__main__":
     unittest.main()

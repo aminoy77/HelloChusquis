@@ -6,7 +6,6 @@ Architecture:
   - ToolPolicy: allow/deny resolution with groups, aliases, plugin expansion
   - ToolLoopDetector: sliding-window loop detection (repeat, ping-pong, circuit-breaker)
   - DangerousToolDetector: flags hazardous tool combinations
-  - ToolSandbox: restricted subprocess execution
   - SecurityAuditor: audits tool calls against policies
 
 No external dependencies. Production-grade. Type-hinted. Dataclass-heavy.
@@ -275,32 +274,6 @@ class DangerousToolCombo:
     severity: Severity
 
 
-@dataclass
-class SandboxConfig:
-    """Configuration for sandboxed execution."""
-    timeout_seconds: float = 30.0
-    max_output_bytes: int = 1024 * 1024  # 1 MB
-    working_directory: Optional[str] = None
-    allowed_commands: Optional[List[str]] = None
-    denied_commands: Optional[List[str]] = None
-    env_inherit: bool = False
-    env_overrides: Optional[Dict[str, str]] = None
-    network_access: bool = False
-    max_memory_mb: Optional[int] = None
-    shell: Optional[str] = None  # default: system shell
-
-
-@dataclass(frozen=True)
-class SandboxResult:
-    """Result of a sandboxed command execution."""
-    exit_code: int
-    stdout: str
-    stderr: str
-    timed_out: bool = False
-    killed: bool = False
-
-
-@dataclass(frozen=True)
 class LoopDetectionConfig:
     """Configuration for loop detection."""
     enabled: bool = True
@@ -1299,232 +1272,6 @@ class DangerousToolDetector:
 
 
 # ---------------------------------------------------------------------------
-# ToolSandbox
-# ---------------------------------------------------------------------------
-
-class ToolSandbox:
-    """
-    Restricted subprocess execution sandbox.
-
-    Provides:
-      - Timeout enforcement
-      - Output size limits
-      - Command allow/deny lists
-      - Environment isolation
-      - Network restriction (via env)
-      - Working directory control
-      - Resource limits (memory, where available)
-    """
-
-    def __init__(self, config: Optional[SandboxConfig] = None) -> None:
-        self._config = config or SandboxConfig()
-
-    @property
-    def config(self) -> SandboxConfig:
-        return self._config
-
-    def execute(
-        self,
-        command: str,
-        *,
-        timeout: Optional[float] = None,
-        working_dir: Optional[str] = None,
-        env: Optional[Dict[str, str]] = None,
-    ) -> SandboxResult:
-        """
-        Execute a command in the sandbox.
-
-        Args:
-            command: Shell command string.
-            timeout: Override timeout in seconds.
-            working_dir: Override working directory.
-            env: Additional environment variables.
-
-        Returns:
-            SandboxResult with exit_code, stdout, stderr, etc.
-        """
-        effective_timeout = timeout or self._config.timeout_seconds
-        effective_cwd = working_dir or self._config.working_directory
-
-        # Command allow/deny checks
-        if not self._check_command_allowed(command):
-            return SandboxResult(
-                exit_code=126,
-                stdout="",
-                stderr="Command denied by sandbox policy.",
-            )
-
-        # Build environment
-        effective_env = self._build_env(env)
-
-        # Build subprocess args
-        shell = self._config.shell or ("/bin/bash" if sys.platform != "win32" else "cmd.exe")
-        is_windows = sys.platform == "win32"
-
-        if is_windows:
-            argv = ["cmd.exe", "/c", command]
-        else:
-            argv = [shell, "-c", command]
-
-        kwargs: Dict[str, Any] = {
-            "args": argv,
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.PIPE,
-            "env": effective_env,
-            "timeout": effective_timeout,
-        }
-
-        if effective_cwd:
-            kwargs["cwd"] = effective_cwd
-
-        try:
-            proc = subprocess.run(**kwargs)
-            stdout = proc.stdout.decode("utf-8", errors="replace") if proc.stdout else ""
-            stderr = proc.stderr.decode("utf-8", errors="replace") if proc.stderr else ""
-
-            # Truncate oversized output
-            if len(stdout) > self._config.max_output_bytes:
-                stdout = stdout[: self._config.max_output_bytes] + "\n... [truncated]"
-            if len(stderr) > self._config.max_output_bytes:
-                stderr = stderr[: self._config.max_output_bytes] + "\n... [truncated]"
-
-            return SandboxResult(
-                exit_code=proc.returncode,
-                stdout=stdout,
-                stderr=stderr,
-            )
-
-        except subprocess.TimeoutExpired as exc:
-            stdout = exc.stdout.decode("utf-8", errors="replace") if exc.stdout else ""
-            stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else ""
-            logger.warning("Sandbox command timed out after %.1fs", effective_timeout)
-            return SandboxResult(
-                exit_code=-1,
-                stdout=stdout,
-                stderr=stderr,
-                timed_out=True,
-            )
-
-        except FileNotFoundError:
-            return SandboxResult(
-                exit_code=127,
-                stdout="",
-                stderr=f"Shell not found: {shell}",
-            )
-
-        except Exception as exc:
-            return SandboxResult(
-                exit_code=1,
-                stdout="",
-                stderr=f"Sandbox error: {exc}",
-                killed=True,
-            )
-
-    def execute_tool(
-        self,
-        tool_name: str,
-        params: Dict[str, Any],
-    ) -> SandboxResult:
-        """
-        Execute a tool call through the sandbox.
-
-        Translates tool params into a subprocess command.
-        For exec/shell tools: runs the 'command' param.
-        For fs tools: translates to shell commands.
-        """
-        normalized = normalize_tool_name(tool_name)
-
-        if normalized in ("exec", "shell", "spawn"):
-            command = params.get("command", "")
-            if not command:
-                return SandboxResult(exit_code=1, stdout="", stderr="No command provided")
-            return self.execute(command)
-
-        if normalized == "fs_read":
-            path = params.get("path", "")
-            if not path:
-                return SandboxResult(exit_code=1, stdout="", stderr="No path provided")
-            return self.execute(f"cat {shlex.quote(path)}")
-
-        if normalized == "fs_write":
-            path = params.get("path", "")
-            content = params.get("content", "")
-            if not path:
-                return SandboxResult(exit_code=1, stdout="", stderr="No path provided")
-            escaped_content = shlex.quote(content)
-            return self.execute(f"echo {escaped_content} > {shlex.quote(path)}")
-
-        if normalized == "fs_delete":
-            path = params.get("path", "")
-            if not path:
-                return SandboxResult(exit_code=1, stdout="", stderr="No path provided")
-            return self.execute(f"rm -f {shlex.quote(path)}")
-
-        if normalized == "fs_move":
-            source = params.get("source", "")
-            dest = params.get("destination", "")
-            if not source or not dest:
-                return SandboxResult(exit_code=1, stdout="", stderr="Source and destination required")
-            return self.execute(f"mv {shlex.quote(source)} {shlex.quote(dest)}")
-
-        if normalized == "fs_list":
-            path = params.get("path", ".")
-            return self.execute(f"ls -la {shlex.quote(path)}")
-
-        return SandboxResult(
-            exit_code=1,
-            stdout="",
-            stderr=f"Tool '{tool_name}' not supported by sandbox executor",
-        )
-
-    # -- Internal ------------------------------------------------------------
-
-    def _check_command_allowed(self, command: str) -> bool:
-        """Check if command is allowed by deny/allow lists."""
-        if self._config.denied_commands:
-            for denied in self._config.denied_commands:
-                if denied in command:
-                    return False
-
-        if self._config.allowed_commands:
-            for allowed in self._config.allowed_commands:
-                if allowed in command:
-                    return True
-            return False
-
-        return True
-
-    def _build_env(self, extra: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-        """Build sandboxed environment dict."""
-        if not self._config.env_inherit:
-            # Minimal env for sandboxed execution
-            base: Dict[str, str] = {
-                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-                "HOME": tempfile.gettempdir(),
-                "TMPDIR": tempfile.gettempdir(),
-                "LANG": "en_US.UTF-8",
-            }
-        else:
-            base = dict(os.environ)
-
-        if self._config.env_overrides:
-            base.update(self._config.env_overrides)
-
-        if extra:
-            base.update(extra)
-
-        if not self._config.network_access:
-            # Best-effort network restriction (not foolproof)
-            base.pop("http_proxy", None)
-            base.pop("https_proxy", None)
-            base.pop("HTTP_PROXY", None)
-            base.pop("HTTPS_PROXY", None)
-            base["NO_PROXY"] = "*"
-
-        return base
-
-
-# ---------------------------------------------------------------------------
 # SecurityAuditor
 # ---------------------------------------------------------------------------
 
@@ -1874,36 +1621,6 @@ class SecurityAuditor:
         return True
 
 
-# ---------------------------------------------------------------------------
-# Convenience: all-in-one audit function
-# ---------------------------------------------------------------------------
-
-def run_tool_security_audit(
-    tool_calls: Sequence[Tuple[str, Any]],
-    *,
-    policy: Optional[ToolPolicy] = None,
-    caller_identity: Optional[str] = None,
-    is_gateway_http: bool = False,
-    suppressions: Optional[List[AuditSuppression]] = None,
-) -> SecurityAuditReport:
-    """
-    One-shot security audit of tool calls.
-
-    Creates a SecurityAuditor with default dangerous-tool detection,
-    runs the audit, and returns the report.
-    """
-    auditor = SecurityAuditor(
-        policy=policy,
-        suppressions=suppressions,
-    )
-    return auditor.audit_tool_calls(
-        tool_calls,
-        caller_identity=caller_identity,
-        is_gateway_http=is_gateway_http,
-    )
-
-
-# ---------------------------------------------------------------------------
 # Module exports
 # ---------------------------------------------------------------------------
 
@@ -1922,15 +1639,12 @@ __all__ = [
     "SecurityAuditSummary",
     "SecurityAuditReport",
     "DangerousToolCombo",
-    "SandboxConfig",
-    "SandboxResult",
     "SessionState",
     "AuditSuppression",
     # Classes
     "ToolPolicy",
     "ToolLoopDetector",
     "DangerousToolDetector",
-    "ToolSandbox",
     "SecurityAuditor",
     # Constants
     "DEFAULT_GATEWAY_HTTP_TOOL_DENY",
@@ -1943,5 +1657,4 @@ __all__ = [
     "normalize_tool_list",
     "expand_tool_groups",
     "hash_tool_call",
-    "run_tool_security_audit",
 ]

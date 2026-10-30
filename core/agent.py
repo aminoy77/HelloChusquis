@@ -1123,7 +1123,6 @@ class Agent:
         self._turn_lock = threading.Lock()
         self._audited_approval_ids: set[str] = set()
         self.history = History()
-        self._pending_tool_results = []
         # Hand-made minimal configs (e.g. Ollama-only) may omit settings the
         # setup wizard always writes; fall back instead of KeyError.
         _settings = config.get("settings", {}) or {}
@@ -1347,7 +1346,6 @@ class Agent:
     def clear_conversation(self) -> dict[str, int]:
         """Remove session history and invalidate pending work for this agent."""
         self.history.clear()
-        self._pending_tool_results = []
         self.session_manager.clear_history(self._session_id)
         cancelled_requests = self.approval_manager.cancel_pending_requests()
         self._audit_cancelled_approvals(cancelled_requests, "conversation_cleared")
@@ -1356,7 +1354,6 @@ class Agent:
     def dispose_session(self) -> None:
         """Release this agent while retaining the audit trail for HTTP sessions."""
         self.history.clear()
-        self._pending_tool_results = []
         cancelled_requests = self.approval_manager.cancel_pending_requests()
         self._audit_cancelled_approvals(cancelled_requests, "session_disposed")
         if self._persistent_session:
@@ -1900,7 +1897,6 @@ class Agent:
         # A failed previous turn can leave tool messages whose assistant
         # tool_calls partner was never persisted — sending them first makes
         # strict providers 400 every following turn. Start each turn clean.
-        self._pending_tool_results = []
 
         messages = self._build_messages()
         recall = memory.recall_context(user_input)
@@ -1915,7 +1911,6 @@ class Agent:
         while True:
             iterations += 1
             if iterations > max_tool_iterations:
-                self._pending_tool_results = []
                 return ("Error: Turn stopped after 30 tool iterations without a final "
                         "answer. Try breaking the task into smaller steps.")
             response = self.pool.chat_with_retry(
@@ -1941,7 +1936,6 @@ class Agent:
                 except Exception:
                     logger.exception("Memory autolog failed")
                 # Clear pending tool results on successful completion
-                self._pending_tool_results = []
                 return content
 
             messages.append(message)
@@ -2057,7 +2051,6 @@ class Agent:
                 step_tool_results.append(tool_msg)
             
             # Keep all tool results for this turn for next turn
-            self._pending_tool_results.extend(step_tool_results)
 
     def stream_run(self, user_input: str, provider: Optional[str] = None, model: Optional[str] = None):
         """Yield SSE events instead of returning full string.
@@ -2086,7 +2079,6 @@ class Agent:
             return
 
         # Same rationale as run(): start each turn clean (audit #4).
-        self._pending_tool_results = []
 
         messages = self._build_messages()
         recall = memory.recall_context(user_input)
@@ -2104,7 +2096,6 @@ class Agent:
         while True:
             iterations += 1
             if iterations > max_tool_iterations:
-                self._pending_tool_results = []
                 yield {"type": "chunk", "content": (
                     "Error: Turn stopped after 30 tool iterations without a final "
                     "answer. Try breaking the task into smaller steps.")}
@@ -2144,7 +2135,6 @@ class Agent:
                 content = "".join(content_parts)
                 self.history.add("assistant", content)
                 self.session_manager.append_message(self._session_id, "assistant", content)
-                self._pending_tool_results = []
                 try:
                     memory.save_turn(user_input, content)
                     for key, value in extract_memory_facts(user_input):
@@ -2290,7 +2280,6 @@ class Agent:
                 messages.append(tool_msg)
                 step_tool_results.append(tool_msg)
 
-            self._pending_tool_results.extend(step_tool_results)
 
     def summarize_and_save(self, retention_days: int = 30):
         messages = self.history.get()

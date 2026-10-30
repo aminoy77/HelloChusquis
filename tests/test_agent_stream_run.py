@@ -15,7 +15,6 @@ def test_stream_run_yields_real_chunks(monkeypatch):
     agent.session_manager = type("S", (), {
         "append_message": staticmethod(lambda *a, **k: None)})()
     agent._session_id = "t"
-    agent._pending_tool_results = []
     agent.tools_schema = None
     agent._build_messages = lambda: [{"role": "user", "content": "hello"}]
 
@@ -52,7 +51,6 @@ def test_stream_run_yields_tool_result_events(monkeypatch):
     agent.session_manager = type("S", (), {
         "append_message": staticmethod(lambda *a, **k: None)})()
     agent._session_id = "t"
-    agent._pending_tool_results = []
     agent._build_messages = lambda: [{"role": "user", "content": "do it"}]
     agent.tools_schema = [{"type": "function", "function": {"name": "echo_tool"}}]
     agent.tool_policy = type("P", (), {"is_tool_allowed": lambda self, n: True})()

@@ -16,7 +16,6 @@ def _agent():
                                     get_user_inputs=lambda: ["goal"])
     agent.session_manager = SimpleNamespace(append_message=lambda *a, **k: None)
     agent._session_id = "t"
-    agent._pending_tool_results = []
     agent.tools_schema = None
     agent._build_messages = lambda: [{"role": "user", "content": "hi"}]
     return agent

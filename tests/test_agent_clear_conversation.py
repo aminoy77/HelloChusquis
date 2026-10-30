@@ -32,7 +32,6 @@ class TestAgentClearConversation(unittest.TestCase):
         agent.history = _History()
         agent.session_manager = _SessionManager()
         agent._session_id = "persisted-session"
-        agent._pending_tool_results = [{"role": "tool", "content": "stale"}]
         agent.approval_manager = ApprovalManager()
         pending = agent.approval_manager.request_for(
             "files", {"action": "delete", "path": "/tmp/example"}
@@ -42,7 +41,6 @@ class TestAgentClearConversation(unittest.TestCase):
 
         self.assertTrue(agent.history.cleared)
         self.assertEqual(agent.session_manager.cleared_ids, ["persisted-session"])
-        self.assertEqual(agent._pending_tool_results, [])
         self.assertEqual(result, {"cancelled_approvals": 1})
         self.assertEqual(
             agent.session_manager.audit_events,

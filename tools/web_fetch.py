@@ -356,8 +356,12 @@ class HTMLExtractor:
     # Recursive renderer
     # ------------------------------------------------------------------
 
-    def _render_node(self, node: Any, parts: list[str]) -> None:
+    def _render_node(self, node: Any, parts: list[str], depth: int = 0) -> None:
         """Walk the soup tree and append markdown fragments."""
+        # Audit #20: hostile pages nest thousands of divs — without a cap
+        # this recurses into RecursionError surfaced as "Fetch failed".
+        if depth > MAX_RENDER_DEPTH:
+            return
         if isinstance(node, NavigableString):
             text = str(node)
             # Decode entities
@@ -378,14 +382,14 @@ class HTMLExtractor:
         if name in ("p", "div", "section", "article", "header", "footer", "main"):
             parts.append("\n\n")
             for child in node.children:
-                self._render_node(child, parts)
+                self._render_node(child, parts, depth + 1)
             return
 
         if name in ("h1", "h2", "h3", "h4", "h5", "h6"):
             level = int(name[1])
             before = len(parts)
             for child in node.children:
-                self._render_node(child, parts)
+                self._render_node(child, parts, depth + 1)
             after = len(parts)
             heading_text = "".join(parts[before:after]).strip()
             del parts[before:after]
@@ -416,7 +420,7 @@ class HTMLExtractor:
         if name == "blockquote":
             before = len(parts)
             for child in node.children:
-                self._render_node(child, parts)
+                self._render_node(child, parts, depth + 1)
             after = len(parts)
             quoted = "".join(parts[before:after]).strip()
             del parts[before:after]
@@ -436,7 +440,7 @@ class HTMLExtractor:
             href = node.get("href", "")
             before = len(parts)
             for child in node.children:
-                self._render_node(child, parts)
+                self._render_node(child, parts, depth + 1)
             after = len(parts)
             link_text = "".join(parts[before:after]).strip()
             # Remove the raw children slices
@@ -453,7 +457,7 @@ class HTMLExtractor:
         if name == "strong" or name == "b":
             before = len(parts)
             for child in node.children:
-                self._render_node(child, parts)
+                self._render_node(child, parts, depth + 1)
             after = len(parts)
             text = "".join(parts[before:after]).strip()
             del parts[before:after]
@@ -464,7 +468,7 @@ class HTMLExtractor:
         if name == "em" or name == "i":
             before = len(parts)
             for child in node.children:
-                self._render_node(child, parts)
+                self._render_node(child, parts, depth + 1)
             after = len(parts)
             text = "".join(parts[before:after]).strip()
             del parts[before:after]
@@ -497,7 +501,7 @@ class HTMLExtractor:
 
         # Default: recurse into children
         for child in node.children:
-            self._render_node(child, parts)
+            self._render_node(child, parts, depth + 1)
 
     # ------------------------------------------------------------------
     # List rendering
@@ -653,11 +657,14 @@ class ReadabilityExtractor:
             if len(text) < 100:
                 continue
 
-            # Score: text length × density (text chars / total HTML chars)
-            html_len = len(str(tag))
-            if html_len == 0:
+            # Score: text length × density. Density uses the sum of child
+            # text lengths as the "HTML size" proxy — len(str(tag)) fully
+            # re-serialized every candidate subtree, O(n²) on big pages
+            # (audit #20).
+            child_chars = sum(len(str(c)) for c in tag.find_all(True)) + len(text)
+            if child_chars == 0:
                 continue
-            density = len(text) / html_len
+            density = len(text) / child_chars
             score = len(text) * density
 
             # Boost for content-like tags
