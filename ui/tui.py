@@ -744,6 +744,7 @@ class HelloChusquisTUI(App):
             full: list[str] = []
             think: list[str] = []
             last_flush = [time.time()]
+            last_think_flush = [0.0]
 
             def flush(force=False):
                 now = time.time()
@@ -759,7 +760,13 @@ class HelloChusquisTUI(App):
                 etype = ev.get("type")
                 if etype == "reasoning":
                     think.append(ev["content"])
-                    self.call_from_thread(self._stream_set_thinking, "".join(think))
+                    # Throttle: one UI post per reasoning token floods the
+                    # Textual thread (query+update+scroll each) and starves
+                    # the answer. 3 refreshes/s is plenty for a collapsed box.
+                    now = time.time()
+                    if now - last_think_flush[0] > 0.3:
+                        last_think_flush[0] = now
+                        self.call_from_thread(self._stream_set_thinking, "".join(think))
                 elif etype == "chunk":
                     full.append(ev["content"])
                     flush()
