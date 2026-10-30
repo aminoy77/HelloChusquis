@@ -15,7 +15,7 @@ import selectors
 from codecs import getincrementaldecoder
 
 from textual._loop import loop_last
-from textual._xterm_parser import XTermParser
+from textual._xterm_parser import XTermParser, ParseEOF
 from textual.drivers.linux_driver import LinuxDriver
 
 
@@ -71,5 +71,5 @@ class LightInputDriver(LinuxDriver):
             try:
                 for event in feed(""):
                     pass
-            except (EOFError, ParseError):
+            except (EOFError, ParseEOF):
                 pass

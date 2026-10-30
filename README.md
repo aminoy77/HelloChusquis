@@ -13,7 +13,7 @@ HelloChusquis brings conversation, tools, memory, web access, code execution, an
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-f5a623.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-35d39a.svg)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-452%20passing-35d39a.svg)](tests/)
+[![CI](https://github.com/aminoy77/HelloChusquis/actions/workflows/ci.yml/badge.svg)](https://github.com/aminoy77/HelloChusquis/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/hellochusquis.svg)](https://pypi.org/project/hellochusquis/)
 [![GitHub](https://img.shields.io/badge/source-GitHub-17191e.svg)](https://github.com/aminoy77/HelloChusquis)
 
@@ -128,7 +128,7 @@ Start the authenticated web interface locally:
 hellochusquis web
 ```
 
-Open [http://localhost:7272](http://localhost:7272). On first launch, the server creates a local access key. You can inspect it with:
+Open [http://localhost:7272](http://localhost:7272). On first launch, the server creates a local access key. The UI asks for it the first time — copy it from:
 
 ```bash
 cat ~/.hellochusquis/api_key.txt

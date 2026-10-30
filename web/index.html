@@ -1336,13 +1336,48 @@
         });
     }
 
-    // ---------- auth (local-first: no prompt; token only if present for remote) ----------
+    // ---------- auth (ask for the key when the server requires one) ----------
     async function initAuth() {
-        try { await fetchJson('/auth/check'); } catch (e) {}
+        let authRequired = false;
+        try {
+            const j = await fetchJson('/auth/check');
+            authRequired = !!j.auth_required;
+        } catch (e) {}
+        if (authRequired && !state.token) {
+            // Nothing ever stored hc_token before — with auth on, every
+            // request 401'd and the UI showed "Offline" forever.
+            const key = window.prompt(
+                'HelloChusquis API key (cat ~/.hellochusquis/api_key.txt):', '');
+            if (key && key.trim()) {
+                try {
+                    await fetchJson('/auth/verify', { method: 'POST', body: { message: key.trim() } });
+                    state.token = key.trim();
+                    storage.set('hc_token', state.token);
+                } catch (e) {
+                    toast('Invalid API key. Get it: cat ~/.hellochusquis/api_key.txt');
+                }
+            }
+        }
         try { await loadStatus(); }
         catch (e) {
+            if (e && e.status === 401 && state.token) {
+                // Stored token is stale (key rotated) — clear and ask once.
+                storage.del('hc_token'); state.token = '';
+                const key = window.prompt(
+                    'Session expired. HelloChusquis API key (cat ~/.hellochusquis/api_key.txt):', '');
+                if (key && key.trim()) {
+                    try {
+                        await fetchJson('/auth/verify', { method: 'POST', body: { message: key.trim() } });
+                        state.token = key.trim();
+                        storage.set('hc_token', state.token);
+                        await loadStatus();
+                        return;
+                    } catch (e2) { toast('Invalid API key.'); }
+                }
+            }
             connPill.textContent = 'Offline'; connPill.classList.add('off');
-            if (e && e.status !== 401) toast('Server unavailable. Check hellochusquis web.');
+            if (e && e.status === 401) toast('Auth required. Get your key: cat ~/.hellochusquis/api_key.txt');
+            else if (e && e.status !== 401) toast('Server unavailable. Check hellochusquis web.');
         }
     }
 
