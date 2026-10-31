@@ -1505,6 +1505,13 @@ def get_client() -> MCPClient:
     global _client
     if _client is None:
         _client = MCPClient()
+        # Register the default servers so the agent's mcp tool can see them.
+        # Connection happens lazily on first use (spawns npx subprocesses).
+        for name, config in build_default_configs().items():
+            try:
+                _client.add_server(name, config)
+            except ValueError:
+                pass  # Already registered
     return _client
 
 

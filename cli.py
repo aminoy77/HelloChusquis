@@ -5,10 +5,10 @@ import os
 import argparse
 import socket
 
-# Add project to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-KNOWN_COMMANDS = {"web", "api", "config", "setup", "status", "doctor", "users", "version", "help", "telegram", "skills"}
+# No sys.path insert needed: running as a script puts this directory on the
+# path automatically, and a console-script install covers the rest. The old
+# dirname(dirname(...)) added the PARENT folder (e.g. ~/Desktop), letting
+# sibling projects shadow our core/ and config modules.
 
 
 def _open_browser(host: str, port: int) -> None:
@@ -517,17 +517,31 @@ def main():
                 return
             print(f"Pruned {db_memory.prune_sessions_older_than(days)} old sessions.")
         elif rest and rest[0] == "export" and len(rest) > 1:
+            import tempfile
             from pathlib import Path as _Path
             dest = _Path(rest[1]).expanduser()
+            store = db_memory._get_store()
             lines = ["# HelloChusquis memory export", ""]
-            for s in db_memory._get_store().load_sessions(limit=1000):
-                lines.append(f"## {s.get('timestamp', '?')}")
-                for m in s.get("data", []):
-                    lines.append(f"- **{m.get('role', '?')}:** {m.get('content', '')}")
-                lines.append("")
-            for e in db_memory._get_store().list_entries(limit=1000):
+            # Page until exhausted: a hard limit silently drops history.
+            page = 500
+            offset = 0
+            while True:
+                batch = store.load_sessions(limit=page, offset=offset)
+                if not batch:
+                    break
+                for s in batch:
+                    lines.append(f"## {s.get('timestamp', '?')}")
+                    for m in s.get("data", []):
+                        lines.append(f"- **{m.get('role', '?')}:** {m.get('content', '')}")
+                    lines.append("")
+                offset += page
+            for e in store.list_entries(limit=100000):
                 lines.append(f"- [{e.category or 'fact'}] {e.key}: {e.value}")
-            dest.write_text("\n".join(lines), encoding="utf-8")
+            # Atomic write: never truncate the old export before the new one is complete.
+            fd, tmp_name = tempfile.mkstemp(dir=dest.parent, suffix=".tmp")
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines))
+            os.replace(tmp_name, dest)
             print(f"Exported to {dest}")
         elif rest:
             query = " ".join(rest)

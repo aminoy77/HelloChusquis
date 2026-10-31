@@ -1472,6 +1472,36 @@ class Agent:
             f"Unknown tool: {tool_name}. I can create this tool for you! "
             "Run `hellochusquis build` to create it with AI."))
 
+    def _ensure_mcp_connected(self) -> None:
+        """Connect MCP servers once, on first mcp-tool use.
+
+        Connection spawns npx subprocesses, so it must not happen at agent
+        init. Runs on a dedicated loop in a worker thread (uvicorn-safe).
+        """
+        import asyncio
+        import threading
+
+        if getattr(self, "_mcp_connected", False):
+            return
+        self._mcp_connected = True
+        holder: dict = {}
+        exc_holder: list[Exception] = []
+
+        def _runner():
+            loop = asyncio.new_event_loop()
+            try:
+                holder["result"] = loop.run_until_complete(self.mcp_client.connect())
+            except Exception as exc:  # noqa: BLE001 — tool boundary
+                exc_holder.append(exc)
+            finally:
+                loop.close()
+
+        t = threading.Thread(target=_runner, daemon=True, timeout=60)
+        t.start()
+        t.join(timeout=60)
+        if exc_holder:
+            logger.warning("MCP connect failed: %s", exc_holder[0])
+
     def _gated_dispatch(self, name: str, args: dict) -> ToolResult:
         """Dispatch with the same policy/audit/approval gates as run().
 
@@ -1721,12 +1751,14 @@ class Agent:
                     servers = list(self.mcp_client.servers.keys())
                     return ToolResult(success=True, output=str(servers))
                 elif action == "list_tools":
+                    self._ensure_mcp_connected()
                     tools = self.mcp_client.list_tools(args.get("server"))
                     return ToolResult(success=True, output=str(tools))
                 elif action == "call_tool":
                     server = args.get("server", "")
                     tool = args.get("tool", "")
                     arguments = args.get("arguments", {})
+                    self._ensure_mcp_connected()
                     import asyncio
                     import threading
 

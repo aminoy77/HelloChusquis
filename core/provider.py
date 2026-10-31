@@ -18,6 +18,23 @@ from core.logger import get_logger
 logger = get_logger("provider")
 
 
+def is_local_base(url: str) -> bool:
+    """True for loopback base URLs (local servers: no key, generous timeout).
+
+    Single source of truth — provider timeouts, setup key prompts and the
+    web server all share it. Covers IPv6 loopback, which substring checks
+    missed (Ollama on [::1] was treated as remote).
+    """
+    base = (url or "").lower()
+    return (
+        "localhost" in base
+        or "127.0.0.1" in base
+        or "[::1]" in base
+        or base.startswith("::1")
+        or base.startswith("http://::1")
+    )
+
+
 def validate_provider_base_url(base_url: str) -> str:
     """Return a canonical provider endpoint or reject unsafe URL components."""
     if not isinstance(base_url, str):
@@ -298,7 +315,7 @@ class ProviderPool:
             payload["tools"] = tools
 
         base = (provider.base_url or "").lower()
-        is_local = "localhost" in base or "127.0.0.1" in base
+        is_local = is_local_base(base)
         timeout = httpx.Timeout(connect=5.0,
                                 read=120.0 if is_local else float(self.timeout),
                                 write=10.0, pool=5.0)
@@ -433,24 +450,22 @@ class ProviderPool:
         except Exception:
             error_msg = ""
 
-        if status in (429, 402, 403, 401, 500, 502, 503, 504):
-            # Mark as exhausted silently - no user-visible output
-            provider.exhausted = True
-            provider.exhausted_at = time.time()
-        elif status in (404, 405):
-            # Model removed / endpoint not supported: this provider can never
-            # serve this request. Exhaust it (the reset window brings it back
-            # if the config changes) instead of paying the round-trip on
-            # every message.
+        if status in (429, 402, 403, 401, 404, 405):
+            # Config/quota problems: this provider cannot serve the request
+            # until something changes. Exhaust it (the reset window brings it
+            # back) instead of paying the round-trip on every message.
             provider.exhausted = True
             provider.exhausted_at = time.time()
         elif status in (400,):
             # Bad request — provider is healthy, don't penalize
             pass
         else:
-            # Mark other errors as exhausted silently
-            provider.exhausted = True
-            provider.exhausted_at = time.time()
+            # 5xx and unknown: likely transient. One blip never exhausts —
+            # two in a row do (success resets the count), like ConnectError.
+            provider.failed_calls += 1
+            if provider.failed_calls >= 2:
+                provider.exhausted = True
+                provider.exhausted_at = time.time()
 
         logger.debug(
             "Provider %s HTTP error (status %s). Message: %s",
@@ -483,7 +498,7 @@ class ProviderPool:
         # Local servers are free and slow (small CPU models + big tool
         # schemas), so they get a generous read budget instead of failing.
         base = (provider.base_url or "").lower()
-        is_local = "localhost" in base or "127.0.0.1" in base
+        is_local = is_local_base(base)
         timeout = httpx.Timeout(connect=5.0,
                                 read=120.0 if is_local else float(self.timeout),
                                 write=10.0, pool=5.0)

@@ -1354,11 +1354,12 @@ class VoiceManager:
         return voices[0] if voices else None
 
     def _cache_key(
-        self, text: str, voice_id: str, provider: str, fmt: str
+        self, text: str, voice_id: str, provider: str, fmt: str,
+        speed: float = 1.0, pitch: float = 1.0, language: str = "",
     ) -> str:
-        """Generate cache key from synthesis params."""
+        """Generate cache key from synthesis params (speed/pitch/language change the audio)."""
         h = hashlib.sha256()
-        h.update(f"{provider}:{voice_id}:{fmt}:{text}".encode("utf-8"))
+        h.update(f"{provider}:{voice_id}:{fmt}:{speed}:{pitch}:{language}:{text}".encode("utf-8"))
         return h.hexdigest()[:16]
 
     def _get_cached(self, key: str, fmt: str) -> Optional[str]:
@@ -1412,7 +1413,8 @@ class VoiceManager:
         # Check cache
         provider_obj = self.get_provider(effective_provider)
         cache_key = self._cache_key(
-            effective_text, effective_voice or "", provider_obj.provider_id, output_format
+            effective_text, effective_voice or "", provider_obj.provider_id,
+            output_format, speed=effective_speed, pitch=effective_pitch, language=lang,
         )
         if use_cache:
             cached_path = self._get_cached(cache_key, output_format)

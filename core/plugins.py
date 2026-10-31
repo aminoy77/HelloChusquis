@@ -646,7 +646,15 @@ class PluginHookSystem:
             timeout_ms=timeout_ms,
         )
         with self._lock:
-            self._registrations.append(reg)
+            # Dedup: load_plugins() runs per Agent instance but the hook
+            # system is process-wide — without this, handlers fire once per
+            # agent on every event.
+            already = any(
+                r.hook_name == hook_name and r.plugin_id == plugin_id
+                for r in self._registrations
+            )
+            if not already:
+                self._registrations.append(reg)
         logger.debug("registered hook %s from %s (priority=%d)", hook_name, plugin_id, priority)
 
     def unregister_hooks(self, plugin_id: str) -> int:

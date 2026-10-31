@@ -44,7 +44,10 @@ class TestIsolation(unittest.TestCase):
         self.assertIn("tool_result_callback", src)
         self.assertIn("release_turn", src)
         self.assertEqual(srv._feedback_limiter._limit, 10)
-        self.assertIn("with sqlite3.connect", src)
+        # /status must use the shared db_memory store, not a raw per-request
+        # sqlite3 connection (the old one leaked a connection per call).
+        self.assertNotIn("sqlite3.connect", src)
+        self.assertIn("get_session_count", src)
 
     def test_cli_flag_guard(self):
         src = Path("cli.py").read_text()

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import urllib.request
 from pathlib import Path
@@ -105,7 +106,11 @@ class TelegramBridge:
     def _save_offset(self) -> None:
         try:
             self._offset_path.parent.mkdir(parents=True, exist_ok=True)
-            self._offset_path.write_text(str(self.offset))
+            # Atomic: a crash mid-write must not truncate the offset back to 0
+            # (that would replay up to 24h of updates).
+            tmp = self._offset_path.with_suffix(".tmp")
+            tmp.write_text(str(self.offset))
+            os.replace(tmp, self._offset_path)
         except OSError:
             pass
 

@@ -64,6 +64,9 @@ def run(action: str, **kwargs: Any) -> str:
         return loop.run_until_complete(_run_async(action, str(token), kwargs, base_url))
     except RuntimeError:
         return _run_sync(action, str(token), kwargs, base_url)
+    except (httpx.HTTPError, ValueError) as exc:
+        # The async path must not leak past run() — same contract as _run_sync.
+        return f"Error: {exc}"
 
 
 async def _run_async(action: str, token: str, kwargs: dict[str, Any], base_url: str) -> str:

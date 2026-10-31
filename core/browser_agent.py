@@ -153,7 +153,9 @@ class BrowserAgent:
                 stealth_args = [
                     '--disable-blink-features=AutomationControlled',
                     '--disable-features=IsolateOrigins,site-per-process',
-                    '--disable-web-security',
+                    # --disable-web-security removed: it kills the same-origin
+                    # policy, letting any visited page read every other tab's
+                    # data. Anti-detect does not need it.
                     '--disable-features=ChromeWhatsNewUI',
                     '--no-first-run',
                     '--no-default-browser-check',
@@ -1099,14 +1101,20 @@ class BrowserAgent:
     async def get_local_storage(self) -> Dict[str, str]:
         """Get all localStorage items."""
         try:
-            return await self.page.evaluate("() => JSON.stringify(window.localStorage)")
+            # JSON.stringify(Storage) is always "{}" — spread into a plain
+            # object instead (Storage properties are not enumerable).
+            return await self.page.evaluate("() => ({...window.localStorage})")
         except Exception:
             return {}
 
     async def set_local_storage(self, key: str, value: str):
         """Set a localStorage item."""
         try:
-            await self.page.evaluate(f"window.localStorage.setItem('{key}', '{value}')")
+            # Pass key/value as an argument, never f-string them into the
+            # script (a crafted value would run arbitrary JS).
+            await self.page.evaluate(
+                "([k, v]) => window.localStorage.setItem(k, v)", [key, value]
+            )
         except Exception:
             pass
 

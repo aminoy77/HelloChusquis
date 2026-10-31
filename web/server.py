@@ -314,8 +314,18 @@ async def root(http_request: Request):
     html = html_path.read_text(encoding="utf-8").replace("<script>", f'<script nonce="{nonce}">', 1)
     # Instant local start: a loopback browser gets the token embedded in the
     # page, so no manual key prompt. Remote clients still must authenticate.
-    host = (http_request.client.host if http_request.client else "")
-    if AUTH_ENABLED and host in ("127.0.0.1", "::1", "localhost"):
+    # Gate on the Host header, not just the socket peer: a reverse proxy on
+    # this box (upstream = localhost) or a DNS-rebinding page must not receive
+    # the owner key.
+    peer = (http_request.client.host if http_request.client else "")
+    host_header = (http_request.headers.get("host") or "").lower()
+    host_name = host_header.rsplit(":", 1)[0] if ":" in host_header else host_header
+    host_name = host_name.strip("[]")
+    if (
+        AUTH_ENABLED
+        and peer in ("127.0.0.1", "::1", "localhost")
+        and host_name in ("127.0.0.1", "::1", "localhost")
+    ):
         html = html.replace("</head>", f'<meta name="hc-token" content="{REQUIRED_API_KEY}"></head>', 1)
     csp = (
         "default-src 'self'; "
@@ -643,18 +653,7 @@ def status(http_request: Request):
     providers = agent.pool.status()
     plugins = [{"name": plugin["name"]} for plugin in agent.plugins]
     summary = db_memory.load_summary()
-    sessions = 0
-    try:
-        import sqlite3
-        from pathlib import Path
-        db_path = Path.home() / ".hellochusquis/memory.db"
-        if db_path.exists():
-            with sqlite3.connect(db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM sessions")
-                sessions = cursor.fetchone()[0]
-    except Exception:
-        pass
+    sessions = db_memory._get_store().get_session_count()
     learnings = load_learnings()
     return {
         "agent_ready": True,

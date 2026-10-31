@@ -27,7 +27,7 @@ class PetstoreTool(Tool):
         """Execute an action against the petstore API."""
         headers = {"Content-Type": "application/json"}
 
-        base_url = self.config.get("base_url", "/api/v3")
+        base_url = self.config.get("base_url", "https://petstore3.swagger.io/api/v3")
 
         # CRUD aliases → real operation ids
         action = {
@@ -51,7 +51,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "findPetsByTags":
                 # Finds Pets by tags.
                 url = f"{base_url}/pet/findByTags"
@@ -64,7 +65,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "getInventory":
                 # Returns pet inventories by status.
                 url = f"{base_url}/store/inventory"
@@ -77,7 +79,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "loginUser":
                 # Logs user into the system.
                 url = f"{base_url}/user/login"
@@ -90,7 +93,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "logoutUser":
                 # Logs out current logged in user session.
                 url = f"{base_url}/user/logout"
@@ -103,7 +107,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             if action == "getPetById":
                 # Find pet by ID.
                 url = f"{base_url}/pet/{{petId}}"
@@ -116,7 +121,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "getOrderById":
                 # Find purchase order by ID.
                 url = f"{base_url}/store/order/{{orderId}}"
@@ -129,7 +135,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "getUserByName":
                 # Get user by user name.
                 url = f"{base_url}/user/{{username}}"
@@ -142,7 +149,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.get(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             if action == "addPet":
                 # Add a new pet to the store.
                 url = f"{base_url}/pet"
@@ -155,7 +163,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.post(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "updatePetWithForm":
                 # Updates a pet in the store with form data.
                 url = f"{base_url}/pet/{{petId}}"
@@ -168,7 +177,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.post(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "uploadFile":
                 # Uploads an image.
                 url = f"{base_url}/pet/{{petId}}/uploadImage"
@@ -179,9 +189,10 @@ class PetstoreTool(Tool):
                 for p in ['petId']:
                     if kwargs.get(p):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
-                r = httpx.post(url, headers=headers, params=params, timeout=30)
+                r = httpx.post(url, headers=headers, params=params, json=kwargs.get("data"), timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "placeOrder":
                 # Place an order for a pet.
                 url = f"{base_url}/store/order"
@@ -192,9 +203,10 @@ class PetstoreTool(Tool):
                 for p in []:
                     if kwargs.get(p):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
-                r = httpx.post(url, headers=headers, params=params, timeout=30)
+                r = httpx.post(url, headers=headers, params=params, json=kwargs.get("data"), timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "createUser":
                 # Create user.
                 url = f"{base_url}/user"
@@ -205,9 +217,10 @@ class PetstoreTool(Tool):
                 for p in []:
                     if kwargs.get(p):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
-                r = httpx.post(url, headers=headers, params=params, timeout=30)
+                r = httpx.post(url, headers=headers, params=params, json=kwargs.get("data"), timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "createUsersWithListInput":
                 # Creates list of users with given input array.
                 url = f"{base_url}/user/createWithList"
@@ -218,9 +231,10 @@ class PetstoreTool(Tool):
                 for p in []:
                     if kwargs.get(p):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
-                r = httpx.post(url, headers=headers, params=params, timeout=30)
+                r = httpx.post(url, headers=headers, params=params, json=kwargs.get("data"), timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             if action == "updatePet":
                 # Update an existing pet.
                 url = f"{base_url}/pet"
@@ -233,7 +247,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.put(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "updateUser":
                 # Update user resource.
                 url = f"{base_url}/user/{{username}}"
@@ -246,7 +261,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.put(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             if action == "deletePet":
                 # Deletes a pet.
                 url = f"{base_url}/pet/{{petId}}"
@@ -259,7 +275,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.delete(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "deleteOrder":
                 # Delete purchase order by identifier.
                 url = f"{base_url}/store/order/{{orderId}}"
@@ -272,7 +289,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.delete(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
             elif action == "deleteUser":
                 # Delete user resource.
                 url = f"{base_url}/user/{{username}}"
@@ -285,7 +303,8 @@ class PetstoreTool(Tool):
                         url = url.replace('{' + p + '}', str(kwargs.get(p)))
                 r = httpx.delete(url, headers=headers, params=params, timeout=30)
                 r.raise_for_status()
-                return ToolResult(success=True, output=json.dumps(r.json(), default=str), data=r.json())
+                body = r.json() if r.content else {}
+                return ToolResult(success=True, output=json.dumps(body, default=str), data=body)
 
             else:
                 return ToolResult(success=False, error=f"Unknown action: {action}. Available actions: addPet, updatePet, findPetsByStatus, findPetsByTags, getPetById, updatePetWithForm, deletePet, uploadFile, getInventory, placeOrder, getOrderById, deleteOrder, createUser, createUsersWithListInput, loginUser, logoutUser, getUserByName, updateUser, deleteUser")

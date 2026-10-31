@@ -13,9 +13,10 @@ import ipaddress
 import re
 import socket
 import time
+import contextlib
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlsplit
 
 import requests
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
@@ -140,6 +141,43 @@ def validate_url_safety(url: str, allow_private: bool = False) -> str:
                 )
 
     return url
+
+
+@contextlib.contextmanager
+def _pinned_dns(hostname: str, allowed_ips: list[str]):
+    """Pin *hostname* to IPs that already passed SSRF validation.
+
+    Closes the DNS-rebinding gap between validate_url_safety's resolution
+    and the connection's own resolution: during the request, getaddrinfo
+    may only return the validated addresses for this host.
+    """
+    original = socket.getaddrinfo
+    allowed = set(allowed_ips)
+
+    def pinned(host, *args, **kwargs):
+        infos = original(host, *args, **kwargs)
+        if host == hostname:
+            infos = [i for i in infos if i[4][0] in allowed]
+        return infos
+
+    socket.getaddrinfo = pinned
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = original
+
+
+def _validated_ips_for(url: str, allow_private: bool) -> list[str]:
+    """Re-resolve *url*'s hostname and enforce the SSRF check on the fresh IPs."""
+    hostname = urlsplit(url).hostname or ""
+    ips = _resolve_hostname(hostname)
+    if not allow_private:
+        for ip in ips:
+            if _is_private_ip(ip):
+                raise SsrFBlockedError(
+                    f"SSRF blocked: {hostname} resolves to private IP {ip}"
+                )
+    return ips
 
 
 def sanitize_fetch_url(raw: str) -> str:
@@ -948,13 +986,17 @@ class WebFetchTool(BaseTool):
         redirect_count = 0
 
         while True:
-            response = requests.get(
-                current_url,
-                headers=headers,
-                timeout=self.timeout_seconds,
-                allow_redirects=False,  # Never auto-follow; we validate each hop
-                stream=True,
-            )
+            # Re-resolve and pin: the connection may only use IPs that pass
+            # the SSRF check now, not the ones seen at validation time.
+            hop_ips = _validated_ips_for(current_url, self.allow_private_network)
+            with _pinned_dns(urlsplit(current_url).hostname or "", hop_ips):
+                response = requests.get(
+                    current_url,
+                    headers=headers,
+                    timeout=self.timeout_seconds,
+                    allow_redirects=False,  # Never auto-follow; we validate each hop
+                    stream=True,
+                )
 
             if response.status_code not in REDIRECT_STATUSES:
                 break  # Final (non-redirect) response

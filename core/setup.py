@@ -486,7 +486,8 @@ def check_browser_ready(cache_dir=None) -> tuple:
 
 def _is_local_url(url: str) -> bool:
     """True for loopback base URLs (local servers need no key, e.g. Ollama)."""
-    return "localhost" in url.lower() or "127.0.0.1" in url
+    from core.provider import is_local_base
+    return is_local_base(url)
 
 
 def _normalize_custom_base_url(base_url: str) -> str:
@@ -589,11 +590,13 @@ def _prompt_api_key(provider_name: str, existing_key: str = "") -> str:
         return api_key.strip()
 
 
-def login_provider(config: dict, display_name: str):
+def login_provider(config: dict, display_name: str, persist: bool = True):
     """Run the browser OAuth flow for an OAuth provider and store the entry.
 
     Appends a new provider or updates the existing one for the same OAuth
     backend. Returns the entry, or None on OAuth failure (message printed).
+    With persist=False the caller owns saving (setup flows pass a throwaway
+    config and save once at the end).
     """
     from core import oauth as _oauth
 
@@ -628,7 +631,8 @@ def login_provider(config: dict, display_name: str):
         tok["base_url"], tok["access_token"],
         provider_name=display_name, known_models=tok.get("models", []),
     )
-    _save_config_securely(config)
+    if persist:
+        _save_config_securely(config)
     console.print(f"  [#5eb97e]✓[/#5eb97e] Logged in to [bold]{display_name}[/bold] → [cyan]{entry['model']}[/cyan]")
     return entry
 
@@ -670,7 +674,7 @@ def run_setup():
         console.print(f"\n[bold]Provider #{priority}[/bold]")
         provider_info = pick_provider()
         if provider_info.get("oauth"):
-            entry = login_provider({"providers": []}, provider_info["name"])
+            entry = login_provider({"providers": []}, provider_info["name"], persist=False)
             if entry is None:
                 continue
             providers.append(entry)
@@ -773,7 +777,7 @@ def run_quick_setup() -> dict:
 
     # Step 2: OAuth providers log in via browser; local skip the key; others must have one
     if provider_info.get("oauth"):
-        entry = login_provider({"providers": []}, provider_info["name"])
+        entry = login_provider({"providers": []}, provider_info["name"], persist=False)
         if entry is None:
             return ensure_config()
         providers = [entry]
@@ -933,7 +937,7 @@ def edit_config(section: str = None):
         while add_new:
             provider_info = pick_provider()
             if provider_info.get("oauth"):
-                entry = login_provider({"providers": []}, provider_info["name"])
+                entry = login_provider({"providers": []}, provider_info["name"], persist=False)
                 if entry is None:
                     add_new = Confirm.ask("  Add another?", default=False)
                     continue

@@ -90,11 +90,13 @@ def _search_ddg_lite(query: str, num_results: int, region: str, time_filter: str
 
     results = []
     for link in soup.find_all("a", class_="result-link"):
-        # Snippet is in sibling/parent elements
+        # Snippet cell is a sibling of the link's cell — walk up to the row.
         snippet = ""
-        parent = link.find_parent("td", class_="result-snippet")
-        if parent:
-            snippet = parent.get_text(strip=True)
+        row = link.find_parent("tr")
+        if row:
+            snippet_cell = row.find("td", class_="result-snippet")
+            if snippet_cell:
+                snippet = snippet_cell.get_text(strip=True)
         results.append({
             "title": link.get_text(strip=True),
             "url": link.get("href", ""),

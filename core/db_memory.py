@@ -433,6 +433,9 @@ class MemoryStore:
         self._embedding_cache: Dict[int, List[float]] = {}
         # Dirty flag: set when entries change, cleared when search cache is rebuilt
         self._dirty: bool = True
+        # Entries written without an embedding (auto_embed=False) that a later
+        # rebuild must pick up. The dirty flag may only clear when this is 0.
+        self._unembedded: int = 0
         # Vocab stale flag: True until a full-corpus fit() has run.  Set on
         # init, entry mutations that skip embedding, and explicit reindexes.
         self._needs_fit: bool = True
@@ -492,11 +495,11 @@ class MemoryStore:
         return []
 
     @_locked
-    def load_sessions(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def load_sessions(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
             "SELECT id, timestamp, data, metadata FROM sessions "
-            "ORDER BY timestamp DESC LIMIT ?",
-            (limit,),
+            "ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+            (limit, offset),
         ).fetchall()
         return [
             {"id": r[0], "timestamp": r[1], "data": json.loads(r[2]), "metadata": json.loads(r[3])}
@@ -568,6 +571,8 @@ class MemoryStore:
             self._needs_fit = True
         if auto_embed:
             self._embed_entry_incremental(entry_id, key, value, tags or [], category)
+        else:
+            self._unembedded += 1
         return entry_id
 
     @_locked
@@ -844,7 +849,11 @@ class MemoryStore:
         # Update in-memory cache — the cache is complete and current now,
         # so searches can stay warm (no full rebuild on the next query).
         self._embedding_cache[entry_id] = embedding
-        self._dirty = False
+        self._unembedded = max(0, self._unembedded - 1)
+        # Only clear dirty when no embedding-less writes are pending —
+        # otherwise a rebuild would never pick them up.
+        if self._unembedded == 0:
+            self._dirty = False
         self._since_fit += 1
 
         # Amortized dimension-consistency reindex: O(N) once per threshold
@@ -862,6 +871,7 @@ class MemoryStore:
             self._dirty = False
             self._needs_fit = False
             self._since_fit = 0
+            self._unembedded = 0
             return 0
         # Build corpus from all text fields
         corpus = self._corpus_from_rows(
@@ -908,6 +918,7 @@ class MemoryStore:
         self._dirty = False
         self._needs_fit = False
         self._since_fit = 0
+        self._unembedded = 0
         return count
 
     @_locked
