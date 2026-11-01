@@ -3,6 +3,36 @@
 All notable changes to HelloChusquis. Older per-release notes previously lived in
 `RELEASE_v*.md` files and are consolidated here.
 
+## 5.5 — 2026-11-01
+
+### Fixed
+- Two full-repo audit rounds (39 findings resolved):
+  - Real token streaming (`client.stream`); 404/405 now exhaust a provider.
+  - Plan steps filtered to strings (malformed LLM JSON no longer crashes the session).
+  - Image resize/thumbnail no longer corrupt paths containing dots.
+  - Streaming path records denied/blocked tools in the loop detector (parity with `run`).
+  - OAuth device-flow survives transient network blips mid-poll.
+  - Redirect loops and SSRF blocks close the streaming response (no socket leak).
+  - Provider exhaustion: fixed double `failed_calls` increment (one 5xx no longer
+    benches a provider); covered by new HTTP-status exhaustion tests.
+  - SSRF DNS pinning covered by regression tests.
+  - Host-header gate on the web server (loopback peers + Host check).
+  - MCP default servers register on first use with a dedicated connect loop.
+  - Session export pagination + atomic temp-file writes; `/status` reads the store directly.
+
+### Changed
+- Removed 77 dead tool modules (−7,466 lines) and 42 of their tests; the tools
+  directory now holds only the 56 wired/contract-checked modules.
+- Removed dead APIs: `write_provenance` table, `save_skill`, `history` stats/compress
+  duplicates, `core/webhook_handler.py`, duplicate autolog constant.
+- Extracted the shared HTTP auth stack to `core/http_auth.py` (api/ and web/ no
+  longer keep divergent copies).
+- `hybrid_search` batched importance lookup (one SELECT instead of one per candidate).
+- `is_complex` keyword routing matches whole words ("report" no longer hits "reportaje").
+- Web UI approvals rely on the structured event only (regex fallback removed).
+- `install.sh` updates use `--ff-only` with a clear failure message.
+- Landing page numbers updated to real counts (48 integrations, 426 tests).
+
 ## 5.4 — 2026-09-11
 
 ### Added

@@ -21,4 +21,5 @@ class PackagingHygieneTest(unittest.TestCase):
         import re
         versions = re.findall(r"^## (\d+\.\d+)", Path("CHANGELOG.md").read_text(), re.M)
         self.assertGreaterEqual(len(versions), 2)
-        self.assertEqual(versions[0], "5.4")
+        from core.version import __version__
+        self.assertEqual(versions[0], __version__)
