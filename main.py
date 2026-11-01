@@ -2,6 +2,7 @@ from core.setup import ensure_config
 from core.agent import Agent
 from rich.console import Console
 import os
+import re
 import signal
 
 console = Console()
@@ -65,7 +66,8 @@ def is_complex(text: str) -> bool:
         return False
 
     for kw in FORCE_PLAN_KEYWORDS:
-        if kw in lower:
+        # Whole-word match: "report" must not hit "reportaje".
+        if re.search(rf"\b{re.escape(kw)}\b", lower):
             return True
 
     words = text.split()

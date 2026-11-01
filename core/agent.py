@@ -2283,15 +2283,17 @@ class Agent:
                                             hook_fn(tool_name, tool_args, result)
                                         except Exception:
                                             pass
-                    # --- Record tool call AND outcome for loop detector ---
-                    self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
-                    self.loop_detector.record_outcome(
-                        self._loop_session_state,
-                        tool_name,
-                        tool_args,
-                        result=result.output if result.success else None,
-                        error=None if result.success else result.error,
-                    )
+                # --- Record tool call AND outcome for loop detector ---
+                # Outside the else: denied/blocked calls count too, matching
+                # run() — otherwise a model can spam a denied tool forever.
+                self.loop_detector.record_call(self._loop_session_state, tool_name, tool_args)
+                self.loop_detector.record_outcome(
+                    self._loop_session_state,
+                    tool_name,
+                    tool_args,
+                    result=result.output if result.success else None,
+                    error=None if result.success else result.error,
+                )
                 if not result.success:
                     logger.error("Stream tool error: %s — %s", tool_name, result.error)
                     self._handle_active_learning_trigger(tool_name, result)

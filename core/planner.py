@@ -28,7 +28,11 @@ def generate_plan(user_input: str, pool) -> list[str]:
         content = choices[0].get("message", {}).get("content", "").strip()
         content = content.replace("```json", "").replace("```", "").strip()
         steps = json.loads(content)
-        return steps if isinstance(steps, list) else []
+        # Only plain strings are executable steps — a dict/int step would
+        # crash the next token count downstream.
+        if isinstance(steps, list):
+            return [s for s in steps if isinstance(s, str)][:6]
+        return []
     except Exception:
         return []
 

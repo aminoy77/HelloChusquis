@@ -9,6 +9,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from api import main as api_main
+from core import http_auth
 from web import server as web_server
 
 
@@ -20,11 +21,11 @@ class TestApiKeyPermissions(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             key_dir = Path(directory) / "keys"
             key_file = key_dir / "api_key.txt"
-            with patch.dict(os.environ, {}, clear=False), patch.object(api_main, "API_KEY_DIR", key_dir), patch.object(
-                api_main, "API_KEY_FILE", key_file
+            with patch.dict(os.environ, {}, clear=False), patch.object(http_auth, "API_KEY_DIR", key_dir), patch.object(
+                http_auth, "API_KEY_FILE", key_file
             ):
                 os.environ.pop("HELLOCHUSQUIS_API_KEY", None)
-                api_main._load_or_generate_api_key()
+                http_auth.load_or_generate_api_key()
 
             self._assert_mode(key_dir, 0o700)
             self._assert_mode(key_file, 0o600)
@@ -36,8 +37,8 @@ class TestApiKeyPermissions(unittest.TestCase):
             key_file = key_dir / "api_key.txt"
             key_file.write_text("existing-key\n")
             os.chmod(key_file, 0o644)
-            with patch.dict(os.environ, {}, clear=False), patch.object(web_server, "_AUTH_DIR", key_dir), patch.object(
-                web_server, "_AUTH_KEY_FILE", key_file
+            with patch.dict(os.environ, {}, clear=False), patch.object(http_auth, "API_KEY_DIR", key_dir), patch.object(
+                http_auth, "API_KEY_FILE", key_file
             ):
                 os.environ.pop("HELLOCHUSQUIS_API_KEY", None)
                 self.assertEqual(web_server._load_or_create_api_key(), "existing-key")

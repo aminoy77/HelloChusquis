@@ -1,16 +1,15 @@
-"""Regression tests for the generic HTTP client's network safety controls."""
+"""Regression tests for the shared SSRF validation used by every network tool."""
 
 import unittest
 
-from tools import http as http_tool
-from tools.web_fetch import SsrFBlockedError
+from tools.web_fetch import SsrFBlockedError, validate_url_safety
 
 
 class TestHttpSsrfSafety(unittest.TestCase):
-    def test_generic_http_client_reuses_shared_ssrf_validation(self):
-        self.assertEqual(http_tool._safe_url("https://8.8.8.8/public"), "https://8.8.8.8/public")
+    def test_validate_url_safety_allows_public_and_blocks_loopback(self):
+        self.assertEqual(validate_url_safety("https://8.8.8.8/public"), "https://8.8.8.8/public")
         with self.assertRaises(SsrFBlockedError):
-            http_tool._safe_url("http://127.0.0.1:8080/admin")
+            validate_url_safety("http://127.0.0.1:8080/admin")
 
 
 if __name__ == "__main__":

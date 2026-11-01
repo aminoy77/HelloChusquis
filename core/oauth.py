@@ -63,7 +63,11 @@ def device_flow(device_url: str, token_url: str, client_id: str, scope: str,
             }, timeout=15)
             tok.raise_for_status()
             payload = tok.json()
-        except (httpx.HTTPError, ValueError, KeyError) as e:
+        except httpx.HTTPError:
+            # Transient server/network blip: keep polling until the deadline
+            # instead of aborting a login the user is mid-way through.
+            continue
+        except (ValueError, KeyError) as e:
             raise OAuthError(f"Lost connection to the login server: {e}") from e
         if "access_token" in payload:
             return payload

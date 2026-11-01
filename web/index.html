@@ -1783,14 +1783,8 @@
                     } else if (ev.type === 'error') {
                         if (thinking) { thinking.remove(); thinking = null; }
                         assistant = assistant || ensureAssistant();
-                        const approvalMatch = /^Error:\s*Approval required:\s*(apr_[A-Za-z0-9_-]+)\.\s*(.*)$/i.exec(ev.content || '');
                         const bubble = assistant.querySelector('.message-bubble');
-                        if (approvalMatch) {
-                            bubble.textContent = '';
-                            renderApprovalCard(bubble, approvalMatch[1], approvalMatch[2]);
-                        } else {
-                            bubble.innerHTML = '<p><em>' + esc(ev.content || 'Error') + '</em></p>';
-                        }
+                        bubble.innerHTML = '<p><em>' + esc(ev.content || 'Error') + '</em></p>';
                     } else if (ev.type === 'done') {
                         break;
                     }

@@ -29,40 +29,22 @@ from core.logger import get_logger
 
 logger = get_logger("web")
 
-# --- Token auth config ---
-_AUTH_DIR = Path.home() / ".hellochusquis"
-_AUTH_KEY_FILE = _AUTH_DIR / "api_key.txt"
+# --- Token auth config (shared with api/) ---
+from core.http_auth import (
+    AuthMiddleware,
+    SecurityHeadersMiddleware,
+    API_KEY_FILE as _AUTH_KEY_FILE,
+    current_principal as _shared_current_principal,
+    load_or_generate_api_key,
+    require_permission as _shared_require_permission,
+)
 
-
-def _secure_api_key_storage() -> None:
-    """Restrict local credential storage to the current operating-system user."""
-    _AUTH_DIR.mkdir(parents=True, exist_ok=True)
-    os.chmod(_AUTH_DIR, 0o700)
-    if _AUTH_KEY_FILE.exists():
-        os.chmod(_AUTH_KEY_FILE, 0o600)
+_AUTH_DIR = _AUTH_KEY_FILE.parent
 
 
 def _load_or_create_api_key() -> str:
-    """Load or generate a key with owner-only filesystem permissions."""
-    env_key = os.environ.get("HELLOCHUSQUIS_API_KEY", "")
-    if env_key:
-        return env_key
-    _secure_api_key_storage()
-    if _AUTH_KEY_FILE.exists():
-        existing = _AUTH_KEY_FILE.read_text().strip()
-        if existing:
-            return existing
-    token = secrets.token_urlsafe(32)
-    try:
-        # O_EXCL create: api/ and web/ may boot together; if the other
-        # process won the race, use ITS key so both agree.
-        with open(_AUTH_KEY_FILE, "x") as f:
-            f.write(token + "\n")
-    except FileExistsError:
-        return _AUTH_KEY_FILE.read_text().strip()
-    os.chmod(_AUTH_KEY_FILE, 0o600)
-    return token
-
+    """Shared loader; kept as a name for tests and the auth hint."""
+    return load_or_generate_api_key()
 
 
 REQUIRED_API_KEY = _load_or_create_api_key()
@@ -92,7 +74,9 @@ def _public_auth_hint() -> str:
 
 def authenticate(token: str) -> Principal | None:
     """Resolve a bearer token to a principal, or ``None`` when unknown."""
-    return authenticate_bearer(token, REQUIRED_API_KEY)
+    from core.http_auth import authenticate as shared_authenticate
+
+    return shared_authenticate(token, REQUIRED_API_KEY)
 
 
 def current_principal(request: Request) -> Principal:
@@ -101,101 +85,19 @@ def current_principal(request: Request) -> Principal:
     With authentication explicitly disabled for local development every caller
     is the owner, matching the pre-identity behaviour of that override.
     """
-    principal = getattr(getattr(request, "state", None), "principal", None)
-    if principal is None:
-        if not AUTH_ENABLED:
-            return legacy_owner()
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return principal
+    return _shared_current_principal(request, REQUIRED_API_KEY, AUTH_ENABLED)
 
 
 def require_permission(request: Request, permission: Permission) -> Principal:
     """Authorize the caller for one operation, or fail with 403."""
-    principal = current_principal(request)
-    if not principal.has(permission):
-        logger.warning(
-            "Denied %s for %s (role=%s)", permission.value, principal.name, principal.role.value
-        )
-        raise HTTPException(
-            status_code=403,
-            detail=f"Role '{principal.role.value}' is not allowed to perform this operation",
-        )
-    return principal
-
-
-class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        path = request.url.path
-
-        # CORS preflight: pass through OPTIONS (browser sends before actual request)
-        if request.method == "OPTIONS":
-            return await call_next(request)
-
-        # Explicit local-development override only — enforced in start():
-        # binding beyond loopback re-enables auth (see start()).
-        if not AUTH_ENABLED:
-            return await call_next(request)
-
-        # Every caller authenticates with a Bearer token, local included.
-        # (The old loopback=owner shortcut let the agent itself — or any
-        # local process, or a reverse proxy — reach owner with no token.)
-
-        # Skip auth for static/login endpoints
-        if request.method == "GET" and path == "/":
-            return await call_next(request)
-
-        # Skip auth for health probes
-        if path in ("/health/live", "/health/ready", "/health"):
-            return await call_next(request)
-
-        # Skip auth for auth bootstrap endpoints (frontend needs these WITHOUT token)
-        if path in ("/auth/check", "/auth/verify"):
-            return await call_next(request)
-
-        # Check Authorization header
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Missing or invalid Authorization header"},
-            )
-        token = auth_header[7:]  # strip "Bearer "
-        principal = authenticate(token)
-        if principal is None:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Invalid API key"},
-            )
-        request.state.principal = principal
-        return await call_next(request)
-
-
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Add defensive headers to every web response, including auth failures."""
-
-    async def dispatch(self, request: Request, call_next):
-        try:
-            response = await call_next(request)
-        except Exception:
-            # Let Starlette's error handler deal with it, but don't swallow as None
-            raise
-        if response is None:
-            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault("Referrer-Policy", "no-referrer")
-        response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=()")
-        response.headers.setdefault("Cache-Control", "no-store")
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'",
-        )
-        return response
+    return _shared_require_permission(request, permission, REQUIRED_API_KEY, AUTH_ENABLED)
 
 
 app = FastAPI()
 app.add_middleware(RequestBodyLimitMiddleware)
-app.add_middleware(AuthMiddleware)
+app.add_middleware(AuthMiddleware, required_api_key=REQUIRED_API_KEY, auth_enabled=AUTH_ENABLED,
+                   public_get_paths=("/", "/health/live", "/health/ready", "/health"),
+                   public_paths=("/auth/check", "/auth/verify"))
 app.add_middleware(SecurityHeadersMiddleware)
 # Keep the web server alive before initial setup; agent-dependent routes return
 # a clear 503 until a provider is configured.

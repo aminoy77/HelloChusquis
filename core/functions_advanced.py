@@ -63,7 +63,8 @@ def image_resize(path: str, width: int, height: int) -> dict:
         from PIL import Image
         with Image.open(path) as img:
             img.thumbnail((width, height))
-            new = path.replace(".", "_resized.")
+            p = Path(path)
+            new = str(p.with_name(f"{p.stem}_resized{p.suffix}"))
             img.save(new)
             return {"saved": new}
     except Exception as e:
@@ -78,7 +79,8 @@ def image_thumbnail(path: str, size: int = 128) -> dict:
         from PIL import Image
         with Image.open(path) as img:
             img.thumbnail((size, size))
-            new = path.replace(".", "_thumb.")
+            p = Path(path)
+            new = str(p.with_name(f"{p.stem}_thumb{p.suffix}"))
             img.save(new)
             return {"saved": new}
     except Exception as e:

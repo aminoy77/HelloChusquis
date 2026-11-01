@@ -295,9 +295,11 @@ class ProviderPool:
                 if started:
                     yield {"type": "error", "message": f"{provider.name}: {e}"}
                     return
-                provider.failed_calls += 1
                 if isinstance(e, httpx.HTTPStatusError):
+                    # _handle_http_error owns the failed_calls count here too.
                     self._handle_http_error(provider, e)
+                else:
+                    provider.failed_calls += 1
                 logger.debug("stream error on %s: %s", provider.name, e)
                 continue
         yield {"type": "error", "message": "All providers failed."}
@@ -415,7 +417,8 @@ class ProviderPool:
                 provider.failed_calls = 0
                 return result
             except httpx.HTTPStatusError as e:
-                provider.failed_calls += 1
+                # _handle_http_error owns the failed_calls count for HTTP
+                # statuses (5xx needs exactly one increment per failure).
                 self._handle_http_error(provider, e)
                 last_error = e
                 continue

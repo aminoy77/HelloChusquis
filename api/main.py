@@ -3,23 +3,24 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 import uvicorn
-import secrets
-import os
 import json
 import re
-from pathlib import Path
 from core.identity import (
     IdentityError,
     Permission,
     Principal,
-    authenticate_bearer,
     default_store,
     parse_role,
 )
 from core.runtime import AgentNotReadyError, AgentRuntime
+from core.http_auth import (
+    AuthMiddleware,
+    SecurityHeadersMiddleware,
+    current_principal as _shared_current_principal,
+    load_or_generate_api_key,
+    require_permission as _shared_require_permission,
+)
 from core.http_limits import RequestBodyLimitMiddleware
 from core.rate_limiter import RateLimiter
 from core.version import __version__
@@ -27,112 +28,31 @@ from core.logger import get_logger
 
 logger = get_logger("api")
 
-# --- Token auth config ---
-API_KEY_DIR = Path.home() / ".hellochusquis"
-API_KEY_FILE = API_KEY_DIR / "api_key.txt"
-
-def _secure_api_key_storage() -> None:
-    """Restrict local credential storage to the current operating-system user."""
-    API_KEY_DIR.mkdir(parents=True, exist_ok=True)
-    os.chmod(API_KEY_DIR, 0o700)
-    if API_KEY_FILE.exists():
-        os.chmod(API_KEY_FILE, 0o600)
-
-
-def _load_or_generate_api_key() -> str:
-    """Load or generate a key with owner-only filesystem permissions."""
-    if key := os.environ.get("HELLOCHUSQUIS_API_KEY", ""):
-        return key
-    _secure_api_key_storage()
-    if API_KEY_FILE.exists():
-        return API_KEY_FILE.read_text().strip()
-    key = secrets.token_urlsafe(32)
-    try:
-        # O_EXCL create: api/ and web/ may boot together; if the other
-        # process won the race, use ITS key so both agree.
-        with open(API_KEY_FILE, "x") as f:
-            f.write(key + "\n")
-    except FileExistsError:
-        return API_KEY_FILE.read_text().strip()
-    os.chmod(API_KEY_FILE, 0o600)
-    return key
-
-REQUIRED_API_KEY = _load_or_generate_api_key()
+REQUIRED_API_KEY = load_or_generate_api_key()
 AUTH_ENABLED = True  # Always enabled
 
 
 def authenticate(token: str) -> Principal | None:
     """Resolve a bearer token to a principal, or ``None`` when unknown."""
-    return authenticate_bearer(token, REQUIRED_API_KEY)
+    from core.http_auth import authenticate as shared_authenticate
+
+    return shared_authenticate(token, REQUIRED_API_KEY)
 
 
 def current_principal(request: Request) -> Principal:
     """Return the principal attached by the auth middleware."""
-    principal = getattr(getattr(request, "state", None), "principal", None)
-    if principal is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return principal
+    return _shared_current_principal(request, REQUIRED_API_KEY, AUTH_ENABLED)
 
 
 def require_permission(request: Request, permission: Permission) -> Principal:
     """Authorize the caller for one operation, or fail with 403."""
-    principal = current_principal(request)
-    if not principal.has(permission):
-        logger.warning(
-            "Denied %s for %s (role=%s)", permission.value, principal.name, principal.role.value
-        )
-        raise HTTPException(
-            status_code=403,
-            detail=f"Role '{principal.role.value}' is not allowed to perform this operation",
-        )
-    return principal
-
-
-class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # CORS preflight: pass through OPTIONS (browser sends before actual request)
-        if request.method == "OPTIONS":
-            return await call_next(request)
-
-        # Skip auth for read-only status endpoints
-        if request.method == "GET" and request.url.path in (
-            "/", "/health", "/health/live", "/health/ready"
-        ):
-            return await call_next(request)
-
-        # Protect everything else (POST endpoints, /history, /clear)
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Missing or invalid Authorization header"},
-            )
-        token = auth_header[7:]  # strip "Bearer "
-        principal = authenticate(token)
-        if principal is None:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Invalid API key"},
-            )
-        request.state.principal = principal
-        return await call_next(request)
-
-
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Add defensive headers to every HTTP response, including auth failures."""
-
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault("Referrer-Policy", "no-referrer")
-        response.headers.setdefault("Cache-Control", "no-store")
-        return response
+    return _shared_require_permission(request, permission, REQUIRED_API_KEY, AUTH_ENABLED)
 
 
 app = FastAPI(title="HelloChusquis API", version=__version__)
 app.add_middleware(RequestBodyLimitMiddleware)
-app.add_middleware(AuthMiddleware)
+app.add_middleware(AuthMiddleware, required_api_key=REQUIRED_API_KEY, auth_enabled=AUTH_ENABLED,
+                   public_get_paths=("/", "/health", "/health/live", "/health/ready"))
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Rate limiters: /chat = 30/min, /feedback = 10/min, /runtime/reload = 3/min.

@@ -6,7 +6,6 @@ Provides persistent memory with:
   - Memory entries with tags, categories, timestamps
   - TF-IDF embeddings for semantic search
   - Hybrid search (semantic + keyword)
-  - Write provenance tracking
   - MEMORY.md bootstrap from workspace
 """
 
@@ -60,18 +59,6 @@ class MemoryEntry:
     importance: int = 5
     created_at: str = ""
     updated_at: str = ""
-
-
-@dataclass
-class WriteProvenance:
-    id: Optional[int] = None
-    entry_id: Optional[int] = None
-    writer: str = ""
-    origin_class: str = "agent"  # agent | untrusted | owner | system
-    observed_at: float = 0.0
-    reason: str = ""
-    content_before: str = ""
-    content_after: str = ""
 
 
 @dataclass
@@ -184,20 +171,6 @@ CREATE TABLE IF NOT EXISTS embedding_cache (
     model         TEXT    DEFAULT 'tfidf',
     created_at    REAL    NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS write_provenance (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    entry_id        INTEGER,
-    writer          TEXT    NOT NULL DEFAULT '',
-    origin_class    TEXT    NOT NULL DEFAULT 'agent',
-    observed_at     REAL    NOT NULL,
-    reason          TEXT    DEFAULT '',
-    content_before  TEXT    DEFAULT '',
-    content_after   TEXT    DEFAULT '',
-    FOREIGN KEY (entry_id) REFERENCES memory_entries(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_prov_entry ON write_provenance(entry_id);
 
 CREATE TABLE IF NOT EXISTS kb_sources (
     path        TEXT PRIMARY KEY,
@@ -613,6 +586,18 @@ class MemoryStore:
         return self._row_to_entry(row) if row else None
 
     @_locked
+    def get_importance_map(self, entry_ids: List[int]) -> Dict[int, int]:
+        """Batched importance lookup: one SELECT for any number of ids."""
+        if not entry_ids:
+            return {}
+        placeholders = ",".join("?" * len(entry_ids))
+        rows = self.conn.execute(
+            f"SELECT id, importance FROM memory_entries WHERE id IN ({placeholders})",
+            tuple(entry_ids),
+        ).fetchall()
+        return {r[0]: r[1] for r in rows}
+
+    @_locked
     def delete_entry(self, entry_id: int) -> None:
         self.conn.execute("DELETE FROM memory_entries WHERE id=?", (entry_id,))
         self.conn.commit()
@@ -693,49 +678,6 @@ class MemoryStore:
     def get_entry_count(self) -> int:
         row = self.conn.execute("SELECT COUNT(*) FROM memory_entries").fetchone()
         return row[0] if row else 0
-
-    # =====================================================================
-    # Write provenance
-    # =====================================================================
-
-    @_locked
-    def record_provenance(
-        self,
-        entry_id: int,
-        writer: str,
-        origin_class: str = "agent",
-        reason: str = "",
-        content_before: str = "",
-        content_after: str = "",
-    ) -> int:
-        cur = self.conn.execute(
-            "INSERT INTO write_provenance "
-            "(entry_id, writer, origin_class, observed_at, reason, content_before, content_after) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (entry_id, writer, origin_class, _now_ms(), reason, content_before, content_after),
-        )
-        self.conn.commit()
-        return cur.lastrowid or 0
-
-    @_locked
-    def get_provenance(self, entry_id: int) -> List[WriteProvenance]:
-        rows = self.conn.execute(
-            "SELECT id, entry_id, writer, origin_class, observed_at, reason, content_before, content_after "
-            "FROM write_provenance WHERE entry_id=? ORDER BY observed_at DESC",
-            (entry_id,),
-        ).fetchall()
-        return [
-            WriteProvenance(
-                id=r[0], entry_id=r[1], writer=r[2], origin_class=r[3],
-                observed_at=r[4], reason=r[5], content_before=r[6], content_after=r[7],
-            )
-            for r in rows
-        ]
-
-    @_locked
-    def get_provenance_for_entry(self, entry_id: int) -> Optional[WriteProvenance]:
-        provs = self.get_provenance(entry_id)
-        return provs[0] if provs else None
 
     # =====================================================================
     # Embedding helpers
@@ -1120,6 +1062,8 @@ class MemorySearch:
                 by_id[r.entry_id] = r
 
         now_ms = _now_ms()
+        # One batched importance lookup instead of one SELECT per candidate.
+        importance_map = self.store.get_importance_map(list(by_id))
         merged: List[SearchResult] = []
         for entry_id, result in by_id.items():
             combined = vw * result.vector_score + tw * result.text_score
@@ -1128,7 +1072,7 @@ class MemorySearch:
                 if age_days is not None and half_life_days > 0:
                     lam = math.log(2) / half_life_days
                     combined *= math.exp(-lam * max(0, age_days))
-            importance_mult = 0.75 + max(1, min(10, self._get_importance(entry_id))) * 0.05
+            importance_mult = 0.75 + max(1, min(10, importance_map.get(entry_id, 5))) * 0.05
             combined *= importance_mult
             result.score = combined
             merged.append(result)
@@ -1445,7 +1389,6 @@ RECALL_TOP_K = 3
 RECALL_MAX_CHARS = 800
 
 
-_AUTOLOG_TURN_CHARS = 4000
 # Audit #10: web/api processes never exit through the TUI, so retention
 # only ran there. Prune lazily here at most once an hour instead.
 _PRUNE_INTERVAL_S = 3600

@@ -33,12 +33,6 @@ class History:
         self._timestamps.append(self._now())
         self._trim()
 
-    def add_system_message(self, content: str):
-        """Add system message. Always inserts at position 0."""
-        self.messages.insert(0, {"role": "system", "content": content})
-        self._timestamps.insert(0, self._now())
-        self._trim()
-
     def _trim(self):
         """Keep only last max_entries, always preserving first system message."""
         if len(self.messages) <= self.max_entries:
@@ -70,76 +64,6 @@ class History:
         if encoder:
             return len(encoder.encode(text))
         return len(text) // 4
-
-    def get_stats(self) -> dict:
-        """Return stats about current history."""
-        return {
-            "total_messages": len(self.messages),
-            "total_tokens": self.get_token_count(self.messages),
-            "oldest_timestamp": self._timestamps[0] if self._timestamps else None,
-        }
-
-    def _summarize_pair(self, user_msg: dict, assistant_msg: dict) -> dict:
-        """Summarize a user+assistant pair into a single short line."""
-        user_content = user_msg.get("content", "")[:80]
-        assistant_content = assistant_msg.get("content", "")[:80]
-        summary = (
-            f"[Summary] User asked about: {user_content}... "
-            f"-> Assistant responded about: {assistant_content}..."
-        )
-        return {"role": "system", "content": summary}
-
-    def compress_if_needed(self, max_tokens: int = 8000) -> list[dict]:
-        """Intelligently compress history if over token budget.
-
-        Strategy:
-        - Keep system message always
-        - Keep last 5 messages in full
-        - Summarize middle pairs (user+assistant) into 1-line summaries
-        """
-        total = self.get_token_count(self.messages)
-        if total <= max_tokens:
-            return self.messages
-
-        compressed: list[dict] = []
-        system_idx = 0
-
-        # Extract system message
-        has_system = self.messages and self.messages[0].get("role") == "system"
-        if has_system:
-            compressed.append(self.messages[0])
-            system_idx = 1
-
-        # Remaining messages (excluding system)
-        remaining = self.messages[system_idx:]
-        if len(remaining) <= 5:
-            # Few enough messages, keep all
-            compressed.extend(remaining)
-            return compressed
-
-        # Keep last 5 in full
-        tail = remaining[-5:]
-        middle = remaining[:-5]
-
-        # Summarize middle in pairs
-        summarized: list[dict] = []
-        i = 0
-        while i < len(middle):
-            if (
-                i + 1 < len(middle)
-                and middle[i].get("role") == "user"
-                and middle[i + 1].get("role") == "assistant"
-            ):
-                summarized.append(self._summarize_pair(middle[i], middle[i + 1]))
-                i += 2
-            else:
-                # Odd message out, keep as-is
-                summarized.append(middle[i])
-                i += 1
-
-        compressed.extend(summarized)
-        compressed.extend(tail)
-        return compressed
 
     def optimize_context(self, max_tokens: int = 4000) -> list[dict]:
         """Optimize history to fit within max_tokens. Safe against missing messages."""

@@ -998,27 +998,33 @@ class WebFetchTool(BaseTool):
                     stream=True,
                 )
 
-            if response.status_code not in REDIRECT_STATUSES:
-                break  # Final (non-redirect) response
+            try:
+                if response.status_code not in REDIRECT_STATUSES:
+                    break  # Final (non-redirect) response
 
-            location = response.headers.get("Location", "")
-            if not location:
-                break  # 3xx but no Location header — treat as final
+                location = response.headers.get("Location", "")
+                if not location:
+                    break  # 3xx but no Location header — treat as final
 
-            redirect_count += 1
-            if redirect_count > self.max_redirects:
-                raise ValueError(
-                    f"Too many redirects ({redirect_count} > {self.max_redirects})"
-                )
+                redirect_count += 1
+                if redirect_count > self.max_redirects:
+                    raise ValueError(
+                        f"Too many redirects ({redirect_count} > {self.max_redirects})"
+                    )
 
-            # Resolve relative Location against the current URL
-            next_url = urljoin(current_url, location)
+                # Resolve relative Location against the current URL
+                next_url = urljoin(current_url, location)
 
-            # Validate the REDIRECT TARGET for SSRF (re-resolves DNS, checks IPs)
-            validate_url_safety(next_url, allow_private=self.allow_private_network)
-            response.close()
-            current_url = next_url
-            # Loop continues with the new URL
+                # Validate the REDIRECT TARGET for SSRF (re-resolves DNS, checks IPs)
+                validate_url_safety(next_url, allow_private=self.allow_private_network)
+                response.close()
+                current_url = next_url
+                # Loop continues with the new URL
+            except Exception:
+                # Any exit here (redirect cap, SSRF block) must not leak the
+                # open streaming response of the last hop.
+                response.close()
+                raise
 
         if response is None:
             raise ValueError("No response received from fetch")

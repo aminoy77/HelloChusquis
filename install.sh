@@ -36,7 +36,11 @@ INSTALL_DIR="$HOME/.hellochusquis-app"
 if [ -d "$INSTALL_DIR" ]; then
     echo "  Updating existing installation..."
     cd "$INSTALL_DIR"
-    git pull origin main --quiet
+    if ! git pull --ff-only origin main --quiet; then
+        echo "  ✗ Update failed: local changes or diverged history in $INSTALL_DIR."
+        echo "    Fix: cd $INSTALL_DIR && git stash && $0"
+        exit 1
+    fi
 else
     echo "  Cloning HelloChusquis..."
     git clone https://github.com/aminoy77/HelloChusquis.git "$INSTALL_DIR" --quiet

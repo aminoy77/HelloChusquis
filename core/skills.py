@@ -211,38 +211,6 @@ def create_skill(name: str, description: str, triggers: list[str], actions: list
     return Skill(name=name, description=description, triggers=triggers, actions=actions)
 
 
-def save_skill(skill: Skill, skills_dir: str = "skills") -> None:
-    """Persist a skill definition with owner-only file permissions."""
-    directory = Path(skills_dir)
-    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-    try:
-        directory.chmod(0o700)
-    except OSError:
-        pass
-    skill_file = directory / f"{skill.name}.json"
-    payload = json.dumps(
-        {
-            "name": skill.name,
-            "description": skill.description,
-            "triggers": skill.triggers,
-            "actions": skill.actions,
-            "requires_approval": skill.requires_approval,
-        },
-        indent=2,
-    )
-    descriptor = os.open(skill_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as skill_handle:
-            skill_handle.write(payload)
-            skill_handle.flush()
-            os.fsync(skill_handle.fileno())
-    finally:
-        try:
-            skill_file.chmod(0o600)
-        except OSError:
-            pass
-
-
 _registry: SkillRegistry | None = None
 
 
