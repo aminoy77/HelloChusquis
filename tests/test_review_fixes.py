@@ -28,7 +28,7 @@ def test_chat_failover_on_oauth_error(monkeypatch):
     pool.timeout = 10
     pool.providers = [p1, p2]
 
-    def fake_call(self, provider, messages, tools, model=None):
+    def fake_call(self, provider, messages, tools, model=None, **kwargs):
         if provider.name == "p1":
             raise oauth.OAuthError("Copilot token refresh failed — please re-login.")
         return {"choices": [{"message": {"content": "ok"}}]}
@@ -62,13 +62,13 @@ def test_stream_run_partial_then_error(monkeypatch):
     agent._session_id = "t"
     agent._pending_tool_results = []
     agent.tools_schema = None
-    agent._build_messages = lambda: [{"role": "user", "content": "hi"}]
+    agent._build_messages = lambda: [{"role": "user", "content": "analyze this log"}]
 
     import core.agent as agent_mod
     monkeypatch.setattr(agent_mod, "memory", SimpleNamespace(
         save_turn=lambda *a, **k: None, recall_context=lambda *a, **k: None))
 
-    events = list(agent.stream_run("hi"))
+    events = list(agent.stream_run("analyze this log"))
     kinds = [e["type"] for e in events]
     assert "error" in kinds
     assert kinds[-1] == "done"

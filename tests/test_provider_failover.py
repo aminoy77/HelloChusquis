@@ -47,7 +47,7 @@ class TestNetworkExhaustion(unittest.TestCase):
             model="m2", priority=2))
         calls = []
 
-        def fake_call(provider, messages, tools, model=None):
+        def fake_call(provider, messages, tools, model=None, **kwargs):
             calls.append((provider.name, model))
             if provider.name == "P1":
                 raise httpx.HTTPStatusError(

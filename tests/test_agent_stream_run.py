@@ -16,7 +16,7 @@ def test_stream_run_yields_real_chunks(monkeypatch):
         "append_message": staticmethod(lambda *a, **k: None)})()
     agent._session_id = "t"
     agent.tools_schema = None
-    agent._build_messages = lambda: [{"role": "user", "content": "hello"}]
+    agent._build_messages = lambda: [{"role": "user", "content": "summarize the log"}]
 
     events_in = [{"type": "reasoning", "content": "hmm"},
                  {"type": "chunk", "content": "Hi"},
@@ -30,7 +30,7 @@ def test_stream_run_yields_real_chunks(monkeypatch):
         "save_turn": staticmethod(lambda *a, **k: saved.setdefault("turn", True)),
         "recall_context": staticmethod(lambda *a, **k: None)}), raising=False)
 
-    events = list(agent.stream_run("hello"))
+    events = list(agent.stream_run("summarize the log"))
     kinds = [e["type"] for e in events]
     assert kinds == ["reasoning", "chunk", "chunk", "done"]
     assert saved.get("turn")

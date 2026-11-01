@@ -202,7 +202,13 @@ class SkillRegistry:
         if not items:
             return "No skills installed. Drop SKILL.md folders in ~/.hellochusquis/skills/<name>/SKILL.md."
         lines = ["Available skills (use the `skill` tool: `list`, `show`):"]
-        lines.extend(f"- {s.name}: {s.description}" for s in items)
+        for s in items:
+            # Full descriptions ran 400-500 chars each and dominated the system
+            # prompt (~9k chars); the `skill show` tool has the complete text.
+            desc = s.description.strip()
+            if len(desc) > 120:
+                desc = desc[:117].rstrip() + "..."
+            lines.append(f"- {s.name}: {desc}")
         return "\n".join(lines)
 
 

@@ -238,6 +238,7 @@ class ProviderPool:
         max_retries: int = 3,
         provider_name: Optional[str] = None,
         model: Optional[str] = None,
+        disable_thinking: bool = False,
     ) -> dict:
         """Attempt to chat, retrying up to *max_retries* times on failure.
 
@@ -250,7 +251,8 @@ class ProviderPool:
         last_error: Optional[Exception] = None
         for attempt in range(max_retries):
             try:
-                return self.chat(messages, tools, provider_name=provider_name, model=model)
+                return self.chat(messages, tools, provider_name=provider_name, model=model,
+                                 disable_thinking=disable_thinking)
             except RuntimeError as exc:
                 last_error = exc
                 if attempt < max_retries - 1:
@@ -262,7 +264,8 @@ class ProviderPool:
         raise RuntimeError(f"All providers failed. Last error: {last_error}")
 
     def chat_stream(self, messages: List[dict], tools: Optional[List[dict]] = None,
-                    provider_name: Optional[str] = None, model: Optional[str] = None):
+                    provider_name: Optional[str] = None, model: Optional[str] = None,
+                    disable_thinking: bool = False):
         """Stream a chat completion as SSE events.
 
         Yields {"type": "reasoning"|"chunk", "content": str} deltas,
@@ -282,7 +285,8 @@ class ProviderPool:
         for provider in available:
             use_model = model if (not provider_name or provider.name == provider_name) else None
             started = False
-            gen = self._call_stream(provider, messages, tools, model=use_model)
+            gen = self._call_stream(provider, messages, tools, model=use_model,
+                                    disable_thinking=disable_thinking)
             try:
                 for event in gen:
                     started = True
@@ -305,13 +309,18 @@ class ProviderPool:
         yield {"type": "error", "message": "All providers failed."}
 
     def _call_stream(self, provider: Provider, messages: List[dict],
-                     tools: Optional[List[dict]], model: Optional[str] = None):
+                     tools: Optional[List[dict]], model: Optional[str] = None,
+                     disable_thinking: bool = False):
         """Yield SSE deltas from *provider*; raises before first chunk on error."""
         payload: Dict[str, Any] = {
             "model": model or provider.model,
             "messages": messages,
             "stream": True,
         }
+        if disable_thinking:
+            # Nemotron-style hybrid reasoning models accept this toggle;
+            # unknown keys are ignored by other OpenAI-compatible servers.
+            payload["chat_template_kwargs"] = {"thinking": False}
         supports_tools = "groq.com" not in provider.base_url.lower()
         if tools and supports_tools:
             payload["tools"] = tools
@@ -375,7 +384,8 @@ class ProviderPool:
                 yield {"type": "tool_calls", "tool_calls": ordered}
 
     def chat(self, messages: List[dict], tools: Optional[List[dict]] = None,
-             provider_name: Optional[str] = None, model: Optional[str] = None) -> dict:
+             provider_name: Optional[str] = None, model: Optional[str] = None,
+             disable_thinking: bool = False) -> dict:
         """Send *messages* to the first available provider and return the response.
 
         When *provider_name* is supplied the pool only considers that provider;
@@ -406,7 +416,8 @@ class ProviderPool:
                 # The requested model belongs to the preferred provider; fallbacks
                 # use their own configured model (a groq model name 404s on Ollama).
                 use_model = model if (not provider_name or provider.name == provider_name) else None
-                result = self._call(provider, messages, tools, model=use_model)
+                result = self._call(provider, messages, tools, model=use_model,
+                                    disable_thinking=disable_thinking)
                 # Update timing statistics
                 elapsed = time.time() - start
                 provider.avg_response_time = (
@@ -483,6 +494,7 @@ class ProviderPool:
         messages: List[dict],
         tools: Optional[List[dict]],
         model: Optional[str] = None,
+        disable_thinking: bool = False,
     ) -> dict:
         """Perform the HTTP request against *provider*.
 
@@ -492,6 +504,8 @@ class ProviderPool:
             "model": model or provider.model,
             "messages": messages,
         }
+        if disable_thinking:
+            payload["chat_template_kwargs"] = {"thinking": False}
         supports_tools = "groq.com" not in provider.base_url.lower()
         if tools and supports_tools:
             payload["tools"] = tools
