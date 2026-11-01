@@ -748,6 +748,10 @@ def run_setup():
             "timeout_seconds": 15,
             "workspace_dirs": [workspace],
             "memory_retention_days": retention_days,
+            # Reasoning toggle for hybrid-thinking models (nemotron etc.):
+            # "auto" = fast answers for short/simple messages, extended
+            # reasoning for long or analysis-heavy ones. "on"/"off" force it.
+            "thinking": "auto",
         },
         "agent": {
             "system_prompt": SYSTEM_PROMPT
@@ -810,6 +814,8 @@ def run_quick_setup() -> dict:
             "timeout_seconds": 15,
             "workspace_dirs": [str(Path.home() / ".hellochusquis" / "workspace")],
             "memory_retention_days": 30,
+            # Reasoning toggle: "auto" (recommended) | "on" | "off"
+            "thinking": "auto",
         },
         "agent": {
             "system_prompt": SYSTEM_PROMPT

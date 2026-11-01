@@ -1,5 +1,5 @@
 """
-Session management, conversation compaction, context-window guarding, and prompt
+Session management and prompt
 composition for HelloChusquis.
 
 Dependencies: stdlib only (sqlite3, hashlib, json, time, uuid, re, textwrap, threading).
@@ -57,20 +57,6 @@ def estimate_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
 
-def estimate_message_tokens(message: dict[str, Any]) -> int:
-    """Estimate tokens for a single chat message dict."""
-    content = message.get("content", "")
-    if isinstance(content, list):
-        # Multimodal: sum text parts
-        parts = [p.get("text", "") for p in content if isinstance(p, dict)]
-        content = "\n".join(parts)
-    role_overhead = 4  # role tag overhead
-    return role_overhead + estimate_tokens(content)
-
-
-def estimate_messages_tokens(messages: Sequence[dict[str, Any]]) -> int:
-    """Sum token estimates for a list of messages."""
-    return sum(estimate_message_tokens(m) for m in messages)
 
 
 # ===========================================================================
@@ -95,17 +81,6 @@ class SessionMetadata:
     model: str
     context_window: int
     extra: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class CompactionResult:
-    """Outcome of a compaction pass."""
-    messages: list[dict[str, Any]]
-    tokens_before: int
-    tokens_after: int
-    strategy_used: str
-    dropped_count: int
-    summary_text: str | None = None
 
 
 # ===========================================================================
@@ -161,16 +136,6 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_messages_ts ON messages(session_id, timestamp);
-
-CREATE TABLE IF NOT EXISTS compaction_log (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id    TEXT NOT NULL REFERENCES sessions(session_id),
-    timestamp     REAL NOT NULL,
-    tokens_before INTEGER NOT NULL,
-    tokens_after  INTEGER NOT NULL,
-    strategy      TEXT NOT NULL,
-    summary       TEXT
-);
 
 CREATE TABLE IF NOT EXISTS audit_events (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -389,7 +354,6 @@ class SessionManager:
             session_ids = [row["session_id"] for row in rows]
             for session_id in session_ids:
                 conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
-                conn.execute("DELETE FROM compaction_log WHERE session_id = ?", (session_id,))
                 conn.execute("DELETE FROM audit_events WHERE session_id = ?", (session_id,))
                 conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
             conn.commit()
@@ -400,7 +364,6 @@ class SessionManager:
         with self._lock:
             conn = self._ensure_connection()
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
-            conn.execute("DELETE FROM compaction_log WHERE session_id = ?", (session_id,))
             conn.execute("DELETE FROM audit_events WHERE session_id = ?", (session_id,))
             cur = conn.execute(
                 "DELETE FROM sessions WHERE session_id = ?", (session_id,)
@@ -526,48 +489,6 @@ class SessionManager:
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
             conn.commit()
 
-    def replace_history(self, session_id: str, messages: list[dict[str, Any]]) -> None:
-        """Swap the full message list atomically (audit #3).
-
-        Compaction used to clear-then-reappend with a commit per message; a
-        crash in between truncated the conversation permanently. One
-        transaction makes the swap all-or-nothing.
-        """
-        now = time.time()
-        with self._lock:
-            conn = self._ensure_connection()
-            try:
-                conn.execute("BEGIN")
-                conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
-                for msg in messages:
-                    tokens = estimate_tokens(msg.get("content", ""))
-                    priority = msg.get("priority") or PRIORITY_WEIGHTS.get(
-                        msg.get("role", "user"), 1.0)
-                    conn.execute(
-                        """INSERT INTO messages
-                           (session_id, role, content, timestamp, token_count, priority, metadata)
-                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                        (
-                            session_id,
-                            msg.get("role", "user"),
-                            msg.get("content", ""),
-                            now,
-                            tokens,
-                            priority,
-                            json.dumps(msg.get("metadata") or {}),
-                        ),
-                    )
-                conn.execute(
-                    "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
-                    (now, session_id),
-                )
-                conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-
-    # -- audit log -----------------------------------------------------------
-
     def log_audit_event(
         self,
         session_id: str,
@@ -609,52 +530,6 @@ class SessionManager:
                 "details": json.loads(row["details"]),
             }
             for row in rows
-        ]
-
-    # -- compaction log ------------------------------------------------------
-
-    def log_compaction(
-        self,
-        session_id: str,
-        tokens_before: int,
-        tokens_after: int,
-        strategy: str,
-        summary: str | None = None,
-    ) -> None:
-        """Record a compaction event."""
-        with self._lock:
-            conn = self._ensure_connection()
-            conn.execute(
-                """INSERT INTO compaction_log
-                   (session_id, timestamp, tokens_before, tokens_after, strategy, summary)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (session_id, time.time(), tokens_before, tokens_after, strategy, summary),
-            )
-            conn.commit()
-
-    def get_compaction_history(
-        self, session_id: str, limit: int = 20
-    ) -> list[dict[str, Any]]:
-        """Return recent compaction events for *session_id*."""
-        with self._lock:
-            conn = self._ensure_connection()
-            rows = conn.execute(
-                """SELECT * FROM compaction_log
-                   WHERE session_id = ?
-                   ORDER BY timestamp DESC
-                   LIMIT ?""",
-                (session_id, limit),
-            ).fetchall()
-        return [
-            {
-                "id": r["id"],
-                "timestamp": r["timestamp"],
-                "tokens_before": r["tokens_before"],
-                "tokens_after": r["tokens_after"],
-                "strategy": r["strategy"],
-                "summary": r["summary"],
-            }
-            for r in rows
         ]
 
 

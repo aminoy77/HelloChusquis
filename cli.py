@@ -4,6 +4,7 @@ import sys
 import os
 import argparse
 import socket
+from pathlib import Path
 
 # No sys.path insert needed: running as a script puts this directory on the
 # path automatically, and a console-script install covers the rest. The old
@@ -250,6 +251,21 @@ def main():
         except ImportError:
             print("hellochusquis (version unknown)")
         return
+
+    if args.command == "build-tool":
+        # Wire the tool synthesis feature: generate tools/<name>.py from a
+        # plain description or an OpenAPI spec (URL or file path).
+        from core import tool_builder
+        source = args.args[0] if args.args else ""
+        if not source:
+            print("Usage: hellochusquis build-tool <service-name-or-openapi-url> [description]")
+            return 1
+        description = " ".join(args.args[1:]) or f"{source} API integration"
+        if source.startswith(("http://", "https://")) or Path(source).suffix in (".json", ".yaml", ".yml"):
+            ok = tool_builder.synthesize_from_openapi(source)
+        else:
+            ok = tool_builder.synthesize_basic_tool(source, description)
+        return 0 if ok else 1
 
     if args.command == "setup":
         from core.setup import run_quick_setup, run_setup
@@ -610,6 +626,7 @@ def main():
     if args.command is not None and args.command not in {
         "web", "api", "telegram", "config", "setup", "status", "users",
         "doctor", "version", "help", "models", "memory", "knowledge", "skills",
+        "build-tool",
     }:
         print(f"Unknown command '{args.command}'. Try: web, api, telegram, config, setup, status, or nothing for chat.")
         print("Run 'hellochusquis help' for full usage.")
