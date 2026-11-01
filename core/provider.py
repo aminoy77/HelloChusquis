@@ -18,6 +18,17 @@ from core.logger import get_logger
 logger = get_logger("provider")
 
 
+def _accepts_thinking_toggle(provider: "Provider") -> bool:
+    """True for servers that tolerate ``chat_template_kwargs``.
+
+    OpenAI and Groq reject unknown request arguments with a 400 (which would
+    exhaust the provider after two short messages); NVIDIA NIM and vLLM
+    accept the toggle, and local servers ignore unknown fields.
+    """
+    base = (provider.base_url or "").lower()
+    return "nvidia" in base or "vllm" in base or is_local_base(base)
+
+
 def is_local_base(url: str) -> bool:
     """True for loopback base URLs (local servers: no key, generous timeout).
 
@@ -317,7 +328,7 @@ class ProviderPool:
             "messages": messages,
             "stream": True,
         }
-        if disable_thinking:
+        if disable_thinking and _accepts_thinking_toggle(provider):
             # Nemotron-style hybrid reasoning models accept this toggle;
             # unknown keys are ignored by other OpenAI-compatible servers.
             payload["chat_template_kwargs"] = {"thinking": False}
@@ -504,7 +515,7 @@ class ProviderPool:
             "model": model or provider.model,
             "messages": messages,
         }
-        if disable_thinking:
+        if disable_thinking and _accepts_thinking_toggle(provider):
             payload["chat_template_kwargs"] = {"thinking": False}
         supports_tools = "groq.com" not in provider.base_url.lower()
         if tools and supports_tools:

@@ -1915,7 +1915,7 @@ class Agent:
     def _is_trivial_greeting(self, user_input: str) -> bool:
         """True only for a bare greeting as the FIRST user message — once
         there is conversation history, even 'hi' may carry context."""
-        text = user_input.strip().lower().rstrip("!.?¡¿ ")
+        text = user_input.strip().lower().strip("!.?¡¿ \t")
         if text not in self._TRIVIAL_GREETINGS:
             return False
         messages = getattr(self.history, "messages", None)
