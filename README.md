@@ -13,13 +13,10 @@ HelloChusquis brings conversation, tools, memory, web access, code execution, an
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-f5a623.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-35d39a.svg)](pyproject.toml)
-[![CI](https://github.com/aminoy77/HelloChusquis/actions/workflows/ci.yml/badge.svg)](https://github.com/aminoy77/HelloChusquis/actions/workflows/ci.yml)
+
 [![PyPI](https://img.shields.io/pypi/v/hellochusquis.svg)](https://pypi.org/project/hellochusquis/)
 [![GitHub](https://img.shields.io/badge/source-GitHub-17191e.svg)](https://github.com/aminoy77/HelloChusquis)
 
-<p align="center">
-  <a href="github-social-preview.png">View the GitHub social preview</a>
-</p>
 
 ## Why HelloChusquis?
 
