@@ -1,0 +1,87 @@
+{
+  "items": [
+    {
+      "id": "caveman",
+      "kind": "skill",
+      "name": "Caveman",
+      "description": "Terse, evidence-first responses with less filler.",
+      "skill_md": "---\nname: caveman\ndescription: Give terse, evidence-first answers without hiding tradeoffs.\n---\n\nAnswer first. Keep technical facts and caveats. Prefer short sentences and no filler.\n"
+    },
+    {
+      "id": "code-review",
+      "kind": "skill",
+      "name": "Code Review",
+      "description": "Review a diff or file with strict, actionable findings.",
+      "skill_md": "---\nname: code-review\ndescription: Review a diff or file with strict, actionable findings.\n---\n\n# Code review\n\nBe strict, specific, and brief.\n\n1. Read the full diff first; never comment on lines you haven't seen.\n2. Report only real defects: wrong behavior, crashes, data loss, security holes, broken contracts.\n3. Skip style nits unless they hide a bug.\n4. Every finding needs: file + line, what's wrong, why it matters, a concrete fix.\n5. Check: error paths, empty inputs, off-by-one, leaked secrets, unhandled rejections.\n6. If the change is safe, say so in one line and stop.\n\nOutput: findings ordered by severity, then a one-line verdict (approve / needs work).\n"
+    },
+    {
+      "id": "standup-notes",
+      "kind": "skill",
+      "name": "Standup Notes",
+      "description": "Turn rough bullets into a tight standup update.",
+      "skill_md": "---\nname: standup-notes\ndescription: Turn rough bullets into a tight standup update.\n---\n\n# Standup notes\n\nTurn the user's rough bullets into a tight standup update.\n\nFormat (keep each line under 20 words):\n\n- **Did:** finished work, with outcome.\n- **Doing:** today's focus, with the concrete next step.\n- **Blocked:** blockers only, naming who or what unblocks.\n\nRules:\n\n1. Cut filler and status with no outcome.\n2. Never invent progress; mark gaps as \"no update\".\n3. Flag anything blocked more than a day at the top.\n4. Total under 120 words.\n"
+    },
+    {
+      "id": "slack",
+      "kind": "plugin",
+      "name": "Slack",
+      "description": "Local Slack integration plugin.",
+      "source": "slack"
+    },
+    {
+      "id": "filesystem",
+      "kind": "mcp",
+      "name": "Filesystem MCP",
+      "description": "Connect an MCP filesystem server with an owner-only workspace.",
+      "config": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/.hellochusquis/mcp-files"],
+        "transport_type": "stdio"
+      }
+    },
+    {
+      "id": "git",
+      "kind": "mcp",
+      "name": "Git MCP",
+      "description": "Connect the local Git MCP server.",
+      "config": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-git"],
+        "transport_type": "stdio"
+      }
+    },
+    {
+      "id": "github",
+      "kind": "mcp",
+      "name": "GitHub MCP",
+      "description": "Connect the GitHub MCP server.",
+      "config": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "transport_type": "stdio"
+      }
+    },
+    {
+      "id": "slack-mcp",
+      "kind": "mcp",
+      "name": "Slack MCP",
+      "description": "Connect the Slack MCP server.",
+      "config": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-slack"],
+        "transport_type": "stdio"
+      }
+    },
+    {
+      "id": "postgres",
+      "kind": "mcp",
+      "name": "Postgres MCP",
+      "description": "Connect the Postgres MCP server.",
+      "config": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-postgres"],
+        "transport_type": "stdio"
+      }
+    }
+  ]
+}

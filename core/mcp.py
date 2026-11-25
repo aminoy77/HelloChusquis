@@ -1493,6 +1493,41 @@ def build_default_configs() -> dict[str, MCPServerConfig]:
     return configs
 
 
+def load_marketplace_configs() -> dict[str, MCPServerConfig]:
+    """Load MCP servers installed through the local marketplace."""
+    path = Path.home() / ".hellochusquis" / "mcp.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    if not isinstance(servers, dict):
+        return {}
+    configs: dict[str, MCPServerConfig] = {}
+    for name, raw in servers.items():
+        if not isinstance(name, str) or not isinstance(raw, dict):
+            continue
+        try:
+            transport_type = str(raw.get("transport_type", "stdio"))
+            if transport_type not in ("stdio", "http", "sse"):
+                continue
+            raw_args = [str(arg).replace("~", str(Path.home()), 1) if str(arg).startswith("~") else str(arg)
+                        for arg in raw.get("args", [])] if isinstance(raw.get("args"), list) else []
+            configs[name] = MCPServerConfig(
+                name=name,
+                command=str(raw.get("command", "")),
+                args=raw_args,
+                env={str(k): str(v) for k, v in raw.get("env", {}).items()} if isinstance(raw.get("env"), dict) else {},
+                cwd=str(raw["cwd"]) if isinstance(raw.get("cwd"), str) else None,
+                url=str(raw.get("url", "")),
+                headers={str(k): str(v) for k, v in raw.get("headers", {}).items()} if isinstance(raw.get("headers"), dict) else {},
+                transport_type=transport_type,
+            )
+        except (TypeError, ValueError):
+            continue
+    return configs
+
+
 # ---------------------------------------------------------------------------
 # Convenience singleton (backward compat)
 # ---------------------------------------------------------------------------
@@ -1507,7 +1542,9 @@ def get_client() -> MCPClient:
         _client = MCPClient()
         # Register the default servers so the agent's mcp tool can see them.
         # Connection happens lazily on first use (spawns npx subprocesses).
-        for name, config in build_default_configs().items():
+        server_configs = build_default_configs()
+        server_configs.update(load_marketplace_configs())
+        for name, config in server_configs.items():
             try:
                 _client.add_server(name, config)
             except ValueError:
@@ -1519,7 +1556,9 @@ async def get_bridge() -> MCPToolBridge:
     """Get a bridge backed by the global client, connected to all default servers."""
     bridge = MCPToolBridge(client=get_client())
     # Auto-register default servers
-    for name, config in build_default_configs().items():
+    server_configs = build_default_configs()
+    server_configs.update(load_marketplace_configs())
+    for name, config in server_configs.items():
         try:
             bridge.register_server(name, config)
         except ValueError:

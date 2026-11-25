@@ -215,6 +215,44 @@ def get_status():
     }
 
 
+@app.get("/market/items")
+def market_items(http_request: Request, kind: str = ""):
+    from core.marketplace import MarketplaceError, is_installed, list_items
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        return {
+            "items": [
+                {**item, "installed": is_installed(item)}
+                for item in list_items(kind)
+            ]
+        }
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/install")
+def market_install(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, install_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        return install_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/uninstall")
+def market_uninstall(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, uninstall_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        return uninstall_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/models")
 def list_models(http_request: Request, provider: str = "", refresh: bool = False):
     """Available models for a configured provider."""
