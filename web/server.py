@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
+from starlette.responses import FileResponse
 from starlette.responses import StreamingResponse
 import uvicorn
 import json
@@ -102,7 +103,7 @@ async def _lifespan(_app: FastAPI):
 app = FastAPI(lifespan=_lifespan)
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(AuthMiddleware, required_api_key=REQUIRED_API_KEY, auth_enabled=AUTH_ENABLED,
-                   public_get_paths=("/", "/health/live", "/health/ready", "/health"),
+                   public_get_paths=("/", "/assets/logo-primary.png", "/health/live", "/health/ready", "/health"),
                    public_paths=("/auth/check", "/auth/verify"))
 app.add_middleware(SecurityHeadersMiddleware)
 # Keep the web server alive before initial setup; agent-dependent routes return
@@ -251,6 +252,15 @@ async def root(http_request: Request):
         "form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     )
     return HTMLResponse(html, headers={"Content-Security-Policy": csp})
+
+
+@app.get("/assets/{asset_name}")
+async def web_asset(asset_name: str):
+    assets_dir = (Path(__file__).parent / "assets").resolve()
+    asset_path = (assets_dir / asset_name).resolve()
+    if asset_path.parent != assets_dir or not asset_path.is_file():
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return FileResponse(asset_path)
 
 
 @app.get("/auth/check")
@@ -606,6 +616,47 @@ def models(http_request: Request, provider: str = "", refresh: bool = False):
     except Exception:
         logger.exception("models fetch failed")
         raise HTTPException(status_code=500, detail="Failed to fetch models")
+
+
+@app.get("/market/items")
+def market_items(http_request: Request, kind: str = ""):
+    from core.marketplace import MarketplaceError, is_installed, list_items
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        items = list_items(kind)
+        return {
+            "items": [
+                {**item, "installed": is_installed(item)}
+                for item in items
+            ]
+        }
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/install")
+def market_install(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, install_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    _require_rate_limit(_provider_update_limiter, http_request, "/market/install")
+    try:
+        return install_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/uninstall")
+def market_uninstall(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, uninstall_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    _require_rate_limit(_provider_update_limiter, http_request, "/market/uninstall")
+    try:
+        return uninstall_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 class ProviderUpdate(BaseModel):

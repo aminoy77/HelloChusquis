@@ -57,6 +57,7 @@ exclude = ["tests*", "docs*"]
 
 [tool.setuptools.package-data]
 "web" = ["*.html", "*.png"]
+"core" = ["marketplace_catalog.json"]
 
 [tool.ruff]
 line-length = 120

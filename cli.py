@@ -126,6 +126,7 @@ Usage:
   hellochusquis models           List configured providers and models
   hellochusquis memory [QUERY]   Memory stats, search, or remember|forget FACT
   hellochusquis knowledge        Knowledge base stats (--reingest to refresh)
+  hellochusquis market [list|search|install|uninstall] [ITEM]
   hellochusquis skills list      List installed SKILL.md skills
   hellochusquis skills show NAME Show a skill body
   hellochusquis users list       List HTTP users and their roles
@@ -606,6 +607,58 @@ def main():
             print(f"files: {count_kb_files()}  ingested sources: {db_memory.kb_ingested_count()}")
         return
 
+    if args.command == "market":
+        from core.marketplace import MarketplaceError, install_item, is_installed, list_items, uninstall_item
+
+        sub = args.args[0] if args.args else ""
+        if sub in ("", "open"):
+            from web.server import start
+            host = args.host or "127.0.0.1"
+            port = args.port or 7272
+            print(f"Starting HelloChusquis marketplace on http://{host}:{port}")
+            if not args.no_browser:
+                _open_browser(host, port)
+            start(host=host, port=port)
+            return
+
+        if sub in ("list", "search"):
+            query = " ".join(args.args[1:]).strip().lower()
+            items = list_items()
+            for item in items:
+                haystack = f"{item.get('name', '')} {item.get('description', '')} {item.get('kind', '')}".lower()
+                if query and query not in haystack:
+                    continue
+                state = "installed" if is_installed(item) else "available"
+                print(f"{item['id']:<24} {item['kind']:<7} [{state}]  {item.get('name', '')}")
+            return
+
+        if sub == "install":
+            if len(args.args) < 2:
+                print("Usage: hellochusquis market install <item-id>")
+                return 1
+            try:
+                result = install_item(args.args[1])
+            except MarketplaceError as exc:
+                print(f"Error: {exc}")
+                return 1
+            print(f"Installed {result['kind']} '{result['item']}'.")
+            return
+
+        if sub == "uninstall":
+            if len(args.args) < 2:
+                print("Usage: hellochusquis market uninstall <item-id>")
+                return 1
+            try:
+                result = uninstall_item(args.args[1])
+            except MarketplaceError as exc:
+                print(f"Error: {exc}")
+                return 1
+            print(f"Uninstalled {result['kind']} '{result['item']}'.")
+            return
+
+        print(f"Unknown market subcommand '{sub}'. Try: list, search, install, uninstall.")
+        return 1
+
     if args.command == "skills":
         from pathlib import Path as _Path
         from core import skills as _skills
@@ -637,7 +690,7 @@ def main():
     # Validate unknown commands
     if args.command is not None and args.command not in {
         "web", "api", "telegram", "config", "setup", "status", "users",
-        "doctor", "version", "help", "models", "memory", "knowledge", "skills",
+        "doctor", "version", "help", "models", "memory", "knowledge", "market", "skills",
         "build-tool",
     }:
         print(f"Unknown command '{args.command}'. Try: web, api, telegram, config, setup, status, or nothing for chat.")
