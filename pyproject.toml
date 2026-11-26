@@ -56,7 +56,7 @@ include = ["core*", "tools*", "ui*", "web*", "api*", "workspace*"]
 exclude = ["tests*", "docs*"]
 
 [tool.setuptools.package-data]
-"web" = ["*.html"]
+"web" = ["*.html", "*.png"]
 "core" = ["marketplace_catalog.json"]
 
 [tool.ruff]

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from core.agent import Agent
-from core.planner import execute_plan
+from core.planner import execute_plan, generate_plan
 
 
 def _agent():
@@ -68,3 +68,24 @@ def test_execute_plan_notify_callback():
     seen = []
     execute_plan(["a", "b"], agent, notify=lambda msg: seen.append(msg))
     assert any("1/2" in m for m in seen) and any("2/2" in m for m in seen)
+
+
+def test_selected_model_is_used_for_planning_and_steps(monkeypatch):
+    import core.planner as planner
+
+    calls = {}
+
+    def chat_with_retry(messages, **kwargs):
+        calls["planner"] = kwargs
+        return {"choices": [{"message": {"content": '["step"]'}}]}
+
+    pool = SimpleNamespace(chat_with_retry=chat_with_retry)
+    assert generate_plan("goal", pool, provider_name="OpenAI", model="gpt-4.1") == ["step"]
+    assert calls["planner"] == {"provider_name": "OpenAI", "model": "gpt-4.1"}
+
+    agent = _agent()
+    agent.pool = pool
+    agent.run = lambda step, **kwargs: calls.setdefault("step", kwargs)
+    monkeypatch.setattr(planner.console, "print", lambda *a, **k: None)
+    execute_plan(["step"], agent, quiet=True, provider_name="OpenAI", model="gpt-4.1")
+    assert calls["step"] == {"provider": "OpenAI", "model": "gpt-4.1"}

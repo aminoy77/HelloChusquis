@@ -119,6 +119,7 @@ Usage:
   hellochusquis api              Launch REST API
   hellochusquis telegram         Chat from Telegram (needs bot token)
   hellochusquis config           Edit configuration
+  hellochusquis config --terminal  Edit configuration in the terminal
   hellochusquis setup            Run setup wizard
   hellochusquis status           Show local readiness summary
   hellochusquis doctor           Check providers & dependencies
@@ -140,6 +141,7 @@ Flags:
   --show             Show current config (masked keys)
   --api-keys         Edit API keys only
   --providers        Edit providers only
+  --terminal         Use the terminal configuration editor (with config)
   --port PORT        Port for web/api (default: 8080 api / 7272 web)
   --host HOST        Host for web/api (default: 127.0.0.1)
   --contracts        Verify bundled integration contracts offline (with doctor)
@@ -167,6 +169,7 @@ def main():
     parser.add_argument("--show", action="store_true", help="Show current config")
     parser.add_argument("--api-keys", action="store_true", help="Edit API keys only")
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
+    parser.add_argument("--terminal", action="store_true", help="Use the terminal configuration editor")
     parser.add_argument("--login", type=str, default=None, metavar="PROVIDER", help="Login to an OAuth provider via browser (copilot, qwen)")
     parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
     parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
@@ -269,18 +272,24 @@ def main():
         return 0 if ok else 1
 
     if args.command == "setup":
-        from core.setup import run_quick_setup, run_setup
         if args.full:
+            from core.setup import run_setup
             run_setup()
         else:
-            run_quick_setup()
+            from web.setup import run_setup_frontend
+            run_setup_frontend()
         return
 
     if args.command == "config":
-        from core.setup import show_config, edit_config, ensure_config
+        from core.setup import show_config, edit_config
 
         if args.show:
             show_config()
+            return
+
+        if not args.terminal:
+            from web.setup import run_setup_frontend
+            run_setup_frontend()
             return
 
         section = None

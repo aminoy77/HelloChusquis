@@ -87,7 +87,11 @@ def is_complex(text: str) -> bool:
 def main():
     """Launch HelloChusquis — TUI by default, web/api via subcommands."""
     try:
-        config = ensure_config()
+        try:
+            config = ensure_config(interactive=False)
+        except FileNotFoundError:
+            from web.setup import run_setup_frontend
+            config = run_setup_frontend()
     except KeyboardInterrupt:
         console.print("\n[dim]Setup cancelled.[/dim]")
         return 1
