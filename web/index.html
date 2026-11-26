@@ -844,6 +844,63 @@
         .model-bar { padding: 10px 6px 2px; }
         .hint-line { font-size: 0.6rem; }
         @media (max-width: 768px) { .messages, .input-shell { max-width: 100%; } .sidebar { width: 248px; } }
+
+        /* Local marketplace */
+        .marketplace-view {
+            display: none; flex: 1; min-height: 0; overflow-y: auto;
+            background: radial-gradient(700px 300px at 85% 0%, rgba(245,166,35,.09), transparent 60%), var(--bg);
+            padding: 32px clamp(20px, 5vw, 64px) 48px;
+        }
+        .marketplace-view.active { display: block; }
+        #chat-area.marketplace-hidden { display: none; }
+        .marketplace-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+        .marketplace-kicker { color: var(--accent); font: 800 .62rem var(--font-mono); letter-spacing: .16em; text-transform: uppercase; }
+        .marketplace-head h1 { margin: 7px 0 0; font: 700 clamp(2rem, 5vw, 4.2rem)/.95 Georgia, 'Times New Roman', serif; letter-spacing: -.055em; }
+        .marketplace-head h1 em { color: var(--accent); font-style: italic; }
+        .marketplace-actions { display: flex; gap: 8px; }
+        .marketplace-tools { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 12px; margin-bottom: 22px; }
+        .marketplace-search { width: 100%; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); padding: 0 14px; font: inherit; outline: none; }
+        .marketplace-search:focus { border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .marketplace-filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; }
+        .marketplace-filter { white-space: nowrap; height: 38px; border: 1px solid var(--border); border-radius: 100px; background: var(--surface); color: var(--text-muted); padding: 0 13px; cursor: pointer; font: 700 .68rem var(--font-ui); }
+        .marketplace-filter.selected { border-color: var(--accent-border); background: var(--accent-soft); color: var(--accent); }
+        .marketplace-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+        .market-card { min-width: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; transition: transform .22s var(--ease), border-color .22s ease; }
+        .market-card:hover { transform: translateY(-5px); border-color: var(--accent-border); }
+        .market-art { position: relative; height: 190px; display: grid; place-items: center; background: linear-gradient(145deg, var(--art), rgba(255,255,255,.04)); overflow: hidden; }
+        .market-art::before { content: ''; position: absolute; width: 110px; height: 110px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; box-shadow: 0 0 0 18px rgba(255,255,255,.06), 0 0 0 36px rgba(255,255,255,.035); }
+        .market-art-mark { position: relative; z-index: 1; width: 72px; height: 72px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.5); border-radius: 22px; background: rgba(10,10,12,.18); color: white; font: 700 1.4rem Georgia, serif; transform: rotate(-5deg); backdrop-filter: blur(5px); }
+        .market-stock { position: absolute; top: 10px; right: 10px; border: 1px solid rgba(255,255,255,.28); border-radius: 100px; background: rgba(10,10,12,.48); color: white; font: 700 .58rem var(--font-mono); padding: 5px 8px; }
+        .market-info { padding: 15px; }
+        .market-category { color: var(--text-dim); font: 800 .58rem var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+        .market-title { margin: 7px 0 5px; font: 700 1rem Georgia, 'Times New Roman', serif; }
+        .market-desc { min-height: 38px; margin: 0 0 13px; color: var(--text-muted); font-size: .72rem; line-height: 1.55; }
+        .market-seller { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: .64rem; }
+        .market-seller b { color: var(--text-muted); }
+        .market-buy { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+        .market-price { font: 800 1.05rem Georgia, serif; }
+        .market-price small { color: var(--text-dim); font: 700 .58rem var(--font-mono); }
+        .market-cart-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--accent-border); border-radius: 50%; background: var(--accent); color: var(--bg); cursor: pointer; }
+        .market-cart-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .market-cart { position: fixed; top: 72px; right: 16px; z-index: 220; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 88px); overflow-y: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-lg); padding: 16px; transform: translateX(calc(100% + 24px)); transition: transform .24s var(--ease); }
+        .market-cart.visible { transform: translateX(0); }
+        .market-cart h3 { margin: 0 0 14px; font: 700 1.15rem Georgia, serif; }
+        .cart-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-soft); font-size: .72rem; }
+        .cart-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cart-row button { width: 25px; height: 25px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface2); color: var(--text); cursor: pointer; }
+        .cart-total { display: flex; justify-content: space-between; margin: 14px 0; font: 800 1rem Georgia, serif; }
+        .cart-name { width: 100%; height: 40px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); padding: 0 10px; }
+        .market-empty { grid-column: 1/-1; min-height: 260px; display: grid; place-items: center; border: 1px dashed var(--border); border-radius: 14px; color: var(--text-muted); }
+        .market-product-dialog { width: min(520px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); padding: 18px; }
+        .market-product-dialog::backdrop { background: rgba(0,0,0,.68); backdrop-filter: blur(4px); }
+        .market-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .market-form label { display: grid; gap: 6px; color: var(--text-muted); font-size: .68rem; }
+        .market-form label.full { grid-column: 1/-1; }
+        .market-form input, .market-form textarea, .market-form select { width: 100%; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); padding: 9px 10px; font: inherit; }
+        .market-form textarea { min-height: 78px; resize: vertical; }
+        @media (max-width: 1100px) { .marketplace-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 800px) { .marketplace-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .marketplace-head { align-items: start; } }
+        @media (max-width: 520px) { .marketplace-view { padding: 24px 14px 40px; } .marketplace-grid { grid-template-columns: 1fr; } .marketplace-tools { grid-template-columns: 1fr; } .marketplace-head { flex-direction: column; } .market-art { height: 220px; } }
 </style>
 </head>
 <body class="theme-dark accent-amber font-inter">
@@ -952,6 +1009,9 @@
                 <span class="conn-pill" id="conn-pill">Connecting</span>
             </div>
             <div class="app-header-right">
+                <button class="btn btn-ghost" id="marketplace-open" type="button" title="Abrir mercado local">
+                    Mercado
+                </button>
                 <button class="icon-btn" id="voice-btn" aria-label="Voice options" title="Voice options (V)">
                     <svg class="ic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                 </button>
@@ -1045,6 +1105,51 @@
             </section>
 
         </div>
+
+        <section class="marketplace-view" id="marketplace-view" aria-label="Mercado local">
+            <header class="marketplace-head">
+                <div>
+                    <div class="marketplace-kicker">Catálogo del barrio</div>
+                    <h1>Hecho cerca.<br><em>Encontrado aquí.</em></h1>
+                </div>
+                <div class="marketplace-actions">
+                    <button class="btn" id="marketplace-sell" type="button">Vender un producto</button>
+                    <button class="btn btn-primary" id="marketplace-cart-open" type="button">Carrito (<span id="marketplace-cart-count">0</span>)</button>
+                </div>
+            </header>
+            <div class="marketplace-tools">
+                <input class="marketplace-search" id="marketplace-search" type="search" placeholder="Buscar objeto, productor o barrio..." aria-label="Buscar en el mercado">
+                <div class="marketplace-filters" id="marketplace-filters" aria-label="Categorías"></div>
+            </div>
+            <div class="marketplace-grid" id="marketplace-grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="market-cart" id="marketplace-cart" aria-label="Carrito">
+            <h3>Tu compra local</h3>
+            <div id="marketplace-cart-items"></div>
+            <div class="cart-total"><span>Total</span><b id="marketplace-cart-total">$0.00</b></div>
+            <input class="cart-name" id="marketplace-customer" maxlength="100" placeholder="Nombre para el pedido" aria-label="Nombre para el pedido">
+            <button class="btn btn-primary" id="marketplace-checkout" type="button" style="width:100%;justify-content:center">Confirmar pedido</button>
+        </aside>
+
+        <dialog class="market-product-dialog" id="marketplace-product-dialog">
+            <form method="dialog" id="marketplace-product-form">
+                <h3 style="margin:0 0 14px;font-family:Georgia,serif">Publicar producto</h3>
+                <div class="market-form">
+                    <label>Vendedor<input name="seller" required maxlength="80" value="Mi Taller"></label>
+                    <label>Barrio<input name="neighborhood" maxlength="80" value="Centro"></label>
+                    <label class="full">Título<input name="title" required maxlength="120"></label>
+                    <label class="full">Descripción<textarea name="description" required maxlength="500"></textarea></label>
+                    <label>Categoría<select name="category" id="marketplace-category-form"><option>Hogar</option><option>Alimentos</option><option>Arte</option><option>Accesorios</option></select></label>
+                    <label>Precio en dólares<input name="price" type="number" required min="0.01" step="0.01" value="10.00"></label>
+                    <label class="full">Stock<input name="stock" type="number" required min="0" max="99999" value="1"></label>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+                    <button class="btn" type="button" id="marketplace-product-cancel">Cancelar</button>
+                    <button class="btn btn-primary" type="submit">Publicar</button>
+                </div>
+            </form>
+        </dialog>
     </div>
 
     <!-- ===================== APPEARANCE PANEL ===================== -->
@@ -1183,6 +1288,9 @@
         voiceMode: storage.get('hc_voice') || 'off',
         abortCtrl: null,
         paletteItems: [],
+        marketplaceCategory: 'Todos',
+        marketplaceProducts: [],
+        marketplaceCart: {},
     };
     const THEMES = ['dark', 'light', 'minimal', 'ocean', 'forest'];
     // ponytail: client-only counters, upgrade to /status history when server exposes it
@@ -1290,6 +1398,7 @@
         landing.classList.add('hidden');
         app.classList.add('active');
         document.body.style.overflow = 'hidden';
+        showChatView();
         composer.focus();
         if (!state.loaded) loadStatus();
     }
@@ -1975,6 +2084,179 @@
         composer.style.height = Math.min(composer.scrollHeight, 160) + 'px';
     }
 
+    // ---------- local marketplace ----------
+    function showChatView() {
+        document.getElementById('chat-area').classList.remove('marketplace-hidden');
+        document.getElementById('marketplace-view').classList.remove('active');
+        document.getElementById('marketplace-cart').classList.remove('visible');
+    }
+
+    async function openMarketplace() {
+        document.getElementById('chat-area').classList.add('marketplace-hidden');
+        document.getElementById('marketplace-view').classList.add('active');
+        await loadMarketplace();
+    }
+
+    function money(cents) {
+        return '$' + (Number(cents) / 100).toFixed(2);
+    }
+
+    async function loadMarketplace() {
+        const grid = document.getElementById('marketplace-grid');
+        grid.innerHTML = '<div class="market-empty">Cargando catálogo local...</div>';
+        try {
+            const [categoryData, productData] = await Promise.all([
+                fetchJson('/marketplace/categories'),
+                fetchJson('/marketplace/products?category=' +
+                    encodeURIComponent(state.marketplaceCategory) +
+                    '&search=' + encodeURIComponent(document.getElementById('marketplace-search').value || '')),
+            ]);
+            const filters = document.getElementById('marketplace-filters');
+            filters.innerHTML = '';
+            (categoryData.categories || ['Todos']).forEach((category) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'marketplace-filter' +
+                    (category === state.marketplaceCategory ? ' selected' : '');
+                button.textContent = category;
+                button.addEventListener('click', () => {
+                    state.marketplaceCategory = category;
+                    loadMarketplace();
+                });
+                filters.appendChild(button);
+            });
+            state.marketplaceProducts = productData.products || [];
+            renderMarketplace();
+        } catch (error) {
+            grid.innerHTML = '<div class="market-empty">No se pudo cargar el mercado: ' +
+                esc(error.message) + '</div>';
+        }
+    }
+
+    function renderMarketplace() {
+        const grid = document.getElementById('marketplace-grid');
+        if (!state.marketplaceProducts.length) {
+            grid.innerHTML = '<div class="market-empty">No hay productos en esta búsqueda.</div>';
+            return;
+        }
+        grid.innerHTML = '';
+        state.marketplaceProducts.forEach((product) => {
+            const card = document.createElement('article');
+            card.className = 'market-card';
+            card.style.setProperty('--art', product.color || '#c89a64');
+            const initial = String(product.title).trim().charAt(0).toUpperCase();
+            card.innerHTML =
+                '<div class="market-art">' +
+                    '<span class="market-stock">' + product.stock + ' disponibles</span>' +
+                    '<span class="market-art-mark" aria-hidden="true">' + esc(initial) + '</span>' +
+                '</div>' +
+                '<div class="market-info">' +
+                    '<div class="market-category">' + esc(product.category) + '</div>' +
+                    '<h2 class="market-title">' + esc(product.title) + '</h2>' +
+                    '<p class="market-desc">' + esc(product.description) + '</p>' +
+                    '<div class="market-seller"><b>' + esc(product.seller) + '</b><span>· ' +
+                        esc(product.neighborhood) + ' · ★ ' + Number(product.rating).toFixed(1) + '</span></div>' +
+                    '<div class="market-buy"><span class="market-price">' + money(product.price_cents) +
+                        ' <small>USD</small></span>' +
+                        '<button class="market-cart-btn" type="button" aria-label="Añadir ' +
+                        esc(product.title) + '" ' + (product.stock < 1 ? 'disabled' : '') +
+                        ' data-product-id="' + product.id + '">+</button></div>' +
+                '</div>';
+            card.querySelector('.market-cart-btn').addEventListener('click', () => addToCart(product));
+            grid.appendChild(card);
+        });
+    }
+
+    function addToCart(product) {
+        const existing = state.marketplaceCart[product.id];
+        if (existing && existing.quantity >= product.stock) {
+            toast('No hay más stock disponible');
+            return;
+        }
+        state.marketplaceCart[product.id] = {
+            product,
+            quantity: existing ? existing.quantity + 1 : 1,
+        };
+        renderCart();
+        toast(product.title + ' añadido');
+    }
+
+    function renderCart() {
+        const items = Object.values(state.marketplaceCart);
+        const count = items.reduce((sum, item) => sum + item.quantity, 0);
+        const total = items.reduce((sum, item) =>
+            sum + item.quantity * item.product.price_cents, 0);
+        document.getElementById('marketplace-cart-count').textContent = count;
+        document.getElementById('marketplace-cart-total').textContent = money(total);
+        const container = document.getElementById('marketplace-cart-items');
+        container.innerHTML = '';
+        items.forEach((item) => {
+            const row = document.createElement('div');
+            row.className = 'cart-row';
+            row.innerHTML =
+                '<b>' + esc(item.product.title) + '</b><span>' + item.quantity + '</span>' +
+                '<button type="button" aria-label="Quitar ' + esc(item.product.title) + '">−</button>';
+            row.querySelector('button').addEventListener('click', () => {
+                if (item.quantity > 1) item.quantity -= 1;
+                else delete state.marketplaceCart[item.product.id];
+                renderCart();
+            });
+            container.appendChild(row);
+        });
+        if (!items.length) {
+            container.innerHTML = '<div class="side-stat">El carrito está vacío.</div>';
+        }
+    }
+
+    async function checkoutMarketplace() {
+        const items = Object.values(state.marketplaceCart).map((item) => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+        }));
+        const customerName = document.getElementById('marketplace-customer').value.trim();
+        if (!items.length) { toast('El carrito está vacío'); return; }
+        if (!customerName) { toast('Escribe el nombre para el pedido'); return; }
+        try {
+            const result = await fetchJson('/marketplace/orders', {
+                method: 'POST',
+                body: { customer_name: customerName, items },
+            });
+            state.marketplaceCart = {};
+            renderCart();
+            document.getElementById('marketplace-cart').classList.remove('visible');
+            document.getElementById('marketplace-customer').value = '';
+            toast('Pedido #' + result.order.id + ' confirmado');
+            await loadMarketplace();
+        } catch (error) {
+            toast(error.message);
+        }
+    }
+
+    async function publishMarketplaceProduct(form) {
+        const data = new FormData(form);
+        const price = Math.round(Number(data.get('price')) * 100);
+        try {
+            await fetchJson('/marketplace/products', {
+                method: 'POST',
+                body: {
+                    seller: data.get('seller'),
+                    neighborhood: data.get('neighborhood'),
+                    title: data.get('title'),
+                    description: data.get('description'),
+                    category: data.get('category'),
+                    price_cents: price,
+                    stock: Number(data.get('stock')),
+                },
+            });
+            document.getElementById('marketplace-product-dialog').close();
+            form.reset();
+            toast('Producto publicado');
+            await loadMarketplace();
+        } catch (error) {
+            toast(error.message);
+        }
+    }
+
     // ---------- init ----------
     function init() {
         // appearance from storage
@@ -2000,6 +2282,7 @@
         const bh = $('brand-home'); if (bh) bh.addEventListener('click', (e) => { e.preventDefault(); showLanding(); });
 
         // header buttons
+        $('marketplace-open').addEventListener('click', openMarketplace);
         appearanceBtn.addEventListener('click', (e) => { e.stopPropagation(); appearancePanel.classList.toggle('visible'); voiceMenu.classList.remove('show'); moreMenu.classList.remove('show'); });
         voiceBtn.addEventListener('click', (e) => { e.stopPropagation(); voiceMenu.classList.toggle('show'); appearancePanel.classList.remove('visible'); moreMenu.classList.remove('show'); });
         menuBtn.addEventListener('click', (e) => { e.stopPropagation(); moreMenu.classList.toggle('show'); appearancePanel.classList.remove('visible'); voiceMenu.classList.remove('show'); });
@@ -2023,6 +2306,28 @@
         // sidebar actions
         $('side-reload').addEventListener('click', () => loadStatus(true));
         $('side-landing').addEventListener('click', showLanding);
+
+        // local marketplace
+        $('marketplace-cart-open').addEventListener('click', () => {
+            document.getElementById('marketplace-cart').classList.toggle('visible');
+        });
+        $('marketplace-checkout').addEventListener('click', checkoutMarketplace);
+        $('marketplace-sell').addEventListener('click', () => {
+            document.getElementById('marketplace-product-dialog').showModal();
+        });
+        $('marketplace-product-cancel').addEventListener('click', () => {
+            document.getElementById('marketplace-product-dialog').close();
+        });
+        const marketplaceForm = $('marketplace-product-form');
+        marketplaceForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            publishMarketplaceProduct(marketplaceForm);
+        });
+        let marketplaceSearchTimer = null;
+        $('marketplace-search').addEventListener('input', () => {
+            clearTimeout(marketplaceSearchTimer);
+            marketplaceSearchTimer = setTimeout(loadMarketplace, 250);
+        });
 
         // appearance panel
         document.querySelectorAll('#theme-swatches .theme-swatch').forEach((b) => b.addEventListener('click', () => applyTheme(b.dataset.theme)));

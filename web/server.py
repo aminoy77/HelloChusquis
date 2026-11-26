@@ -22,6 +22,13 @@ from core.provider import validate_provider_base_url
 from core.runtime import AgentNotReadyError, AgentRuntime
 from core.version import __version__
 import core.db_memory as db_memory
+from core.marketplace import (
+    MARKETPLACE_DB_PATH,
+    create_order,
+    create_product,
+    categories,
+    list_products,
+)
 from core.http_limits import RequestBodyLimitMiddleware
 from core.learning import load_learnings, add_feedback
 from core.rate_limiter import RateLimiter
@@ -206,6 +213,21 @@ class ConfigRequest(BaseModel):
     data: dict = Field(default_factory=dict)
 
 
+class MarketplaceProductRequest(BaseModel):
+    seller: str = Field(min_length=1, max_length=80)
+    neighborhood: str = Field(default="Centro", max_length=80)
+    title: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=500)
+    category: str = Field(min_length=1, max_length=40)
+    price_cents: int = Field(ge=1, le=10_000_000)
+    stock: int = Field(ge=0, le=99_999)
+
+
+class MarketplaceOrderRequest(BaseModel):
+    customer_name: str = Field(min_length=1, max_length=100)
+    items: list[dict] = Field(min_length=1, max_length=100)
+
+
 # --- Routes ---
 
 @app.get("/", response_class=HTMLResponse)
@@ -294,6 +316,61 @@ def readiness_probe():
 @app.get("/health/live")
 def liveness_probe():
     return {"status": "ok"}
+
+
+@app.get("/marketplace/categories")
+def marketplace_categories(http_request: Request):
+    require_permission(http_request, Permission.READ_STATE)
+    return {"categories": ["Todos", *categories()], "currency": "USD"}
+
+
+@app.get("/marketplace/products")
+def marketplace_products(
+    http_request: Request,
+    search: str = "",
+    category: str = "",
+):
+    require_permission(http_request, Permission.READ_STATE)
+    search = search.strip()[:100]
+    category = category.strip()[:40]
+    return {
+        "currency": "USD",
+        "products": list_products(search=search, category=category),
+    }
+
+
+@app.post("/marketplace/products")
+def marketplace_create_product(req: MarketplaceProductRequest, http_request: Request):
+    require_permission(http_request, Permission.MUTATING_TOOLS)
+    return {
+        "status": "ok",
+        "product": create_product(
+            db_path=MARKETPLACE_DB_PATH,
+            seller_name=req.seller.strip(),
+            neighborhood=req.neighborhood.strip(),
+            title=req.title.strip(),
+            description=req.description.strip(),
+            category=req.category.strip(),
+            price_cents=req.price_cents,
+            stock=req.stock,
+        ),
+    }
+
+
+@app.post("/marketplace/orders")
+def marketplace_create_order(req: MarketplaceOrderRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
+    principal = require_permission(http_request, Permission.CHAT)
+    try:
+        order = create_order(
+            db_path=MARKETPLACE_DB_PATH,
+            principal_id=principal.id,
+            customer_name=req.customer_name.strip(),
+            items=req.items,
+        )
+        return {"status": "ok", "order": order}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/chat")
