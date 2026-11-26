@@ -1,4 +1,4 @@
-"""Local marketplace storage backed by SQLite."""
+"""Local marketplace catalog, storage, and installers."""
 
 from __future__ import annotations
 
