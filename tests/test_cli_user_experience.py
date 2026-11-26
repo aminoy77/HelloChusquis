@@ -5,9 +5,32 @@ import unittest
 from unittest.mock import patch
 
 import cli
+import main as main_module
 
 
 class TestCliUserExperience(unittest.TestCase):
+    def test_config_opens_browser_setup_by_default(self):
+        with patch.object(sys, "argv", ["hellochusquis", "config"]), patch(
+            "web.setup.run_setup_frontend"
+        ) as setup_frontend:
+            cli.main()
+
+        setup_frontend.assert_called_once_with()
+
+    def test_first_launch_opens_browser_setup(self):
+        config = {"providers": [], "settings": {"memory_retention_days": 30}}
+        agent = object()
+        with patch("main.ensure_config", side_effect=FileNotFoundError), patch(
+            "web.setup.run_setup_frontend", return_value=config
+        ) as setup_frontend, patch("main.Agent", return_value=agent), patch(
+            "main._cleanup"
+        ) as cleanup, patch("ui.tui.run_tui") as run_tui, patch("main.signal.signal"):
+            main_module.main()
+
+        setup_frontend.assert_called_once_with()
+        run_tui.assert_called_once_with(agent=agent, config=config)
+        cleanup.assert_called_once_with(agent, 30)
+
     def test_status_is_a_recognized_command_before_setup(self):
         with patch.object(sys, "argv", ["hellochusquis", "status"]), patch(
             "core.setup.ensure_config", side_effect=FileNotFoundError
