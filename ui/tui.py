@@ -212,7 +212,7 @@ class StatusBar(Widget):
         t = Text()
         t.append("Ctrl+P", style=f"bold {AMBER}")
         t.append(" commands   ", style="dim")
-        t.append("F2", style=f"bold {AMBER}")
+        t.append("F2/Ctrl+M", style=f"bold {AMBER}")
         t.append(" model   ", style="dim")
         t.append("Ctrl+L", style=f"bold {AMBER}")
         t.append(" clear   ", style="dim")
@@ -577,6 +577,7 @@ class HelloChusquisTUI(App):
         Binding("ctrl+l", "clear", "Clear", show=True),
         Binding("ctrl+s", "status", "Status", show=True),
         Binding("f2", "select_model", "Model", show=True),
+        Binding("ctrl+m", "select_model", "Model", show=True),
         Binding("ctrl+p", "command_palette", "Commands", show=True),
         Binding("ctrl+k", "command_palette", "Commands", show=False),
     ]
@@ -620,7 +621,7 @@ class HelloChusquisTUI(App):
         self.query_one("#input").focus()
         self._set_sidebar_visibility(self.size.width)
         self._update_topbar()
-        self._add_system_msg("Ask anything. Ctrl+P opens commands; F2 changes your model.")
+        self._add_system_msg("Ask anything. Ctrl+P opens commands; F2 or Ctrl+M changes your model.")
 
     def on_resize(self, event) -> None:
         self._set_sidebar_visibility(event.size.width)

@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 from ui.tui import HelloChusquisTUI, ModelPicker, _model_choices
 
 
@@ -17,7 +19,8 @@ def test_model_choices_cover_configured_provider_catalog_and_current_model():
     assert len(models) == len(set(models))
 
 
-def test_f2_opens_model_picker():
+@pytest.mark.parametrize("key", ["f2", "ctrl+m"])
+def test_model_picker_hotkeys_open_model_picker(key):
     async def exercise_picker():
         app = HelloChusquisTUI(config={
             "providers": [{
@@ -27,7 +30,7 @@ def test_f2_opens_model_picker():
             }]
         })
         async with app.run_test() as pilot:
-            await pilot.press("f2")
+            await pilot.press(key)
             assert isinstance(app.screen, ModelPicker)
             await pilot.press("escape")
 
