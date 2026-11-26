@@ -183,6 +183,14 @@ def _build_tools_schema(plugins: list) -> list:
                         "clear_first": {
                             "type": "boolean",
                             "description": "Clear field before typing"
+                        },
+                        "value": {
+                            "type": "string",
+                            "description": "Option value for select_option"
+                        },
+                        "label": {
+                            "type": "string",
+                            "description": "Option label for select_option"
                         }
                     },
                     "required": ["action"]
@@ -221,13 +229,13 @@ def _build_tools_schema(plugins: list) -> list:
             "type": "function",
             "function": {
                 "name": "web_search",
-                "description": "Search the internet with fallbacks (DuckDuckGo lite → HTML → browser). Returns titles, URLs, snippets.",
+                "description": "Search the web (multi-engine, falls back to Wikipedia/Hacker News/Stack Overflow). Returns titles, URLs, snippets.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {"type": "string", "description": "Search query"},
                         "num_results": {"type": "number", "description": "Number of results (1-20, default 5)"},
-                        "region": {"type": "string", "description": "Region code (e.g. es-es, en-us)"},
+                        "region": {"type": "string", "description": "Region code (e.g. us-en, es-es)"},
                         "time_filter": {"type": "string", "enum": ["day", "week", "month", "year"], "description": "Time filter for results"}
                     },
                     "required": ["query"]
@@ -1487,7 +1495,6 @@ class Agent:
 
         if getattr(self, "_mcp_connected", False):
             return
-        self._mcp_connected = True
         holder: dict = {}
         exc_holder: list[Exception] = []
 
@@ -1500,11 +1507,17 @@ class Agent:
             finally:
                 loop.close()
 
-        t = threading.Thread(target=_runner, daemon=True, timeout=60)
+        t = threading.Thread(target=_runner, daemon=True)
         t.start()
         t.join(timeout=60)
+        if t.is_alive():
+            logger.warning("MCP connect timed out after 60s")
+            return
         if exc_holder:
+            # Do not poison the flag: a later call may succeed (server started).
             logger.warning("MCP connect failed: %s", exc_holder[0])
+            return
+        self._mcp_connected = True
 
     def _gated_dispatch(self, name: str, args: dict) -> ToolResult:
         """Dispatch with the same policy/audit/approval gates as run().
@@ -1604,6 +1617,7 @@ class Agent:
                     browser_go_back, browser_go_forward, browser_reload,
                     browser_press_key, browser_scroll_to_element,
                     browser_open_new_tab, browser_switch_to_page,
+                    browser_close_current_tab, browser_select_option, browser_upload_file,
                     browser_fill_form, browser_submit_form, browser_hover,
                     browser_get_visible_text, browser_get_cookies, browser_health,
                 )
@@ -1669,7 +1683,17 @@ class Agent:
                     "get_cookies": lambda: browser_get_cookies(),
                     "open_new_tab": lambda: browser_open_new_tab(url=args.get("url")),
                     "switch_to_page": lambda: browser_switch_to_page(index=args.get("index", 0)),
-                    "close_current_tab": lambda: browser_switch_to_page(index=0),
+                    "close_current_tab": lambda: browser_close_current_tab(),
+                    "select_option": lambda: browser_select_option(
+                        selector=args.get("selector", ""),
+                        value=args.get("value"),
+                        label=args.get("label"),
+                        index=args.get("index"),
+                    ),
+                    "upload_file": lambda: browser_upload_file(
+                        file_path=args.get("file_path", ""),
+                        selector=args.get("selector", ""),
+                    ),
                     "health": lambda: browser_health(),
                 }
 
@@ -1744,6 +1768,8 @@ class Agent:
                     )
                 else:
                     return ToolResult(success=False, output="", error=f"Unknown media action: {action}")
+                if isinstance(result, dict) and result.get("error"):
+                    return ToolResult(success=False, output="", error=str(result["error"]))
                 return ToolResult(success=True, output=str(result))
             except Exception as exc:
                 return safe_tool_failure("Media", exc)

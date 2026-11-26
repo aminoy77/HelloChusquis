@@ -904,6 +904,7 @@ _loader: Optional[PluginLoader] = None
 _registry: Optional[PluginRegistry] = None
 _hook_system: Optional[PluginHookSystem] = None
 _services: Optional[PluginServices] = None
+_loaded_plugins: Optional[list[dict]] = None
 
 
 def _ensure_init() -> tuple[PluginLoader, PluginRegistry, PluginHookSystem, PluginServices]:
@@ -930,7 +931,14 @@ def load_plugins() -> list[dict]:
     Discover, load, validate, and enable plugins.
     Returns list of dicts compatible with the original API:
       {name, schema, run}
+
+    Loaded once per process: agents are created per session, and re-executing
+    plugin modules for every session repeats module-level side effects.
     """
+    global _loaded_plugins
+    if _loaded_plugins is not None:
+        return _loaded_plugins
+
     loader, registry, hook_system, _ = _ensure_init()
     init()
 
@@ -974,7 +982,14 @@ def load_plugins() -> list[dict]:
 
         logger.info("loaded plugin %s v%s", record.manifest.name, record.manifest.version)
 
+    _loaded_plugins = results
     return results
+
+
+def _invalidate_plugin_cache() -> None:
+    """Force the next load_plugins() call to rediscover the plugins directory."""
+    global _loaded_plugins
+    _loaded_plugins = None
 
 
 def install_plugin(name: str) -> None:
@@ -1023,6 +1038,7 @@ def install_plugin(name: str) -> None:
     except (OSError, ValueError) as exc:
         logger.error("could not install plugin '%s': %s", name, exc)
         return
+    _invalidate_plugin_cache()
     logger.info("plugin '%s' installed to %s", name, dest)
 
 
@@ -1053,6 +1069,7 @@ def uninstall_plugin(name: str) -> None:
     path = PLUGINS_DIR / f"{name}.py"
     if path.exists():
         path.unlink()
+        _invalidate_plugin_cache()
         print(f"✓ Plugin '{name}' uninstalled.")
         return
     # try directory
@@ -1060,6 +1077,7 @@ def uninstall_plugin(name: str) -> None:
     if dir_path.is_dir():
         import shutil
         shutil.rmtree(dir_path)
+        _invalidate_plugin_cache()
         print(f"✓ Plugin '{name}' uninstalled.")
         return
     print(f"✗ Plugin '{name}' not found.")

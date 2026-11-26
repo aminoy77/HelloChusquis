@@ -2,17 +2,14 @@
 # Converts capability gaps into working tool integrations
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
-import httpx
 from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 
-from tools.base import Tool, ToolResult
 
 console = Console()
 
@@ -139,7 +136,8 @@ def run(action: str = "list", **kwargs):
 # TOOL SYNTHESIS 2.0: OpenAPI-powered intelligent tool generation
 # ============================================================================
 
-def synthesize_from_openapi(spec_source: str, service_name: str = None) -> bool:
+def synthesize_from_openapi(spec_source: str, service_name: str = None,
+                            overwrite: bool = False) -> bool:
     """
     Synthesize a tool from an OpenAPI/Swagger specification.
     
@@ -150,6 +148,7 @@ def synthesize_from_openapi(spec_source: str, service_name: str = None) -> bool:
     Args:
         spec_source: URL or file path to OpenAPI spec (JSON or YAML)
         service_name: Override service name (extracted from spec if not provided)
+        overwrite: Replace an existing generated tool with the same name
         
     Returns:
         True if successful, False otherwise
@@ -210,7 +209,7 @@ def synthesize_from_openapi(spec_source: str, service_name: str = None) -> bool:
     file_name = re.sub(r"[^a-z0-9_]", "_", service_name.lower().strip("/"))
     tool_file = TOOLS_DIR / f"{file_name}.py"
     
-    if tool_file.exists():
+    if tool_file.exists() and not overwrite:
         console.print(f"[yellow]Tool '{service_name}' already exists at {tool_file}[/yellow]")
         console.print("[cyan]Use synthesize_from_openapi with overwrite=True to replace.[/cyan]")
         return False
@@ -315,9 +314,6 @@ def _generate_openapi_tool(
             # Build parameter handling
             path_params = [p['name'] for p in params if p.get('in') == 'path']
             query_params = [p['name'] for p in params if p.get('in') == 'query']
-            
-            # Path template for URL
-            url_template = path.replace('{', '{').replace('}', '}')
             
             # First operation uses 'if', rest use 'elif'
             keyword = 'if' if first_op else 'elif'

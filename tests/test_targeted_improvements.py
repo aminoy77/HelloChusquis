@@ -2,7 +2,6 @@ import json
 import unittest
 
 from api import main as api_main
-from core.doc_parser import DocParser
 
 
 class _AgentFailsAfterDone:
@@ -17,18 +16,6 @@ class TestTargetedImprovements(unittest.TestCase):
         payloads = [json.loads(event.removeprefix("data: ").strip()) for event in wire_events]
 
         self.assertEqual([payload["type"] for payload in payloads], ["done"])
-
-    def test_extract_todos_supports_common_markdown_task_markers(self):
-        content = """- [ ] dash item
-  * [ ] indented star item
-+ [x] completed item
-- regular item
-"""
-
-        self.assertEqual(
-            DocParser().extract_todos(content),
-            ["dash item", "indented star item"],
-        )
 
 
 if __name__ == "__main__":

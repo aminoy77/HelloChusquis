@@ -1,7 +1,7 @@
 import json
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Prompt
 from rich.table import Table
 
 console = Console()
@@ -111,7 +111,7 @@ def execute_plan(steps: list[str], agent, notify=None, depth: int = 0,
             if not quiet:
                 from ui.terminal import print_assistant
                 print_assistant(result)
-        except Exception as e:
+        except Exception:
             if depth >= 2:
                 say(f"[red]Step {i} failed and re-plan limit reached. Stopping.[/red]")
                 return

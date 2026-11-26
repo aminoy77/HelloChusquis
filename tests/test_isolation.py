@@ -1,7 +1,5 @@
 """Regression: workspace/files isolation + rate limiter prune + web/cli."""
 import tempfile
-import threading
-import time
 import unittest
 import sys
 import os

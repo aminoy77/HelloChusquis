@@ -23,7 +23,7 @@ def main():
             before = json.load(f)
         errors_before = len(before.get("errors", []))
         improvements_before = len(before.get("system_prompt_improvements", []))
-        print(f"📊 Baseline learnings:")
+        print("📊 Baseline learnings:")
         print(f"   Errors: {errors_before}")
         print(f"   Improvements: {improvements_before}\n")
     except FileNotFoundError:
@@ -55,7 +55,7 @@ def main():
         errors_after = len(after.get("errors", []))
         improvements_after = len(after.get("system_prompt_improvements", []))
         
-        print(f"\n📊 Learnings after failure:")
+        print("\n📊 Learnings after failure:")
         print(f"   Errors: {errors_after} (+{errors_after - errors_before})")
         print(f"   Improvements: {improvements_after} (+{improvements_after - improvements_before})")
         

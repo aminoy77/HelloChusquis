@@ -59,9 +59,14 @@ DOCUMENTATION_NETWORKS = [
 ]
 IPV6_PRIVATE_NETWORKS = [
     ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("::/128"),        # unspecified
     ipaddress.ip_network("fc00::/7"),      # ULA
     ipaddress.ip_network("fe80::/10"),     # link-local
+    ipaddress.ip_network("fec0::/10"),     # deprecated site-local
     ipaddress.ip_network("::ffff:0:0/96"), # IPv4-mapped
+    ipaddress.ip_network("64:ff9b::/96"),  # NAT64 -> IPv4
+    ipaddress.ip_network("64:ff9b:1::/48"),# local-use NAT64
+    ipaddress.ip_network("2002::/16"),     # 6to4 -> IPv4
 ]
 
 BLOCKED_HEADER_NAMES = frozenset({
@@ -110,7 +115,8 @@ def _is_private_ip(ip_str: str) -> bool:
         for net in IPV6_PRIVATE_NETWORKS:
             if ip in net:
                 return True
-        return ip.is_loopback or ip.is_link_local
+        return (ip.is_loopback or ip.is_link_local or ip.is_private
+                or ip.is_reserved or ip.is_unspecified)
     return False
 
 

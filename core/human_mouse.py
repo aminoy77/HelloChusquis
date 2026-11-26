@@ -55,10 +55,12 @@ class HumanMouse:
             return
 
         if steps is None:
-            steps = max(int(distance / 3), 20)
+            # One CDP round-trip per 3px made long moves take 30-60s, which
+            # blew the browser task timeout and left orphan clicks running.
+            steps = min(max(int(distance / 3), 20), 40)
         if duration is None:
             speed = self.base_speed * (1 + random.uniform(-self.variation, self.variation))
-            duration = distance / (100 * speed)
+            duration = min(distance / (100 * speed), 1.5)
 
         step_duration = duration / steps
 
@@ -156,12 +158,6 @@ class HumanMouse:
     ):
         """Move to position and click with human-like timing."""
         import random
-
-        async def noop_move(x, y):
-            if page_mouse:
-                await page_mouse.move(x, y)
-
-        move_cb = on_move or noop_move
 
         # Small delay before click (human reaction time)
         await asyncio.sleep(random.uniform(0.05, 0.15))

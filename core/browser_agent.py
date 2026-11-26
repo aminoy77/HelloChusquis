@@ -5,9 +5,7 @@ Anti-detection, human-like mouse, persistent contexts, cookies, network intercep
 """
 
 import asyncio
-import json
 import logging
-import os
 import random
 import re
 import time
@@ -15,7 +13,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from core.human_mouse import (
     HumanMouse,
@@ -24,6 +22,122 @@ from core.human_mouse import (
 )
 
 logger = logging.getLogger("browser_agent")
+
+# Brand amber (#f5a623) cursor drawn into the page so a headed run is watchable.
+_CURSOR_OVERLAY_JS = """
+(() => {
+  const mount = () => {
+    if (window.__hcCursor && window.__hcCursor.isConnected) return;
+    const root = document.documentElement || document.body;
+    if (!root) return;
+    const c = document.createElement('div');
+    c.id = '__hc_cursor';
+    c.style.cssText = [
+      'position: fixed', 'left: -100px', 'top: -100px',
+      'width: 26px', 'height: 26px', 'pointer-events: none',
+      'z-index: 2147483647', 'opacity: 0.95',
+      'filter: drop-shadow(0 0 6px rgba(245,166,35,0.9))',
+    ].join(';');
+    // Built node by node: assigning markup as HTML throws on sites with
+    // Trusted Types (YouTube, Gmail), which silently killed the overlay there.
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width', '26');
+    svg.setAttribute('height', '26');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    const arrow = document.createElementNS(ns, 'path');
+    arrow.setAttribute('d', 'M5 2l13 9.5-6.2 1.1 3.6 7.2-2.7 1.3-3.6-7.2L5 18z');
+    arrow.setAttribute('fill', '#f5a623');
+    arrow.setAttribute('stroke', '#3a2a00');
+    arrow.setAttribute('stroke-width', '1.2');
+    arrow.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(arrow);
+    c.appendChild(svg);
+    root.appendChild(c);
+    window.__hcCursor = c;
+  };
+  window.__hcCursorMount = mount;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mount, { once: true });
+  } else {
+    mount();
+  }
+})();
+"""
+
+_CURSOR_MOVE_JS = """([x, y]) => {
+  if (window.__hcCursorMount) window.__hcCursorMount();
+  const c = window.__hcCursor;
+  if (c) { c.style.left = (x - 4) + 'px'; c.style.top = (y - 2) + 'px'; }
+}
+"""
+
+_CURSOR_PULSE_JS = """([x, y]) => {
+  if (window.__hcCursorMount) window.__hcCursorMount();
+  const root = document.documentElement || document.body;
+  if (!root) return;
+  const r = document.createElement('div');
+  r.style.cssText = 'position:fixed;left:' + (x - 5) + 'px;top:' + (y - 5) + 'px;'
+    + 'width:10px;height:10px;border-radius:50%;pointer-events:none;'
+    + 'z-index:2147483646;background:#f5a623;opacity:.85;'
+    + 'transition:transform .45s ease-out,opacity .45s ease-out;';
+  root.appendChild(r);
+  requestAnimationFrame(() => { r.style.transform = 'scale(6)'; r.style.opacity = '0'; });
+  setTimeout(() => r.remove(), 600);
+}
+"""
+
+
+_CAPTCHA_JS = """
+() => {
+  const marks = [
+    ['recaptcha', "iframe[src*='recaptcha'],div.g-recaptcha"],
+    ['hcaptcha', "iframe[src*='hcaptcha'],div.h-captcha"],
+    ['turnstile', "iframe[src*='challenges.cloudflare.com'],div.cf-turnstile"],
+  ];
+  for (const [name, sel] of marks) {
+    try { if (document.querySelector(sel)) return name; } catch (e) {}
+  }
+  return null;
+}
+"""
+
+
+# Buttons worth clicking without being asked, while a video plays.
+_SKIP_SELECTORS = (
+    '.ytp-ad-skip-button, .ytp-ad-skip-button-text, .ytp-ad-skip-button-modern',
+    'button[aria-label*="Skip ad" i], button[aria-label*="Skip Ad" i]',
+    'button:has-text("Skip intro"), button:has-text("Skip ad")',
+)
+
+# Consent dialogs: reject is the privacy-preserving choice.
+_CONSENT_SELECTORS = (
+    'ytd-consent-bump-v2-lightbox button:has-text("Reject all")',
+    'div[role="dialog"] button:has-text("Reject all")',
+    '[aria-label*="cookie" i] button:has-text("Reject all")',
+)
+
+# Every navigation returns a compact description of what is on screen.
+_PAGE_REPORT_JS = """() => {
+  const clean = (s, n) => (s || '').trim().slice(0, n);
+  const links = Array.from(document.querySelectorAll('a[href]'))
+    .filter(a => clean(a.innerText, 1))
+    .slice(0, 8)
+    .map(a => ({text: clean(a.innerText, 80), href: a.href}));
+  const headings = Array.from(document.querySelectorAll('h1,h2'))
+    .slice(0, 5).map(h => clean(h.innerText, 120));
+  const v = document.querySelector('video');
+  return {
+    title: document.title,
+    url: location.href,
+    headings,
+    links,
+    text: clean(document.body && document.body.innerText, 1500),
+    video: v ? {paused: v.paused, currentTime: Math.round(v.currentTime),
+                duration: Math.round(v.duration || 0)} : null,
+  };
+}
+"""
 
 
 @dataclass
@@ -93,6 +207,7 @@ class BrowserState:
     is_connected: bool = False
     last_action: str = ""
     last_action_time: Optional[float] = None
+    last_error: str = ""
     errors_since_last_health: int = 0
 
 
@@ -282,8 +397,15 @@ class BrowserAgent:
 
         if self.config.record_har:
             har_path = f"trace_{datetime.now().strftime('%Y%m%d_%H%M%S')}.har"
+            context_options['record_har_path'] = har_path
+            context_options['record_har_content'] = 'embed'
 
         self.context = await self.browser.new_context(**context_options)
+
+        # Headed runs are watchable: draw the amber cursor the automation is
+        # using. Init script re-creates it on every navigation.
+        if not self.config.headless:
+            await self.context.add_init_script(_CURSOR_OVERLAY_JS)
 
     async def _inject_full_stealth(self):
         """Inject comprehensive anti-detection scripts."""
@@ -358,6 +480,55 @@ class BrowserAgent:
         navigator.constructor.prototype.toString = () => '[object Navigator]';
         """
         await self.context.add_init_script(stealth_js)
+
+    async def detect_captcha(self) -> Optional[str]:
+        """Return the CAPTCHA vendor on the current page, if any.
+
+        Detection only: solving a challenge is a human step in the visible
+        window (or a paid solver), never something this agent fakes.
+        """
+        try:
+            return await self.page.evaluate(_CAPTCHA_JS)
+        except Exception:
+            return None
+
+    async def auto_handle(self) -> List[str]:
+        """Idle housekeeping: skip ads/intros, reject consent, resume video."""
+        actions = []
+        for selector in _SKIP_SELECTORS + _CONSENT_SELECTORS:
+            try:
+                element = await self._first_visible(self.page.locator(selector), 0)
+                if element is None:
+                    continue
+                box = await element.bounding_box()
+                if box and not self.config.headless:
+                    cx, cy = box['x'] + box['width'] / 2, box['y'] + box['height'] / 2
+                    await self._cursor_move(cx, cy)
+                await element.click(timeout=1000)
+                if box and not self.config.headless:
+                    await self._cursor_click(cx, cy)
+                actions.append(selector)
+            except Exception:
+                continue
+        try:
+            played = await self.page.evaluate("""() => {
+              const v = document.querySelector('video');
+              if (!v || !v.paused || v.readyState === 0) return false;
+              v.play().catch(() => {});
+              return true;
+            }""")
+            if played:
+                actions.append('play video')
+        except Exception:
+            pass
+        return actions
+
+    async def page_report(self) -> Optional[Dict]:
+        """Compact structured description of the current page."""
+        try:
+            return await self.page.evaluate(_PAGE_REPORT_JS)
+        except Exception:
+            return None
 
     async def health_check(self) -> bool:
         """Check if browser is still alive and responsive."""
@@ -478,6 +649,25 @@ class BrowserAgent:
 
     # ─── CLICKING ──────────────────────────────────────────────────
 
+    async def _first_visible(self, locator, index: int = 0):
+        """Return the index-th visible match of a locator, or None."""
+        try:
+            count = await locator.count()
+        except Exception:
+            return locator.nth(index)
+        visible_seen = 0
+        for i in range(min(count, 50)):
+            candidate = locator.nth(i)
+            try:
+                if not await candidate.is_visible():
+                    continue
+            except Exception:
+                continue
+            if visible_seen == index:
+                return candidate
+            visible_seen += 1
+        return None
+
     async def click_element(
         self,
         selector: str = None,
@@ -488,7 +678,9 @@ class BrowserAgent:
         timeout: int = None,
     ) -> bool:
         """Click an element with human-like mouse movement."""
+        self.state.last_error = ""
         if not await self.health_check():
+            self.state.last_error = 'browser not healthy'
             return False
 
         try:
@@ -498,7 +690,11 @@ class BrowserAgent:
             elif xpath:
                 locator = self.page.locator(f'xpath={xpath}')
             elif text:
-                locator = self.page.get_by_text(text, exact=False)
+                # Loose text match hit explanatory copy instead of the button
+                # of the same name ("Reject all" on YouTube's consent dialog).
+                locator = self.page.get_by_text(text, exact=True)
+                if await locator.count() == 0:
+                    locator = self.page.get_by_text(text, exact=False)
 
             if not locator:
                 if self.debug:
@@ -506,7 +702,22 @@ class BrowserAgent:
                 return False
 
             timeout_ms = (timeout or self.config.action_timeout)
-            element = locator.nth(index)
+            if selector:
+                # Sites ship hidden duplicates (YouTube has two input#search).
+                # nth(index) picked the hidden one and burned the full timeout.
+                element = await self._first_visible(locator, index)
+                if element is None:
+                    element = locator.nth(index)
+            else:
+                # Text/xpath lookups also match hidden duplicates (overlays,
+                # templates); clicking the first match then failed even though
+                # a visible element with the same text existed.
+                element = await self._first_visible(locator, index)
+                if element is None:
+                    if self.debug:
+                        logger.warning("click_element: no visible element matched")
+                    self.state.last_error = 'no visible element matched'
+                    return False
 
             # Wait for element to be visible
             try:
@@ -514,12 +725,16 @@ class BrowserAgent:
             except Exception:
                 if self.debug:
                     logger.warning("click_element: element not visible")
+                self.state.last_error = (
+                    f'element not visible after {timeout_ms}ms'
+                )
                 return False
 
             box = await element.bounding_box()
             if not box:
                 if self.debug:
                     logger.warning("click_element: bounding box not found")
+                self.state.last_error = 'element has no bounding box'
                 return False
 
             click_x = box['x'] + box['width'] / 2 + random.uniform(-2, 2)
@@ -533,8 +748,10 @@ class BrowserAgent:
                 await asyncio.sleep(random.uniform(0.05, 0.15))
                 await self.page.mouse.click(click_x, click_y)
                 self._last_mouse_pos = (click_x, click_y)
+                await self._cursor_click(click_x, click_y)
                 await asyncio.sleep(random.uniform(0.1, 0.3))
             else:
+                await self._cursor_click(click_x, click_y)
                 await element.click(timeout=timeout_ms)
 
             self.state.last_action = "click"
@@ -547,6 +764,7 @@ class BrowserAgent:
 
         except Exception as e:
             logger.error("Click failed: %s", e)
+            self.state.last_error = f'click failed: {e}'
             return False
 
     async def double_click(
@@ -628,12 +846,19 @@ class BrowserAgent:
         human: bool = True,
     ) -> bool:
         """Type text with human-like timing."""
+        self.state.last_error = ""
         try:
             if selector:
-                element = self.page.locator(selector)
+                locator = self.page.locator(selector)
+                element = await self._first_visible(locator, 0)
+                if element is None:
+                    element = locator.nth(0)
                 try:
                     await element.wait_for(state='visible', timeout=self.config.action_timeout)
                 except Exception:
+                    self.state.last_error = (
+                        f'element not visible after {self.config.action_timeout}ms'
+                    )
                     return False
                 await element.click()
                 if clear_first:
@@ -658,6 +883,7 @@ class BrowserAgent:
             return True
         except Exception as e:
             logger.error("Type failed: %s", e)
+            self.state.last_error = f'type failed: {e}'
             return False
 
     async def press_key(self, key: str):
@@ -964,13 +1190,11 @@ class BrowserAgent:
                 ]
 
                 element = None
-                found_selector = None
                 for s in selectors:
                     try:
                         el = self.page.locator(s)
                         if await el.count() > 0:
                             element = el
-                            found_selector = s
                             break
                     except Exception:
                         pass
@@ -1003,8 +1227,9 @@ class BrowserAgent:
                 kwargs['index'] = index
             await self.page.locator(selector).select_option(**kwargs)
             return True
-        except Exception:
-            return False
+        except Exception as e:
+            # Bare False hid whether the selector, option or page was wrong.
+            raise RuntimeError(f"select_option failed: {e}") from e
 
     async def submit_form(self, selector: str = "form") -> bool:
         """Submit a form."""
@@ -1026,8 +1251,9 @@ class BrowserAgent:
         try:
             await self.page.locator(selector).set_input_files(file_path)
             return True
-        except Exception:
-            return False
+        except Exception as e:
+            # Bare False hid whether the input or the path was the problem.
+            raise RuntimeError(f"upload_file failed: {e}") from e
 
     async def check_checkbox(self, selector: str, checked: bool = True) -> bool:
         """Check or uncheck a checkbox."""
@@ -1044,8 +1270,16 @@ class BrowserAgent:
         try:
             return await self.page.evaluate(script)
         except Exception as e:
-            logger.error("Script execution failed: %s", e)
-            return None
+            if 'Illegal return statement' not in str(e):
+                logger.error("Script execution failed: %s", e)
+                return None
+            # Agents emit function bodies with `return`; page.evaluate wants
+            # an expression. Retry as an IIFE before giving up.
+            try:
+                return await self.page.evaluate(f'(() => {{ {script} }})()')
+            except Exception as retry_error:
+                logger.error("Script execution failed: %s", retry_error)
+                return None
 
     async def execute_async_script(self, script: str, *args) -> Any:
         """Execute async JavaScript on the page."""
@@ -1202,7 +1436,7 @@ class BrowserAgent:
         try:
             pages = self.context.pages
             if len(pages) <= 1:
-                return False
+                raise RuntimeError("cannot close the last open tab")
             current_index = pages.index(self.page)
             await self.page.close()
             pages = self.context.pages
@@ -1210,8 +1444,8 @@ class BrowserAgent:
             self.page = pages[new_index]
             await self.page.bring_to_front()
             return True
-        except Exception:
-            return False
+        except Exception as e:
+            raise RuntimeError(f"close_current_tab failed: {e}") from e
 
     async def get_page_count(self) -> int:
         """Get number of open pages/tabs."""
@@ -1368,6 +1602,24 @@ class BrowserAgent:
         """Get current mouse position from tracked position."""
         return {'x': self._last_mouse_pos[0], 'y': self._last_mouse_pos[1]}
 
+    async def _cursor_move(self, x: int, y: int):
+        """Move the amber cursor overlay to the pointer position."""
+        if self.config.headless:
+            return
+        try:
+            await self.page.evaluate(_CURSOR_MOVE_JS, [int(x), int(y)])
+        except Exception:
+            pass
+
+    async def _cursor_click(self, x: int, y: int):
+        """Pulse the amber cursor where the click landed."""
+        if self.config.headless:
+            return
+        try:
+            await self.page.evaluate(_CURSOR_PULSE_JS, [int(x), int(y)])
+        except Exception:
+            pass
+
     async def _human_move_to(
         self, from_x: int, from_y: int, to_x: int, to_y: int
     ):
@@ -1378,6 +1630,7 @@ class BrowserAgent:
                 self._last_mouse_pos = (x, y)
             except Exception:
                 pass
+            await self._cursor_move(x, y)
 
         await self.human_mouse.move_to(
             (from_x, from_y),
@@ -1389,6 +1642,7 @@ class BrowserAgent:
             self._last_mouse_pos = (int(to_x), int(to_y))
         except Exception:
             pass
+        await self._cursor_move(to_x, to_y)
 
     async def _on_page_load(self, page=None):
         """Handle page load event."""

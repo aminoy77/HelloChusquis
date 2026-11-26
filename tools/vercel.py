@@ -12,7 +12,6 @@ def run(action: str, **kwargs) -> str:
     import asyncio
     try:
         loop = asyncio.get_running_loop()
-        import concurrent.futures
         fut = asyncio.run_coroutine_threadsafe(_run_async(action, api_key, kwargs), loop)
         return fut.result(timeout=30)
     except RuntimeError:
@@ -67,7 +66,7 @@ def _run_sync(action: str, api_key: str, kwargs: dict) -> str:
 
 async def deploy(api_key: str, project: str, branch: str = "main") -> dict:
     """Deploy to Vercel."""
-    url = f"https://api.vercel.com/v6/deployments"
+    url = "https://api.vercel.com/v6/deployments"
     async with AsyncClient() as client:
         r = await client.post(url, json={"name": project, "branch": branch}, headers={"Authorization": f"Bearer {api_key}"})
         return r.json()

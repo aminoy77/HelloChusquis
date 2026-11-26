@@ -1034,7 +1034,6 @@ class HelloChusquisTUI(App):
         )
         if steps:
             self.call_from_thread(self._add_plan, steps, task)
-            step_idx = [0]
 
             def notify(msg: str):
                 # "Step N/M:" lines mark step completion in the sidebar.
