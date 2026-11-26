@@ -6,7 +6,6 @@ The token never leaves memory except inside HTTPS calls to api.telegram.org.
 from __future__ import annotations
 
 import json
-import logging
 import os
 import threading
 import urllib.request

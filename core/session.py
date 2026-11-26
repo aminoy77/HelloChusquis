@@ -12,14 +12,13 @@ import json
 import os
 import re
 import sqlite3
-import textwrap
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Optional tiktoken import (lazy: BPE ranks cost ~90ms at import)
@@ -532,10 +531,6 @@ class SessionManager:
             for row in rows
         ]
 
-
-# ===========================================================================
-# ConversationCompactor
-# ===========================================================================
 
 def _generate_session_id(agent_id: str) -> str:
     """Generate a unique session ID: ``<agent>-<uuid8>``."""

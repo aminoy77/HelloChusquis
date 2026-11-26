@@ -1,5 +1,4 @@
 import json
-import os
 import re
 from typing import Dict, Optional
 from rich.console import Console
@@ -246,8 +245,8 @@ Be conservative — prioritize blocking if unsure — but avoid false positives 
 
     except json.JSONDecodeError:
         console.print(
-            f"[yellow]Warning: Could not parse safety response. "
-            f"Blocking command as precaution.[/yellow]"
+            "[yellow]Warning: Could not parse safety response. "
+            "Blocking command as precaution.[/yellow]"
         )
         return {
             "safe": False,

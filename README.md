@@ -43,7 +43,7 @@ hellochusquis config
 ```
 
 Run `hellochusquis config --terminal` to use the terminal editor instead. In the TUI,
-use the terminal editor for custom endpoints. Press `Ctrl+M` to choose a configured
+use the terminal editor for custom endpoints. Press `F2` or `Ctrl+M` to choose a configured
 provider and model; that choice is saved for next time.
 
 For a fast OpenRouter setup:

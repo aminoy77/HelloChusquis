@@ -2,26 +2,32 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
+from starlette.responses import FileResponse
 from starlette.responses import StreamingResponse
 import uvicorn
 import json
 import re
 import secrets
-import urllib.parse
 from pathlib import Path
 from typing import Literal
 
-from core.identity import Permission, Principal, authenticate_bearer, legacy_owner
+from core.identity import Permission, Principal
 from core.provider import validate_provider_base_url
-from core.runtime import AgentNotReadyError, AgentRuntime
+from core.runtime import AgentBusyError, AgentNotReadyError, AgentRuntime
 from core.version import __version__
 import core.db_memory as db_memory
+from core.marketplace import (
+    MARKETPLACE_DB_PATH,
+    create_order,
+    create_product,
+    categories,
+    list_products,
+)
 from core.http_limits import RequestBodyLimitMiddleware
 from core.learning import load_learnings, add_feedback
 from core.rate_limiter import RateLimiter
@@ -93,10 +99,18 @@ def require_permission(request: Request, permission: Permission) -> Principal:
     return _shared_require_permission(request, permission, REQUIRED_API_KEY, AUTH_ENABLED)
 
 
-app = FastAPI()
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Stop rate-limiter cleanup threads when the server stops."""
+    yield
+    for limiter in _ALL_LIMITERS:
+        limiter.close()
+
+
+app = FastAPI(lifespan=_lifespan)
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(AuthMiddleware, required_api_key=REQUIRED_API_KEY, auth_enabled=AUTH_ENABLED,
-                   public_get_paths=("/", "/health/live", "/health/ready", "/health"),
+                   public_get_paths=("/", "/assets/logo-primary.png", "/health/live", "/health/ready", "/health"),
                    public_paths=("/auth/check", "/auth/verify"))
 app.add_middleware(SecurityHeadersMiddleware)
 # Keep the web server alive before initial setup; agent-dependent routes return
@@ -132,6 +146,9 @@ def _require_agent(http_request: Request | None = None):
     except AgentNotReadyError as exc:
         logger.warning("Agent runtime requested before ready: %s", exc)
         raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
+    except AgentBusyError as exc:
+        logger.warning("Agent sessions exhausted: %s", exc)
+        raise HTTPException(status_code=503, detail="All agent sessions are busy. Retry shortly.") from exc
 
 
 # Rate limiters: /chat and /models = 30/min, /feedback = 10/min, forced model refresh = 5/min,
@@ -143,6 +160,10 @@ _models_refresh_limiter = RateLimiter(requests_per_minute=5)
 _reload_limiter = RateLimiter(requests_per_minute=3)
 _provider_update_limiter = RateLimiter(requests_per_minute=15)
 _auth_verify_limiter = RateLimiter(requests_per_minute=20)
+_ALL_LIMITERS = (
+    _chat_limiter, _feedback_limiter, _models_limiter, _models_refresh_limiter,
+    _reload_limiter, _provider_update_limiter, _auth_verify_limiter,
+)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -206,6 +227,21 @@ class ConfigRequest(BaseModel):
     data: dict = Field(default_factory=dict)
 
 
+class MarketplaceProductRequest(BaseModel):
+    seller: str = Field(min_length=1, max_length=80)
+    neighborhood: str = Field(default="Centro", max_length=80)
+    title: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=500)
+    category: str = Field(min_length=1, max_length=40)
+    price_cents: int = Field(ge=1, le=10_000_000)
+    stock: int = Field(ge=0, le=99_999)
+
+
+class MarketplaceOrderRequest(BaseModel):
+    customer_name: str = Field(min_length=1, max_length=100)
+    items: list[dict] = Field(min_length=1, max_length=100)
+
+
 # --- Routes ---
 
 @app.get("/", response_class=HTMLResponse)
@@ -238,6 +274,15 @@ async def root(http_request: Request):
         "form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     )
     return HTMLResponse(html, headers={"Content-Security-Policy": csp})
+
+
+@app.get("/assets/{asset_name}")
+async def web_asset(asset_name: str):
+    assets_dir = (Path(__file__).parent / "assets").resolve()
+    asset_path = (assets_dir / asset_name).resolve()
+    if asset_path.parent != assets_dir or not asset_path.is_file():
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return FileResponse(asset_path)
 
 
 @app.get("/auth/check")
@@ -294,6 +339,61 @@ def readiness_probe():
 @app.get("/health/live")
 def liveness_probe():
     return {"status": "ok"}
+
+
+@app.get("/marketplace/categories")
+def marketplace_categories(http_request: Request):
+    require_permission(http_request, Permission.READ_STATE)
+    return {"categories": ["Todos", *categories()], "currency": "USD"}
+
+
+@app.get("/marketplace/products")
+def marketplace_products(
+    http_request: Request,
+    search: str = "",
+    category: str = "",
+):
+    require_permission(http_request, Permission.READ_STATE)
+    search = search.strip()[:100]
+    category = category.strip()[:40]
+    return {
+        "currency": "USD",
+        "products": list_products(search=search, category=category),
+    }
+
+
+@app.post("/marketplace/products")
+def marketplace_create_product(req: MarketplaceProductRequest, http_request: Request):
+    require_permission(http_request, Permission.MUTATING_TOOLS)
+    return {
+        "status": "ok",
+        "product": create_product(
+            db_path=MARKETPLACE_DB_PATH,
+            seller_name=req.seller.strip(),
+            neighborhood=req.neighborhood.strip(),
+            title=req.title.strip(),
+            description=req.description.strip(),
+            category=req.category.strip(),
+            price_cents=req.price_cents,
+            stock=req.stock,
+        ),
+    }
+
+
+@app.post("/marketplace/orders")
+def marketplace_create_order(req: MarketplaceOrderRequest, http_request: Request):
+    require_permission(http_request, Permission.CHAT)
+    principal = require_permission(http_request, Permission.CHAT)
+    try:
+        order = create_order(
+            db_path=MARKETPLACE_DB_PATH,
+            principal_id=principal.id,
+            customer_name=req.customer_name.strip(),
+            items=req.items,
+        )
+        return {"status": "ok", "order": order}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/chat")
@@ -542,6 +642,7 @@ def update_config(req: ConfigRequest):
 
 @app.get("/status")
 def status(http_request: Request):
+    require_permission(http_request, Permission.READ_STATE)
     if not runtime.is_ready:
         return {
             "agent_ready": False,
@@ -577,11 +678,14 @@ def status(http_request: Request):
 @app.get("/models")
 def models(http_request: Request, provider: str = "", refresh: bool = False):
     """Available models for the requesting session's provider configuration."""
+    require_permission(http_request, Permission.READ_STATE)
     _require_rate_limit(_models_limiter, http_request, "/models")
     if refresh:
         _require_rate_limit(_models_refresh_limiter, http_request, "/models?refresh=true")
     agent = _require_agent(http_request)
     known_names = {provider_status["name"] for provider_status in agent.pool.status()}
+    if not provider:
+        raise HTTPException(status_code=400, detail="provider query parameter is required")
     if provider not in known_names:
         raise HTTPException(status_code=404, detail=f"Provider '{provider}' not found")
     try:
@@ -589,6 +693,47 @@ def models(http_request: Request, provider: str = "", refresh: bool = False):
     except Exception:
         logger.exception("models fetch failed")
         raise HTTPException(status_code=500, detail="Failed to fetch models")
+
+
+@app.get("/market/items")
+def market_items(http_request: Request, kind: str = ""):
+    from core.marketplace import MarketplaceError, is_installed, list_items
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        items = list_items(kind)
+        return {
+            "items": [
+                {**item, "installed": is_installed(item)}
+                for item in items
+            ]
+        }
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/install")
+def market_install(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, install_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    _require_rate_limit(_provider_update_limiter, http_request, "/market/install")
+    try:
+        return install_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/uninstall")
+def market_uninstall(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, uninstall_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    _require_rate_limit(_provider_update_limiter, http_request, "/market/uninstall")
+    try:
+        return uninstall_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 class ProviderUpdate(BaseModel):

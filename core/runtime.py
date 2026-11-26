@@ -25,6 +25,10 @@ class AgentNotReadyError(RuntimeError):
     """Raised when an HTTP request needs an agent that is not configured."""
 
 
+class AgentBusyError(RuntimeError):
+    """Raised when every cached agent session is busy and none can be evicted."""
+
+
 class AgentRuntime:
     """Own configured agents with bounded, request-session isolation.
 
@@ -138,6 +142,14 @@ class AgentRuntime:
                     self._session_agents.pop(evicted_session, None)
                     self._dispose_agent(evicted_agent)
                     logger.info("Evicted inactive agent session %s", evicted_session)
+                else:
+                    # Every cached session is mid-turn: refuse the new one
+                    # instead of growing memory past the cap.
+                    self._session_agents.pop(session_id, None)
+                    self._dispose_agent(agent)
+                    raise AgentBusyError(
+                        f"All {self._max_sessions} agent sessions are busy. Retry shortly."
+                    )
             return agent
 
     @staticmethod

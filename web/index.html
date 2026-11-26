@@ -3,57 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelloChusquis — Your terminal, upgraded</title>
-    <meta name="description" content="HelloChusquis is a local-first AI agent for the terminal, browser, web, memory, code, and integrations. Install it with pip and start working.">
+    <title>HelloChusquis — Agent workspace</title>
+    <meta name="description" content="HelloChusquis local AI agent workspace">
     <link rel="canonical" href="https://hellochusquis.dev">
     <meta property="og:title" content="HelloChusquis — AI Terminal Agent">
     <meta property="og:description" content="AI terminal agent with chat, web search, file management, and code execution. pip install hellochusquis">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="theme-color" content="#090a0c">
+    <meta name="theme-color" content="#F7F7F5">
     <meta property="og:image" content="https://hellochusquis.dev/og.jpg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #0a0a0c;
-            --surface: #121216;
-            --surface2: #18181e;
-            --surface3: #202028;
-            --overlay: rgba(10, 10, 12, 0.82);
-            --text: #f1efe9;
-            --text-muted: #a3a0b0;
-            --text-dim: #6b6878;
-            --border: #26262e;
-            --border-soft: #1d1d24;
+            --bg: #F7F7F5;
+            --surface: #FFFFFF;
+            --surface2: #F1F1EE;
+            --surface3: #E8E9E5;
+            --overlay: #F7F7F5;
+            --text: #1B1D1F;
+            --text-muted: #5E6266;
+            --text-dim: #73777A;
+            --border: #D8DAD6;
+            --border-soft: #E7E8E4;
             --accent: #f5a623;
-            --accent-strong: #ffb340;
-            --accent-soft: rgba(245, 166, 35, 0.12);
-            --accent-border: rgba(245, 166, 35, 0.35);
-            --green: #34d399;
-            --green-soft: rgba(52, 211, 153, 0.12);
-            --red: #f87171;
-            --red-soft: rgba(248, 113, 113, 0.12);
-            --blue: #60a5fa;
-            --radius: 10px;
-            --radius-lg: 14px;
-            --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
-            --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
-            --font-display: 'Space Grotesk', 'Inter', sans-serif;
+            --accent-strong: #ffb84a;
+            --accent-soft: rgba(245, 166, 35, .12);
+            --accent-border: rgba(245, 166, 35, .38);
+            --green: #287A55;
+            --green-soft: #EDF6F1;
+            --red: #B44343;
+            --red-soft: #FBEEEE;
+            --blue: #456A9D;
+            --radius: 8px;
+            --radius-lg: 10px;
+            --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+            --font-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             --ease: cubic-bezier(0.22, 1, 0.36, 1);
             --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.55);
             --shadow-md: 0 12px 40px rgba(0, 0, 0, 0.4);
         }
-
-        body.accent-amber   { --accent: #f5a623; --accent-strong: #ffb340; --accent-soft: rgba(245,166,35,.12);  --accent-border: rgba(245,166,35,.35); }
-        body.accent-emerald { --accent: #34d399; --accent-strong: #5eead4; --accent-soft: rgba(52,211,153,.12);   --accent-border: rgba(52,211,153,.35); }
-        body.accent-cyan    { --accent: #22d3ee; --accent-strong: #67e8f9; --accent-soft: rgba(34,211,238,.12);   --accent-border: rgba(34,211,238,.35); }
-        body.accent-violet  { --accent: #a78bfa; --accent-strong: #c4b5fd; --accent-soft: rgba(167,139,250,.14);  --accent-border: rgba(167,139,250,.38); }
-        body.accent-rose    { --accent: #fb7185; --accent-strong: #fda4af; --accent-soft: rgba(251,113,133,.12);  --accent-border: rgba(251,113,133,.35); }
-        body.accent-blue    { --accent: #60a5fa; --accent-strong: #93c5fd; --accent-soft: rgba(96,165,250,.12);   --accent-border: rgba(96,165,250,.35); }
 
         body.theme-light {
             --bg: #f7f7f9; --surface: #ffffff; --surface2: #f0f0f3; --surface3: #e7e7ec;
@@ -61,27 +51,6 @@
             --text: #1b1b20; --text-muted: #5b5969; --text-dim: #8b899b; --border: #e2e2e9; --border-soft: #ececf1;
             --shadow-lg: 0 24px 60px rgba(20, 20, 40, 0.14); --shadow-md: 0 12px 34px rgba(20, 20, 40, 0.1);
         }
-        body.theme-minimal {
-            --bg: #0b0d10; --surface: #121519; --surface2: #181c21; --surface3: #1f242b;
-            --overlay: rgba(11, 13, 16, 0.85);
-            --text: #e8edf2; --text-muted: #8f98a4; --text-dim: #5b646e; --border: #20262e; --border-soft: #191e24;
-        }
-        body.theme-ocean {
-            --bg: #08121e; --surface: #0d1c30; --surface2: #11233b; --surface3: #162b49;
-            --overlay: rgba(8, 18, 30, 0.85);
-            --text: #dbeafe; --text-muted: #7fb4dc; --text-dim: #4d7698; --border: #17314e; --border-soft: #112840;
-        }
-        body.theme-forest {
-            --bg: #08120a; --surface: #0e1c11; --surface2: #132418; --surface3: #182e1d;
-            --overlay: rgba(8, 18, 10, 0.85);
-            --text: #dcfce7; --text-muted: #7fc495; --text-dim: #4d8a62; --border: #1b3a24; --border-soft: #142c1b;
-        }
-
-        body.font-inter { --font-ui: 'Inter', system-ui, sans-serif; --font-display: 'Inter', sans-serif; }
-        body.font-mono  { --font-ui: 'JetBrains Mono', ui-monospace, monospace; --font-display: 'JetBrains Mono', monospace; }
-        body.font-grotesk { --font-ui: 'Space Grotesk', 'Inter', sans-serif; --font-display: 'Space Grotesk', sans-serif; }
-        body.font-system { --font-ui: system-ui, -apple-system, sans-serif; --font-display: system-ui, sans-serif; }
-
         html { scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
         .app-container, .main, .messages, .sidebar, .panel, .palette-results { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
@@ -113,6 +82,11 @@
         .skip-link:focus { top: 16px; }
 
         *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0;
+            margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0);
+            white-space: nowrap; border: 0;
+        }
 
         .ic { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         .ic-sm { width: 15px; height: 15px; }
@@ -127,8 +101,7 @@
         }
         .icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
         .icon-btn.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
-        .icon-btn.voice-listening { background: var(--green-soft); color: var(--green); animation: pulse-voice 1.2s infinite; }
-        @keyframes pulse-voice { 0%,100% { box-shadow: 0 0 0 0 var(--green-soft); } 50% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0.35); } }
+        .icon-btn.voice-listening { background: var(--green-soft); color: var(--green); }
 
         .btn {
             display: inline-flex; align-items: center; gap: 7px;
@@ -161,6 +134,7 @@
             font-family: var(--font-display); font-size: 1.08rem; font-weight: 700;
             color: var(--accent); text-decoration: none; letter-spacing: -0.01em;
         }
+        .header-logo-mark { width: 30px; height: 30px; object-fit: contain; }
         .landing nav { display: flex; gap: 4px; }
         .landing nav a {
             color: var(--text-muted); text-decoration: none; font-size: 0.72rem;
@@ -273,7 +247,7 @@
         .cmd-desc { color: var(--text-muted); }
 
         .tips-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 32px; }
-        .tip-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 22px; }
+        .tip-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
         .tip-card h4 { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
         .tip-card p { font-size: 0.76rem; color: var(--text-muted); line-height: 1.65; }
         .tip-card code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; color: var(--green); font-family: var(--font-mono); }
@@ -289,7 +263,7 @@
         .proof-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
 
         .testimonial-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        .testimonial-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px; border-left: 3px solid var(--accent); }
+        .testimonial-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px; }
         .testimonial-text { font-size: 0.86rem; color: var(--text); line-height: 1.7; font-style: italic; margin-bottom: 12px; }
         .testimonial-name { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
 
@@ -464,7 +438,7 @@
             width: 248px; flex-shrink: 0;
             background: var(--surface); border-right: 1px solid var(--border);
             padding: 18px 14px; display: flex; flex-direction: column; gap: 22px;
-            overflow-y: auto; transition: transform 0.25s var(--ease), margin-left 0.25s var(--ease), width 0.25s var(--ease);
+            overflow-y: auto; transition: transform 0.25s var(--ease);
         }
         .sidebar.hidden { margin-left: -248px; }
         @media (max-width: 860px) { .sidebar { position: absolute; left: 0; top: 0; bottom: 0; z-index: 90; box-shadow: var(--shadow-lg); } .sidebar.hidden { margin-left: -248px; } }
@@ -487,8 +461,8 @@
         .provider-card .pc-model { font-size: 0.64rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .provider-card .pc-stats { display: flex; gap: 10px; margin-top: 6px; font-size: 0.6rem; color: var(--text-dim); font-family: var(--font-mono); }
         .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .dot.ready { background: var(--green); box-shadow: 0 0 8px var(--green); }
-        .dot.exhausted { background: var(--red); box-shadow: 0 0 8px var(--red); }
+        .dot.ready { background: var(--green); }
+        .dot.exhausted { background: var(--red); }
         .dot.plugin { background: var(--blue); }
 
         .side-item { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; padding: 3px 0; color: var(--text-muted); }
@@ -557,7 +531,7 @@
         .message-bubble pre code { background: none; border: none; padding: 0; color: var(--text); font-size: 0.78rem; line-height: 1.6; }
         .message-bubble a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-border); }
         .message-bubble a:hover { border-bottom-color: var(--accent); }
-        .message-bubble blockquote { border-left: 3px solid var(--accent-border); padding: 2px 14px; margin: 8px 0; color: var(--text-muted); }
+        .message-bubble blockquote { border-left: 1px solid var(--accent-border); padding: 2px 14px; margin: 8px 0; color: var(--text-muted); }
         .message-bubble hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
         .tool-calls { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
@@ -580,10 +554,7 @@
         .approval-deny { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
 
         .thinking { align-self: flex-start; display: flex; gap: 5px; align-items: center; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; border-radius: 14px; animation: fadeUp 0.24s var(--ease); }
-        .thinking span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: bounce 1.2s infinite; opacity: 0.35; }
-        .thinking span:nth-child(2) { animation-delay: 0.15s; }
-        .thinking span:nth-child(3) { animation-delay: 0.3s; }
-        @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: 0.35; } 30% { transform: translateY(-5px); opacity: 1; } }
+        .thinking span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; opacity: 0.55; }
 
         .welcome { align-self: center; text-align: center; margin: auto; max-width: 560px; width: 100%; }
         .welcome h2 { font-family: var(--font-display); font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 8px; }
@@ -717,7 +688,8 @@
         .landing-skip:focus { top: 16px; }
         .landing-header { position: sticky; top: 0; z-index: 20; height: 72px; padding: 0 max(24px, calc((100vw - 1160px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: 24px; background: rgba(9,10,12,.86); border-bottom: 1px solid #22262d; backdrop-filter: blur(18px); }
         .landing-brand { display: inline-flex; align-items: center; gap: 10px; color: #f2eee6 !important; text-decoration: none; font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; }
-        .landing-brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(245,166,35,.5); border-radius: 9px; color: #f5a623; background: rgba(245,166,35,.09); font: 700 .65rem var(--font-mono); }
+        .landing-brand-mark { width: 30px; height: 30px; display: grid; place-items: center; flex-shrink: 0; }
+        .landing-brand-mark img { width: 30px; height: 30px; object-fit: contain; display: block; }
         .landing-nav { display: flex; align-items: center; gap: 4px; }
         .landing-nav a, .landing-text-link { padding: 8px 10px; color: #9fa3ac !important; text-decoration: none; font-size: .67rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; transition: color .2s ease; }
         .landing-nav a:hover, .landing-text-link:hover { color: #f2eee6 !important; }
@@ -762,26 +734,196 @@
         @media (max-width: 600px) { .landing-header { height: 62px; }.landing-text-link { display: none; }.landing-hero, .landing-section, .landing-cta { width: min(100% - 36px, 1160px); }.landing-signal-row, .landing-footer { width: calc(100% - 36px); }.landing-hero h1 { font-size: clamp(2.8rem, 14vw, 4rem); }.landing-hero-lede { font-size: .9rem; }.landing-terminal-body { min-height: 300px; padding: 22px 17px; font-size: .66rem; }.landing-install-line { width: 100%; font-size: .62rem; }.landing-section { padding: 92px 0; }.landing-step-grid, .landing-capability-grid { grid-template-columns: 1fr; }.landing-capability-featured { min-height: 260px; }.landing-control-panel { padding: 28px 22px; }.landing-control-list div { grid-template-columns: 1fr; gap: 6px; }.landing-footer { flex-wrap: wrap; }.landing-footer > span { order: 3; width: 100%; }.landing-footer > div { margin-left: auto; } }
         @media (prefers-reduced-motion: reduce) { .landing *, .landing *::before, .landing *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
 
+        /* Compact agent workspace */
+        body.theme-dark, body.theme-light {
+            --amber: #f5a623;
+            --amber-hover: #ffb84a;
+            --green: #35d39a;
+        }
+        body.theme-dark {
+            --bg: #090a0c;
+            --surface: #111318;
+            --surface2: #161a20;
+            --surface3: #1d2229;
+            --text: #f2eee6;
+            --text-muted: #b0b4bd;
+            --text-dim: #7d8390;
+            --border: #2b3038;
+            --border-soft: #22262d;
+            --accent: #f5a623;
+            --accent-strong: #ffb84a;
+            --accent-soft: rgba(245, 166, 35, .12);
+            --accent-border: rgba(245, 166, 35, .38);
+        }
+        body.theme-light {
+            --bg: #f7f7f5;
+            --surface: #ffffff;
+            --surface2: #f1f1ee;
+            --surface3: #e7e8e4;
+            --text: #1b1d1f;
+            --text-muted: #5e6266;
+            --text-dim: #73777a;
+            --border: #d8dad6;
+            --border-soft: #e7e8e4;
+            --accent: #f5a623;
+            --accent-strong: #dc8d10;
+            --accent-soft: rgba(245, 166, 35, .12);
+            --accent-border: rgba(245, 166, 35, .38);
+        }
+        .landing {
+            min-height: 100vh;
+            background: var(--bg) !important;
+            color: var(--text) !important;
+            font-family: var(--font-ui);
+        }
+        .landing-header {
+            height: 64px;
+            padding: 0 24px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: none;
+        }
+        .landing-brand, .landing-brand:hover { color: var(--text) !important; }
+        .landing-nav, .landing-header-actions .landing-text-link,
+        .landing-skip, .landing-hero, .landing-signal-row, .landing-section,
+        .landing-cta, .landing-footer { display: none !important; }
+        .landing-header-actions { margin-left: auto; }
+        .workspace-main {
+            width: min(1120px, calc(100% - 48px));
+            min-height: calc(100vh - 64px);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 220px minmax(0, 1fr);
+        }
+        .workspace-menu {
+            padding: 34px 22px 34px 0;
+            border-right: 1px solid var(--border);
+        }
+        .workspace-menu-label {
+            margin: 0 0 10px 10px;
+            color: var(--text-dim);
+            font-size: .66rem;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .workspace-menu button {
+            width: 100%;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 10px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--text-muted);
+            font: 700 .78rem var(--font-ui);
+            cursor: pointer;
+            text-align: left;
+        }
+        .workspace-menu button:hover { color: var(--text); background: var(--surface2); }
+        .workspace-menu button.active { color: var(--text); background: var(--surface2); }
+        .workspace-menu button .ic { width: 16px; height: 16px; }
+        .workspace-content {
+            padding: 54px 0 44px 56px;
+        }
+        .workspace-heading {
+            max-width: 760px;
+            margin-bottom: 34px;
+        }
+        .workspace-heading h1 {
+            margin: 0 0 10px;
+            color: var(--text);
+            font-size: clamp(2.1rem, 5vw, 4.2rem);
+            line-height: 1;
+            letter-spacing: -.055em;
+        }
+        .workspace-heading p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: .92rem;
+        }
+        .workspace-open {
+            min-width: 176px;
+            min-height: 46px;
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            background: var(--accent);
+            color: #090a0c;
+            font: 800 .78rem var(--font-ui);
+            cursor: pointer;
+        }
+        .workspace-open:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+        .workspace-info {
+            margin-top: 48px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            border-top: 1px solid var(--border);
+        }
+        .workspace-info-item {
+            min-height: 92px;
+            padding: 18px 18px 18px 0;
+            border-right: 1px solid var(--border);
+        }
+        .workspace-info-item:last-child { border-right: 0; padding-left: 18px; }
+        .workspace-info-item:nth-child(2) { padding-left: 18px; }
+        .workspace-info-item span {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--text-dim);
+            font-size: .68rem;
+            font-weight: 700;
+        }
+        .workspace-info-item strong { color: var(--text); font-size: .82rem; }
+        .workspace-status-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            margin-right: 7px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+        @media (max-width: 720px) {
+            .landing-header { padding: 0 18px; }
+            .workspace-main { width: calc(100% - 36px); grid-template-columns: 1fr; }
+            .workspace-menu {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                padding: 12px 0;
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
+            }
+            .workspace-menu-label { display: none; }
+            .workspace-menu button { justify-content: center; padding: 0 6px; }
+            .workspace-content { padding: 38px 0 28px; }
+            .workspace-heading h1 { font-size: clamp(2.4rem, 14vw, 4rem); }
+            .workspace-info { grid-template-columns: 1fr; }
+            .workspace-info-item, .workspace-info-item:nth-child(2), .workspace-info-item:last-child {
+                min-height: 72px;
+                padding: 16px 0;
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
+            }
+            .workspace-info-item:last-child { border-bottom: 0; }
+        }
+
         /* Motion layer — deliberately restrained, with the terminal as the stage. */
         .landing { isolation: isolate; position: relative; }
-        .landing::before { content: ''; position: absolute; z-index: -2; inset: 72px 0 auto; height: 780px; pointer-events: none; background: radial-gradient(ellipse 48% 42% at 76% 20%, rgba(245,166,35,.11), transparent 70%), radial-gradient(ellipse 34% 30% at 19% 18%, rgba(73,128,210,.08), transparent 70%); }
-        .landing-hero::before { content: ''; position: absolute; z-index: -1; width: min(760px, 70vw); height: min(760px, 70vw); right: -210px; top: 35px; border: 1px solid rgba(245,166,35,.12); border-radius: 50%; box-shadow: 0 0 0 64px rgba(245,166,35,.025), 0 0 0 128px rgba(245,166,35,.017); animation: landing-orbit 18s linear infinite; }
+        .landing::before,
+        .landing-hero::before,
+        .landing-hero::after,
+        .landing-terminal::after { display: none; content: none; }
         .landing-hero { position: relative; }
-        .landing-hero::after { content: ''; position: absolute; z-index: -1; right: 9%; top: 12%; width: 11px; height: 11px; border-radius: 50%; background: #f5a623; box-shadow: 0 0 0 7px rgba(245,166,35,.12), 0 0 34px 6px rgba(245,166,35,.3); animation: landing-beacon 3.8s ease-in-out infinite; }
-        @keyframes landing-orbit { to { transform: rotate(360deg); } }
-        @keyframes landing-beacon { 0%,100% { transform: translate(0,0); opacity: .65; } 50% { transform: translate(-24px,18px); opacity: 1; } }
-        .landing-terminal { transform-style: preserve-3d; will-change: transform; transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease, border-color .35s ease; }
-        .landing-terminal::after { content: ''; position: absolute; inset: -1px; pointer-events: none; opacity: var(--terminal-glow, 0); background: radial-gradient(460px circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255,204,106,.16), transparent 44%); transition: opacity .25s ease; }
-        .landing-terminal:hover { border-color: rgba(245,166,35,.65); box-shadow: 24px 34px 90px rgba(0,0,0,.48), 0 0 60px rgba(245,166,35,.08); }
-        .landing-terminal:hover::after { opacity: 1; }
+        .landing-terminal { transform-style: preserve-3d; transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s ease; }
+        .landing-terminal:hover { border-color: var(--border); }
         .landing-terminal-body p { opacity: 0; transform: translateY(8px); animation: landing-line-in .55s cubic-bezier(.2,.75,.25,1) forwards; }
         .landing-terminal-body p:nth-child(1) { animation-delay: .55s; }.landing-terminal-body p:nth-child(2) { animation-delay: .72s; }.landing-terminal-body p:nth-child(3) { animation-delay: .89s; }.landing-terminal-body p:nth-child(4) { animation-delay: 1.02s; }.landing-terminal-body p:nth-child(5) { animation-delay: 1.18s; }.landing-terminal-body p:nth-child(6) { animation-delay: 1.39s; }.landing-terminal-body p:nth-child(7) { animation-delay: 1.58s; }.landing-terminal-body p:nth-child(8) { animation-delay: 1.7s; }.landing-terminal-body p:nth-child(9) { animation-delay: 1.85s; }
         @keyframes landing-line-in { to { opacity: 1; transform: translateY(0); } }
-        .landing-status-dot { animation: landing-status 2.1s ease-in-out infinite; }
-        @keyframes landing-status { 50% { box-shadow: 0 0 0 9px rgba(53,211,154,.02), 0 0 20px rgba(53,211,154,.7); } }
+        .landing-status-dot { background: var(--green); }
         .landing-signal-row { position: relative; overflow: hidden; }
-        .landing-signal-row::before { content: ''; position: absolute; top: 0; left: -35%; width: 30%; height: 1px; background: linear-gradient(90deg, transparent, #f5a623, transparent); animation: landing-scan 6s ease-in-out infinite; }
-        @keyframes landing-scan { 50% { left: 105%; } 100% { left: 105%; } }
+        .landing-signal-row::before { display: none; content: none; }
         .landing-capability { position: relative; overflow: hidden; }
         .landing-capability::before { content: ''; position: absolute; width: 140px; height: 140px; right: -70px; bottom: -70px; border: 1px solid rgba(245,166,35,.18); border-radius: 50%; opacity: 0; transition: opacity .35s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
         .landing-capability:hover::before { opacity: 1; transform: scale(1.45); }
@@ -844,99 +986,422 @@
         .model-bar { padding: 10px 6px 2px; }
         .hint-line { font-size: 0.6rem; }
         @media (max-width: 768px) { .messages, .input-shell { max-width: 100%; } .sidebar { width: 248px; } }
+        /* Local marketplace */
+        .marketplace-view {
+            display: none; flex: 1; min-height: 0; overflow-y: auto;
+            background: radial-gradient(700px 300px at 85% 0%, rgba(245,166,35,.09), transparent 60%), var(--bg);
+            padding: 32px clamp(20px, 5vw, 64px) 48px;
+        }
+        .marketplace-view.active { display: block; }
+        #chat-area.marketplace-hidden { display: none; }
+        .marketplace-view .marketplace-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+        .marketplace-kicker { color: var(--accent); font: 800 .62rem var(--font-mono); letter-spacing: .16em; text-transform: uppercase; }
+        .marketplace-view .marketplace-head h1 { margin: 7px 0 0; font: 700 clamp(2rem, 5vw, 4.2rem)/.95 Georgia, 'Times New Roman', serif; letter-spacing: -.055em; }
+        .marketplace-view .marketplace-head h1 em { color: var(--accent); font-style: italic; }
+        .marketplace-actions { display: flex; gap: 8px; }
+        .marketplace-tools { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 12px; margin-bottom: 22px; }
+        .marketplace-view .marketplace-search { width: 100%; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); padding: 0 14px; font: inherit; outline: none; }
+        .marketplace-view .marketplace-search:focus { border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .marketplace-view .marketplace-filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; }
+        .marketplace-view .marketplace-filter { white-space: nowrap; height: 38px; border: 1px solid var(--border); border-radius: 100px; background: var(--surface); color: var(--text-muted); padding: 0 13px; cursor: pointer; font: 700 .68rem var(--font-ui); }
+        .marketplace-view .marketplace-filter.selected { border-color: var(--accent-border); background: var(--accent-soft); color: var(--accent); }
+        .marketplace-view .marketplace-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+        .market-card { min-width: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; transition: transform .22s var(--ease), border-color .22s ease; }
+        .market-card:hover { transform: translateY(-5px); border-color: var(--accent-border); }
+        .market-art { position: relative; height: 190px; display: grid; place-items: center; background: linear-gradient(145deg, var(--art), rgba(255,255,255,.04)); overflow: hidden; }
+        .market-art::before { content: ''; position: absolute; width: 110px; height: 110px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; box-shadow: 0 0 0 18px rgba(255,255,255,.06), 0 0 0 36px rgba(255,255,255,.035); }
+        .market-art-mark { position: relative; z-index: 1; width: 72px; height: 72px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.5); border-radius: 22px; background: rgba(10,10,12,.18); color: white; font: 700 1.4rem Georgia, serif; transform: rotate(-5deg); backdrop-filter: blur(5px); }
+        .market-stock { position: absolute; top: 10px; right: 10px; border: 1px solid rgba(255,255,255,.28); border-radius: 100px; background: rgba(10,10,12,.48); color: white; font: 700 .58rem var(--font-mono); padding: 5px 8px; }
+        .market-info { padding: 15px; }
+        .market-category { color: var(--text-dim); font: 800 .58rem var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+        .market-title { margin: 7px 0 5px; font: 700 1rem Georgia, 'Times New Roman', serif; }
+        .market-desc { min-height: 38px; margin: 0 0 13px; color: var(--text-muted); font-size: .72rem; line-height: 1.55; }
+        .market-seller { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: .64rem; }
+        .market-seller b { color: var(--text-muted); }
+        .market-buy { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+        .market-price { font: 800 1.05rem Georgia, serif; }
+        .market-price small { color: var(--text-dim); font: 700 .58rem var(--font-mono); }
+        .market-cart-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--accent-border); border-radius: 50%; background: var(--accent); color: var(--bg); cursor: pointer; }
+        .market-cart-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .market-cart { position: fixed; top: 72px; right: 16px; z-index: 220; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 88px); overflow-y: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-lg); padding: 16px; transform: translateX(calc(100% + 24px)); transition: transform .24s var(--ease); }
+        .market-cart.visible { transform: translateX(0); }
+        .market-cart h3 { margin: 0 0 14px; font: 700 1.15rem Georgia, serif; }
+        .cart-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-soft); font-size: .72rem; }
+        .cart-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cart-row button { width: 25px; height: 25px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface2); color: var(--text); cursor: pointer; }
+        .cart-total { display: flex; justify-content: space-between; margin: 14px 0; font: 800 1rem Georgia, serif; }
+        .cart-name { width: 100%; height: 40px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); padding: 0 10px; }
+        .market-empty { grid-column: 1/-1; min-height: 260px; display: grid; place-items: center; border: 1px dashed var(--border); border-radius: 14px; color: var(--text-muted); }
+        .market-product-dialog { width: min(520px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); padding: 18px; }
+        .market-product-dialog::backdrop { background: rgba(0,0,0,.68); backdrop-filter: blur(4px); }
+        .market-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .market-form label { display: grid; gap: 6px; color: var(--text-muted); font-size: .68rem; }
+        .market-form label.full { grid-column: 1/-1; }
+        .market-form input, .market-form textarea, .market-form select { width: 100%; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); padding: 9px 10px; font: inherit; }
+        .market-form textarea { min-height: 78px; resize: vertical; }
+        @media (max-width: 1100px) { .marketplace-view .marketplace-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 800px) { .marketplace-view .marketplace-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .marketplace-view .marketplace-head { align-items: start; } }
+        @media (max-width: 520px) { .marketplace-view { padding: 24px 14px 40px; } .marketplace-view .marketplace-grid { grid-template-columns: 1fr; } .marketplace-tools { grid-template-columns: 1fr; } .marketplace-view .marketplace-head { flex-direction: column; } .market-art { height: 220px; } }
+        .marketplace-modal {
+            position: fixed; z-index: 1100; left: 50%; top: 50%;
+            transform: translate(-50%, -50%) scale(.98);
+            width: min(820px, calc(100vw - 32px));
+            max-height: min(760px, calc(100vh - 32px));
+            display: none; overflow: hidden;
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+        }
+        .marketplace-modal.show { display: flex; flex-direction: column; }
+        .marketplace-modal .marketplace-head {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            gap: 16px; padding: 20px 20px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .marketplace-modal .marketplace-title-wrap { min-width: 0; }
+        .marketplace-modal .marketplace-eyebrow {
+            display: block; margin-bottom: 5px;
+            color: var(--accent); font: 700 .62rem var(--font-mono);
+            text-transform: uppercase; letter-spacing: .12em;
+        }
+        .marketplace-modal .marketplace-head h2 {
+            margin: 0; font: 700 1.15rem var(--font-display);
+            letter-spacing: -.02em;
+        }
+        .marketplace-modal .marketplace-summary { margin-top: 5px; color: var(--text-muted); font-size: .72rem; }
+        .marketplace-modal .marketplace-toolbar {
+            display: grid; grid-template-columns: minmax(180px, 1fr) auto;
+            gap: 10px; align-items: center; padding: 12px 20px;
+            border-bottom: 1px solid var(--border-soft);
+        }
+        .marketplace-modal .marketplace-search {
+            width: 100%; height: 38px; border: 1px solid var(--border);
+            border-radius: 9px; background: var(--surface2); color: var(--text);
+            padding: 0 12px; font: 600 .78rem var(--font-ui);
+        }
+        .marketplace-modal .marketplace-search::placeholder { color: var(--text-dim); }
+        .marketplace-modal .marketplace-filters { display: flex; gap: 6px; }
+        .marketplace-modal .extension-marketplace-filter {
+            min-height: 38px; border: 1px solid var(--border); border-radius: 9px;
+            background: transparent; color: var(--text-muted); padding: 0 10px;
+            font: 700 .66rem var(--font-ui); cursor: pointer;
+        }
+        .marketplace-modal .extension-marketplace-filter:hover { color: var(--text); background: var(--surface2); }
+        .marketplace-modal .extension-marketplace-filter.active {
+            color: var(--accent); background: var(--accent-soft);
+            border-color: var(--accent-border);
+        }
+        .marketplace-modal .marketplace-grid {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px; padding: 14px 20px 20px; overflow-y: auto;
+        }
+        .marketplace-card {
+            min-width: 0; display: grid; grid-template-columns: 1fr auto;
+            grid-template-rows: auto 1fr auto; gap: 10px;
+            border: 1px solid var(--border); border-radius: 12px;
+            padding: 14px; background: var(--surface2);
+        }
+        .marketplace-card:hover { border-color: var(--accent-border); }
+        .marketplace-card h3 {
+            min-width: 0; margin: 0; font: 700 .82rem var(--font-display);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .marketplace-kind {
+            align-self: start; border: 1px solid var(--border); border-radius: 100px;
+            color: var(--text-dim); background: var(--surface);
+            padding: 3px 7px; font: 700 .58rem var(--font-mono);
+            text-transform: uppercase; letter-spacing: .08em;
+        }
+        .marketplace-card p {
+            grid-column: 1 / -1; margin: 0;
+            color: var(--text-muted); font-size: .72rem; line-height: 1.55;
+        }
+        .marketplace-card-footer {
+            grid-column: 1 / -1; display: flex; align-items: center;
+            justify-content: space-between; gap: 10px;
+        }
+        .marketplace-status { color: var(--text-dim); font: 700 .62rem var(--font-mono); }
+        .marketplace-status.installed { color: var(--green); }
+        .marketplace-card button {
+            min-height: 36px; min-width: 82px;
+            border: 1px solid var(--border); border-radius: 9px;
+            background: var(--surface); color: var(--text);
+            padding: 7px 11px; font: 700 .68rem var(--font-ui); cursor: pointer;
+        }
+        .marketplace-card button.install { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        .marketplace-card button.install:hover { background: var(--accent-strong); }
+        .marketplace-card button.uninstall:hover { color: var(--red); border-color: var(--red); }
+        .marketplace-card button:disabled { opacity: .55; cursor: wait; }
+        .marketplace-modal .marketplace-empty {
+            grid-column: 1 / -1; min-height: 180px; display: grid;
+            place-items: center; text-align: center; color: var(--text-muted);
+            border: 1px dashed var(--border); border-radius: 12px;
+        }
+        @media (max-width: 620px) {
+            .marketplace-modal { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+            .marketplace-modal .marketplace-head { padding: 16px 14px 12px; }
+            .marketplace-modal .marketplace-toolbar { grid-template-columns: 1fr; padding: 10px 14px; }
+            .marketplace-modal .marketplace-filters { overflow-x: auto; }
+            .marketplace-modal .extension-marketplace-filter { flex: 1 0 auto; }
+            .marketplace-modal .marketplace-grid { grid-template-columns: 1fr; padding: 12px 14px 14px; }
+        }
+
+        /* DIRECTION CONTRACT
+        THESIS: HelloChusquis is a precise engineering plate: visible work, not theatrical terminal styling.
+        OWN-WORLD: Near-white field, white panels, ink text, quiet hairlines, one periwinkle action color, and the primary logo as the sole brand device.
+        STORY: A developer understands the local agent, sees the working surface, and starts from a direct install or app action.
+        FIRST VIEWPORT: Split engineering plate: 46% headline and install action on the left, one measured local-session readout on the right.
+        FORM: Replacement visual world; system UI and monospace data; restrained flat geometry. */
+        :root,
+        body.theme-dark,
+        body.theme-light {
+            --accent: #f5a623;
+            --accent-strong: #ffb84a;
+            --accent-soft: rgba(245, 166, 35, .12);
+            --accent-border: rgba(245, 166, 35, .38);
+            --green: #287A55;
+            --green-soft: #EDF6F1;
+            --red: #B44343;
+            --red-soft: #FBEEEE;
+            --blue: #456A9D;
+            --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+            --font-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body.theme-dark {
+            --bg: #090a0c;
+            --surface: #111318;
+            --surface2: #161a20;
+            --surface3: #1d2229;
+            --overlay: #090a0c;
+            --text: #f2eee6;
+            --text-muted: #b0b4bd;
+            --text-dim: #7d8390;
+            --border: #2b3038;
+            --border-soft: #22262d;
+        }
+
+        body.theme-light {
+            --bg: #f7f7f5;
+            --surface: #ffffff;
+            --surface2: #f1f1ee;
+            --surface3: #e7e8e4;
+            --overlay: #f7f7f5;
+            --text: #1b1d1f;
+            --text-muted: #5e6266;
+            --text-dim: #73777a;
+            --border: #d8dad6;
+            --border-soft: #e7e8e4;
+        }
+
+        body { background: var(--bg); color: var(--text); transition: none; }
+        body::before { display: none; }
+        .landing header, .landing-header, .app-header {
+            background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none;
+            box-shadow: none;
+        }
+        .landing-header { border-bottom: 1px solid var(--border); }
+        .landing-brand, .header-logo { color: var(--text); }
+        .landing-brand-mark, .header-logo-mark { width: 32px; height: 32px; }
+        .landing-nav a, .landing-text-link { text-transform: none; letter-spacing: 0; color: var(--text-muted); }
+        .landing-nav a:hover, .landing-text-link:hover { color: var(--text); background: var(--surface2); }
+        .landing-button, .btn, .icon-btn, .marketplace-card button {
+            border-radius: 7px; box-shadow: none; text-transform: none; letter-spacing: 0;
+        }
+        .landing-button, .btn-primary, .marketplace-card button.install {
+            background: var(--accent); border-color: var(--accent); color: #FFFFFF;
+        }
+        .landing-button:hover, .btn-primary:hover, .marketplace-card button.install:hover {
+            background: var(--accent-strong); border-color: var(--accent-strong); color: #FFFFFF;
+        }
+        .landing-button-quiet, .btn, .btn-ghost { background: var(--surface); color: var(--text); }
+        .landing-button-quiet:hover, .btn:hover, .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+
+        .landing-kicker, .landing-eyebrow, .landing-card-index, .landing-step > span,
+        .section-label, .howto-number, .proof-number, .proof-label, .testimonial-card,
+        .landing-cta-deco { display: none !important; }
+        .landing-hero, .hero {
+            max-width: 1120px; min-height: 620px; padding: 72px 24px;
+            grid-template-columns: minmax(0, 1.02fr) minmax(380px, .98fr); gap: 48px;
+        }
+        .landing-hero-copy h1, .hero h1, .hero-title {
+            color: var(--text); font-family: var(--font-display);
+            font-size: clamp(3rem, 5.6vw, 5.4rem); line-height: .98; letter-spacing: -.055em;
+            max-width: 10ch;
+        }
+        .landing-hero-copy h1 em, .hero h1 em, .hero-title em {
+            color: var(--text-muted); font-style: normal; font-weight: 500;
+        }
+        .landing-hero-lede, .hero-sub {
+            max-width: 34rem; color: var(--text-muted); font-size: 1rem; line-height: 1.65;
+        }
+        .landing-install-line, .install-line {
+            max-width: 520px; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-family: var(--font-mono);
+        }
+        .landing-microproof { color: var(--text-dim); }
+        .landing-terminal, .terminal {
+            background: #FFFFFF; border: 1px solid var(--border); border-radius: 10px;
+            box-shadow: none;
+        }
+        .landing-terminal-top, .terminal-title {
+            background: var(--surface2); border-bottom: 1px solid var(--border); color: var(--text-muted);
+            text-transform: none; letter-spacing: 0;
+        }
+        .landing-terminal-body, .terminal-body { background: #FFFFFF; color: var(--text); }
+        .landing-window-dots i { background: var(--border); }
+        .landing-terminal-signal { color: var(--green); }
+        .landing-green, .term-highlight, .ht-h { color: var(--green); }
+        .landing-amber, .term-highlight { color: var(--accent); }
+        .landing-blue { color: var(--blue); }
+        .landing-muted, .term-muted, .term-dim { color: var(--text-muted); }
+        .landing-cursor, .term-cursor { background: var(--accent); }
+
+        .landing-signal-row { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .landing-signal-row div { border-right: 1px solid var(--border); }
+        .landing-signal-row strong { color: var(--text); }
+        .landing-signal-row span { color: var(--text-muted); }
+        .landing-section, .section { border-bottom: 1px solid var(--border-soft); }
+        .landing-section-intro h2, .section-title {
+            color: var(--text); font-family: var(--font-display); letter-spacing: -.035em;
+        }
+        .landing-section-intro p, .section-desc { color: var(--text-muted); }
+        .landing-step-grid, .landing-capability-grid, .feature-grid, .commands-grid {
+            gap: 0; border-top: 1px solid var(--border); border-left: 1px solid var(--border);
+        }
+        .landing-step, .landing-capability, .feature-card, .howto-step, .proof-card, .integration-card {
+            background: var(--surface); border: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+            border-radius: 0; box-shadow: none;
+        }
+        .landing-step h3, .landing-capability h3, .feature-card h3, .howto-step h3,
+        .integration-card, .provider-tag { color: var(--text); }
+        .landing-step p, .landing-capability p, .feature-card p, .howto-step p { color: var(--text-muted); }
+        .landing-control-panel, .cta-box, .tip-card, .testimonial-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: none; }
+        .landing-control-panel::before, .cta-box::before, body::selection { display: none; }
+        .landing-control-list div { border-top: 1px solid var(--border-soft); }
+        .landing-control-copy h2, .cta-box h2 { color: var(--text); }
+        .landing-control-copy p, .landing-control-list span, .cta-box p { color: var(--text-muted); }
+
+        .app-container, .app, .main, .sidebar, .panel, .palette, .menu,
+        .marketplace-modal, .voice-menu, .more-menu {
+            background: var(--surface); border-color: var(--border); box-shadow: none;
+        }
+        .app-container, .app-header, .sidebar, .main { backdrop-filter: none; -webkit-backdrop-filter: none; }
+        .app-header { background: var(--surface); border-bottom: 1px solid var(--border); }
+        .brand-name, .panel-title, .panel-title .ic, .message.assistant .message-label,
+        .side-section h3, .side-section h3 .ic { color: var(--text); }
+        .sidebar { background: var(--surface); border-right: 1px solid var(--border); }
+        .main, .messages { background: var(--bg); }
+        .icon-btn, .provider-card, .side-item, .menu-item {
+            color: var(--text-muted); border-radius: 7px;
+        }
+        .icon-btn:hover, .icon-btn.active, .provider-card:hover, .menu-item:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+        .message-bubble { background: var(--surface); border: 1px solid var(--border-soft); color: var(--text); border-radius: 8px; }
+        .message.assistant .message-bubble { background: var(--surface); border-color: var(--border); }
+        .message-bubble code, .feature-code, .howto-terminal, .shortcode-key, .shortcut-key {
+            background: var(--surface2); color: var(--text); border-color: var(--border-soft);
+        }
+        .composer-wrap { background: var(--surface); border-top: 1px solid var(--border); }
+        .composer { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+        .composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .palette-overlay, .marketplace-overlay { background: rgba(27,29,31,.28); backdrop-filter: none; -webkit-backdrop-filter: none; }
+        .palette, .panel, .menu, .marketplace-modal { border-radius: 10px; }
+        .palette-item:hover, .palette-item.selected { background: var(--surface2); }
+        .palette-item-icon { background: var(--accent-soft); color: var(--accent); }
+        .palette-item-shortcut, .shortcut-key { color: var(--text-muted); }
+        .seg button.selected { background: var(--surface2); color: var(--text); border-color: var(--border); }
+
+        .panel-body .cfg-section:first-child { display: block; }
+        .marketplace-modal { background: var(--surface); border: 1px solid var(--border); }
+        .marketplace-modal .marketplace-head, .marketplace-modal .marketplace-toolbar { background: var(--surface); border-color: var(--border); }
+        .marketplace-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+        .marketplace-card:hover { border-color: var(--accent-border); }
+        .marketplace-kind, .marketplace-status, .marketplace-card button { border-radius: 7px; }
+        .marketplace-status.installed { color: var(--green); }
+        .marketplace-card button.install { background: var(--accent); color: #FFFFFF; }
+        .marketplace-card button.uninstall { background: var(--surface); color: var(--text); }
+        .marketplace-modal .marketplace-empty { background: var(--bg); border-color: var(--border); }
+
+        @media (max-width: 900px) {
+            .landing-hero, .hero { min-height: auto; grid-template-columns: 1fr; gap: 36px; padding-top: 52px; }
+            .landing-hero-copy h1, .hero h1, .hero-title { max-width: 12ch; font-size: clamp(2.8rem, 10vw, 4.8rem); }
+            .landing-terminal { max-width: 680px; width: 100%; }
+        }
+        @media (max-width: 620px) {
+            .landing-header { height: 56px; padding: 0 14px; }
+            .landing-nav { display: none; }
+            .landing-header-actions .landing-text-link { display: none; }
+            .landing-brand { gap: 7px; }
+            .landing-brand-mark { width: 28px; height: 28px; }
+            .landing-hero, .hero { padding: 40px 16px 36px; }
+            .landing-hero-copy h1, .hero h1, .hero-title { font-size: clamp(2.5rem, 13vw, 4rem); letter-spacing: -.05em; }
+            .landing-hero-actions { display: grid; grid-template-columns: 1fr; }
+            .landing-install-line { font-size: .68rem; }
+            .landing-microproof { flex-wrap: wrap; }
+            .landing-signal-row { grid-template-columns: 1fr; }
+            .landing-signal-row div { border-right: 0; border-bottom: 1px solid var(--border); }
+            .landing-step-grid, .landing-capability-grid { grid-template-columns: 1fr; }
+            .landing-section { padding-left: 16px; padding-right: 16px; }
+            .landing-control-panel { grid-template-columns: 1fr; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
 </style>
 </head>
-<body class="theme-dark accent-amber font-inter">
+<body class="theme-dark">
 
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <!-- ===================== LANDING ===================== -->
-    <div class="landing" id="landing">
+    <div class="landing" id="main-menu">
         <a class="landing-skip" href="#landing-main">Skip to content</a>
         <header class="landing-header">
             <a href="#top" class="landing-brand" aria-label="HelloChusquis home">
-                <span class="landing-brand-mark" aria-hidden="true"><span>&gt;_</span></span>
+                <span class="landing-brand-mark" aria-hidden="true"><img src="/assets/logo-primary.png" alt=""></span>
                 <span>HelloChusquis</span>
             </a>
-            <nav class="landing-nav" aria-label="Main navigation">
-                <a href="#workflow">Workflow</a>
-                <a href="#capabilities">Capabilities</a>
-                <a href="#control">Control</a>
-                <a href="#integrations">Integrations</a>
-            </nav>
-            <div class="landing-header-actions">
-                <a class="landing-text-link" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
-                <button class="landing-button landing-button-small" type="button" id="launch-top">Launch app <span aria-hidden="true">→</span></button>
-            </div>
+            <div class="landing-header-actions"></div>
         </header>
-
-        <main id="landing-main">
-            <section class="landing-hero" id="top" aria-labelledby="landing-title">
-                <div class="landing-hero-copy motion-reveal">
-                    <div class="landing-kicker"><span class="landing-status-dot" aria-hidden="true"></span> Local-first AI workspace</div>
-                    <h1 id="landing-title">Make the terminal<br><em>your command center.</em></h1>
-                    <p class="landing-hero-lede">HelloChusquis connects conversation, tools, memory, web access, and integrations in one developer-controlled agent.</p>
-                    <div class="landing-hero-actions">
-                        <button class="landing-button" type="button" id="copy-install-btn">Copy install command <span aria-hidden="true">⌘</span></button>
-                        <a class="landing-button landing-button-quiet" href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Read the docs <span aria-hidden="true">↗</span></a>
+        <main class="workspace-main" id="landing-main">
+            <nav class="workspace-menu" aria-label="Workspace">
+                <p class="workspace-menu-label">Workspace</p>
+                <button class="active" type="button" id="workspace-chat" data-action="open-agent">
+                    <svg class="ic" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+                    Chat
+                </button>
+                <button type="button" id="workspace-providers" data-action="providers">
+                    <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    Providers
+                </button>
+                <button type="button" id="workspace-history" data-action="history">
+                    <svg class="ic" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><polyline points="12 7 12 12 16 14"/></svg>
+                    History
+                </button>
+            </nav>
+            <section class="workspace-content" aria-labelledby="workspace-title">
+                <div class="workspace-heading">
+                    <h1 id="workspace-title">Agent workspace</h1>
+                    <p>Choose an action.</p>
+                </div>
+                <button class="workspace-open" type="button" id="launch-agent">Open agent <span aria-hidden="true">→</span></button>
+                <div class="workspace-info" aria-label="Agent status">
+                    <div class="workspace-info-item">
+                        <span>Providers</span>
+                        <strong><span class="workspace-status-dot"></span><span id="menu-ready">Checking</span></strong>
                     </div>
-                    <div class="landing-install-line" aria-label="Install command"><span>$</span> python -m pip install hellochusquis <button id="install-copy-btn" class="landing-copy" type="button" aria-label="Copy install command">copy</button></div>
-                    <div class="landing-microproof"><span>Python 3.10+</span><span>MIT licensed</span><span>70+ providers</span></div>
-                </div>
-                <div class="landing-terminal motion-reveal" aria-label="HelloChusquis terminal preview">
-                    <div class="landing-terminal-top"><span class="landing-window-dots"><i></i><i></i><i></i></span><span>hellochusquis / local session</span><span class="landing-terminal-signal">● ready</span></div>
-                    <div class="landing-terminal-body">
-                        <p><span class="landing-green">$</span> hellochusquis</p>
-                        <p class="landing-muted">Loading local context...</p>
-                        <p><span class="landing-amber">agent</span> <span class="landing-muted">›</span> Ready when you are.</p>
-                        <p class="landing-spacer"></p>
-                        <p><span class="landing-blue">you</span> <span class="landing-muted">›</span> Inspect this repo and find the riskiest test gap.</p>
-                        <p class="landing-muted">→ planning a focused review</p>
-                        <p><span class="landing-green">✓</span> 6 files inspected <span class="landing-muted">·</span> 1 issue found</p>
-                        <p class="landing-spacer"></p>
-                        <p><span class="landing-blue">you</span> <span class="landing-muted">›</span> <span class="landing-cursor" aria-hidden="true"></span></p>
+                    <div class="workspace-info-item">
+                        <span>Chat</span>
+                        <strong id="menu-chat">Ready for a new task</strong>
+                    </div>
+                    <div class="workspace-info-item">
+                        <span>History</span>
+                        <strong id="menu-history">Local session</strong>
                     </div>
                 </div>
             </section>
-
-            <section class="landing-signal-row" aria-label="Product summary">
-                <div><strong>One agent.</strong><span>Many ways to work.</span></div>
-                <div><strong>Visible tools.</strong><span>Safer execution.</span></div>
-                <div><strong>Local context.</strong><span>Less tab switching.</span></div>
-            </section>
-
-            <section class="landing-section landing-workflow" id="workflow" aria-labelledby="workflow-title">
-                <div class="landing-section-intro motion-reveal"><div class="landing-eyebrow">The workflow</div><h2 id="workflow-title">From intent to useful work.</h2><p>Ask naturally. Keep the work close to the code. Let the agent make the next step visible.</p></div>
-                <div class="landing-step-grid">
-                    <article class="landing-step motion-reveal"><span>01</span><div><h3>Describe the job</h3><p>Use plain language for research, code changes, files, data, or multi-step tasks.</p></div></article>
-                    <article class="landing-step motion-reveal"><span>02</span><div><h3>Watch the plan</h3><p>Tools, progress, approvals, and failures stay legible instead of disappearing behind a black box.</p></div></article>
-                    <article class="landing-step motion-reveal"><span>03</span><div><h3>Keep the result</h3><p>Memory, sessions, exports, and integrations keep the useful parts close for the next turn.</p></div></article>
-                </div>
-            </section>
-
-            <section class="landing-section" id="capabilities" aria-labelledby="capabilities-title">
-                <div class="landing-section-intro landing-section-intro-wide motion-reveal"><div class="landing-eyebrow">The toolkit</div><h2 id="capabilities-title">Enough surface area to ship.<br><span>Not enough to get lost.</span></h2><p>Core tools cover the everyday developer loop, while providers and integrations expand the edges when you need them.</p></div>
-                <div class="landing-capability-grid">
-                    <article class="landing-capability landing-capability-featured motion-reveal"><div class="landing-card-index">01 / terminal</div><h3>Build beside your shell</h3><p>Run commands, inspect files, execute bounded code, and iterate without leaving the conversation.</p><div class="landing-code-line"><span class="landing-green">$</span> hellochusquis <span class="landing-muted">--quick</span></div></article>
-                    <article class="landing-capability motion-reveal"><div class="landing-card-index">02 / context</div><h3>Remember the right things</h3><p>Bounded history, compression, sessions, summaries, and local memory keep context useful.</p></article>
-                    <article class="landing-capability motion-reveal"><div class="landing-card-index">03 / access</div><h3>Meet the web halfway</h3><p>Search, browser automation, an authenticated web UI, and a streaming REST API share one agent.</p></article>
-                    <article class="landing-capability motion-reveal"><div class="landing-card-index">04 / scale</div><h3>Switch providers freely</h3><p>Use hosted, local, enterprise, and specialized providers through one configuration flow.</p></article>
-                </div>
-            </section>
-
-            <section class="landing-section landing-control" id="control" aria-labelledby="control-title">
-                <div class="landing-control-panel"><div class="landing-control-copy"><div class="landing-eyebrow">The control layer</div><h2 id="control-title">Automation with the lights on.</h2><p>HelloChusquis is built for useful autonomy, not invisible side effects. The web/API surfaces isolate sessions, bound requests, protect credentials, and pause high-impact actions for approval.</p><a href="https://github.com/aminoy77/HelloChusquis#approvals-roles-and-audit" target="_blank" rel="noopener" class="landing-inline-link">Explore the security model <span aria-hidden="true">↗</span></a></div><div class="landing-control-list"><div><b>approval gate</b><span>High-impact actions can wait for a human decision.</span></div><div><b>isolated sessions</b><span>Conversation state stays scoped to the caller.</span></div><div><b>local persistence</b><span>Memory, audit, and configuration remain on your machine.</span></div></div></div>
-            </section>
-
-            <section class="landing-section landing-integrations" id="integrations" aria-labelledby="integrations-title">
-                <div class="landing-section-intro"><div class="landing-eyebrow">The ecosystem</div><h2 id="integrations-title">Your tools, in the same room.</h2><p>Connect the services that already hold the context of your work.</p></div>
-                <div class="landing-integration-cloud"><span>GitHub</span><span>Slack</span><span>Discord</span><span>Docker</span><span>Notion</span><span>AWS</span><span>Gmail</span><span>Jira</span><span>PostgreSQL</span><span>MongoDB</span><span>Stripe</span><span>Supabase</span><span>Vercel</span><span>Shopify</span><span>Linear</span><span>Kubernetes</span></div>
-            </section>
-
-            <section class="landing-cta" aria-labelledby="cta-title"><div class="landing-cta-grid"><div><div class="landing-eyebrow">Start local</div><h2 id="cta-title">Give your next task<br><em>a better place to run.</em></h2></div><div><p>One install gets you from a blank terminal to a capable AI workspace.</p><div class="landing-hero-actions"><button class="landing-button" type="button" id="launch-cta">Launch the app <span aria-hidden="true">→</span></button><a class="landing-button landing-button-quiet" href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">View source <span aria-hidden="true">↗</span></a></div></div></div></section>
         </main>
-
-        <footer class="landing-footer" role="contentinfo"><a href="#top" class="landing-brand"><span class="landing-brand-mark" aria-hidden="true"><span>&gt;_</span></span><span>HelloChusquis</span></a><span>Open source, local-first, built for people who ship.</span><div><a href="https://github.com/aminoy77/HelloChusquis" target="_blank" rel="noopener">GitHub ↗</a><a href="https://github.com/aminoy77/HelloChusquis#readme" target="_blank" rel="noopener">Docs ↗</a></div></footer>
     </div>
     <!-- ===================== APP ===================== -->
     <div class="app-container" id="app" aria-label="HelloChusquis chat application">
@@ -946,20 +1411,21 @@
                 <button class="icon-btn" id="sidebar-toggle" aria-label="Toggle sidebar" title="Toggle sidebar (S)">
                     <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                 </button>
-                <a href="#" class="header-logo" id="brand-home" aria-label="Back to landing page">
+                <a href="#" class="header-logo" id="brand-home" aria-label="Back to main menu">
+                    <img class="header-logo-mark" src="/assets/logo-primary.png" alt="">
                     HelloChusquis
                 </a>
                 <span class="conn-pill" id="conn-pill">Connecting</span>
             </div>
             <div class="app-header-right">
+                <button class="btn btn-ghost" id="marketplace-open" type="button" title="Abrir mercado local">
+                    Mercado
+                </button>
                 <button class="icon-btn" id="voice-btn" aria-label="Voice options" title="Voice options (V)">
                     <svg class="ic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                 </button>
                 <button class="icon-btn" id="palette-btn" aria-label="Command palette" title="Command palette (Cmd+K)">
                     <svg class="ic" viewBox="0 0 24 24"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg>
-                </button>
-                <button class="icon-btn" id="appearance-btn" aria-label="Appearance settings" title="Appearance settings">
-                    <svg class="ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
                 </button>
                 <button class="icon-btn" id="menu-btn" aria-label="More actions" title="More actions">
                     <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
@@ -1045,54 +1511,51 @@
             </section>
 
         </div>
-    </div>
 
-    <!-- ===================== APPEARANCE PANEL ===================== -->
-    <div class="panel" id="appearance-panel" role="dialog" aria-label="Appearance settings">
-        <div class="panel-title">
-            <svg class="ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-            Appearance
-        </div>
-        <div class="panel-body">
-            <div class="cfg-section">
-                <div class="cfg-label">Theme</div>
-                <div class="swatch-row" id="theme-swatches">
-                    <button class="theme-swatch" data-theme="dark" style="--sw:#18181e;--s2:#0a0a0c;--acc:#f5a623" aria-label="Dark theme" title="Dark"></button>
-                    <button class="theme-swatch" data-theme="light" style="--sw:#ffffff;--s2:#f0f0f3;--acc:#f5a623" aria-label="Light theme" title="Light"></button>
-                    <button class="theme-swatch" data-theme="minimal" style="--sw:#181c21;--s2:#0b0d10;--acc:#f5a623" aria-label="Minimal theme" title="Minimal"></button>
-                    <button class="theme-swatch" data-theme="ocean" style="--sw:#11233b;--s2:#08121e;--acc:#60a5fa" aria-label="Ocean theme" title="Ocean"></button>
-                    <button class="theme-swatch" data-theme="forest" style="--sw:#132418;--s2:#08120a;--acc:#34d399" aria-label="Forest theme" title="Forest"></button>
+        <section class="marketplace-view" id="marketplace-view" aria-label="Mercado local">
+            <header class="marketplace-head">
+                <div>
+                    <div class="marketplace-kicker">Catálogo del barrio</div>
+                    <h1>Hecho cerca.<br><em>Encontrado aquí.</em></h1>
                 </div>
-            </div>
-            <div class="cfg-section">
-                <div class="cfg-label">Accent</div>
-                <div class="swatch-row" id="accent-swatches">
-                    <button class="accent-swatch" data-accent="amber" style="background:#f5a623" aria-label="Amber accent" title="Amber"></button>
-                    <button class="accent-swatch" data-accent="emerald" style="background:#34d399" aria-label="Emerald accent" title="Emerald"></button>
-                    <button class="accent-swatch" data-accent="cyan" style="background:#22d3ee" aria-label="Cyan accent" title="Cyan"></button>
-                    <button class="accent-swatch" data-accent="violet" style="background:#a78bfa" aria-label="Violet accent" title="Violet"></button>
-                    <button class="accent-swatch" data-accent="rose" style="background:#fb7185" aria-label="Rose accent" title="Rose"></button>
-                    <button class="accent-swatch" data-accent="blue" style="background:#60a5fa" aria-label="Blue accent" title="Blue"></button>
+                <div class="marketplace-actions">
+                    <button class="btn" id="marketplace-sell" type="button">Vender un producto</button>
+                    <button class="btn btn-primary" id="marketplace-cart-open" type="button">Carrito (<span id="marketplace-cart-count">0</span>)</button>
                 </div>
+            </header>
+            <div class="marketplace-tools">
+                <input class="marketplace-search" id="marketplace-search" type="search" placeholder="Buscar objeto, productor o barrio..." aria-label="Buscar en el mercado">
+                <div class="marketplace-filters" id="marketplace-filters" aria-label="Categorías"></div>
             </div>
-            <div class="cfg-section">
-                <div class="cfg-label">Font</div>
-                <div class="seg" id="font-seg">
-                    <button data-font="inter">Inter</button>
-                    <button data-font="grotesk">Grotesk</button>
-                    <button data-font="mono">Mono</button>
-                    <button data-font="system">System</button>
+            <div class="marketplace-grid" id="marketplace-grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="market-cart" id="marketplace-cart" aria-label="Carrito">
+            <h3>Tu compra local</h3>
+            <div id="marketplace-cart-items"></div>
+            <div class="cart-total"><span>Total</span><b id="marketplace-cart-total">$0.00</b></div>
+            <input class="cart-name" id="marketplace-customer" maxlength="100" placeholder="Nombre para el pedido" aria-label="Nombre para el pedido">
+            <button class="btn btn-primary" id="marketplace-checkout" type="button" style="width:100%;justify-content:center">Confirmar pedido</button>
+        </aside>
+
+        <dialog class="market-product-dialog" id="marketplace-product-dialog">
+            <form method="dialog" id="marketplace-product-form">
+                <h3 style="margin:0 0 14px;font-family:Georgia,serif">Publicar producto</h3>
+                <div class="market-form">
+                    <label>Vendedor<input name="seller" required maxlength="80" value="Mi Taller"></label>
+                    <label>Barrio<input name="neighborhood" maxlength="80" value="Centro"></label>
+                    <label class="full">Título<input name="title" required maxlength="120"></label>
+                    <label class="full">Descripción<textarea name="description" required maxlength="500"></textarea></label>
+                    <label>Categoría<select name="category" id="marketplace-category-form"><option>Hogar</option><option>Alimentos</option><option>Arte</option><option>Accesorios</option></select></label>
+                    <label>Precio en dólares<input name="price" type="number" required min="0.01" step="0.01" value="10.00"></label>
+                    <label class="full">Stock<input name="stock" type="number" required min="0" max="99999" value="1"></label>
                 </div>
-            </div>
-            <div class="cfg-section">
-                <div class="cfg-label">Shortcuts</div>
-                <div class="shortcut-item"><span>Command palette</span><span class="shortcut-key">Cmd K</span></div>
-                <div class="shortcut-item"><span>Toggle sidebar</span><span class="shortcut-key">S</span></div>
-                <div class="shortcut-item"><span>Voice options</span><span class="shortcut-key">V</span></div>
-                <div class="shortcut-item"><span>Focus composer</span><span class="shortcut-key">/</span></div>
-                <div class="shortcut-item"><span>Send message</span><span class="shortcut-key">Enter</span></div>
-            </div>
-        </div>
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+                    <button class="btn" type="button" id="marketplace-product-cancel">Cancelar</button>
+                    <button class="btn btn-primary" type="submit">Publicar</button>
+                </div>
+            </form>
+        </dialog>
     </div>
 
     <!-- ===================== VOICE MENU ===================== -->
@@ -1116,6 +1579,34 @@
         </div>
     </div>
 
+    <!-- ===================== MARKETPLACE ===================== -->
+    <div class="palette-overlay" id="marketplace-overlay"></div>
+    <div class="marketplace-modal" id="marketplace-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="marketplace-title">
+        <div class="marketplace-head">
+            <div class="marketplace-title-wrap">
+                <span class="marketplace-eyebrow">Extensions</span>
+                <h2 id="marketplace-title">Local marketplace</h2>
+                <p class="marketplace-summary" id="marketplace-summary" aria-live="polite">Loading local catalog...</p>
+            </div>
+            <button class="icon-btn" id="marketplace-close" type="button" aria-label="Close marketplace">×</button>
+        </div>
+        <div class="marketplace-toolbar">
+            <label>
+                <span class="sr-only">Search marketplace</span>
+                <input class="marketplace-search" id="extension-marketplace-search" type="search" placeholder="Search plugins, skills, and MCP servers" autocomplete="off">
+            </label>
+            <div class="marketplace-filters" role="group" aria-label="Filter marketplace">
+                <button class="extension-marketplace-filter active" type="button" data-kind="all" aria-pressed="true">All</button>
+                <button class="extension-marketplace-filter" type="button" data-kind="plugin" aria-pressed="false">Plugins</button>
+                <button class="extension-marketplace-filter" type="button" data-kind="skill" aria-pressed="false">Skills</button>
+                <button class="extension-marketplace-filter" type="button" data-kind="mcp" aria-pressed="false">MCP</button>
+            </div>
+        </div>
+        <div class="marketplace-grid" id="extension-marketplace-grid">
+            <div class="marketplace-empty">Loading local catalog...</div>
+        </div>
+    </div>
+
     <!-- ===================== MORE MENU ===================== -->
     <div class="menu" id="more-menu" role="menu" aria-label="More actions">
         <div class="menu-item" id="menu-export">
@@ -1130,9 +1621,13 @@
             <svg class="ic" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             Reload providers
         </div>
+        <div class="menu-item" id="menu-marketplace">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            Local marketplace
+        </div>
         <div class="menu-item" id="menu-landing">
             <svg class="ic" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            Back to landing
+            Back to main menu
         </div>
     </div>
 
@@ -1183,17 +1678,17 @@
         voiceMode: storage.get('hc_voice') || 'off',
         abortCtrl: null,
         paletteItems: [],
+        marketplaceCategory: 'Todos',
+        marketplaceProducts: [],
+        marketplaceCart: {},
     };
-    const THEMES = ['dark', 'light', 'minimal', 'ocean', 'forest'];
+    const THEMES = ['dark', 'light'];
     // ponytail: client-only counters, upgrade to /status history when server exposes it
     const chatStats = { msgs: 0, tools: 0 };
     function updateStats() {
         ['stat-msgs', 'w-msgs'].forEach((id) => { const el = document.getElementById(id); if (el) el.textContent = chatStats.msgs; });
         const t = document.getElementById('stat-tools'); if (t) t.textContent = chatStats.tools;
     }
-    const ACCENTS = ['amber', 'emerald', 'cyan', 'violet', 'rose', 'blue'];
-    const FONTS = ['inter', 'mono', 'grotesk', 'system'];
-
     const ICONS = {
         user: '<svg class="ic" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
         bot: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>',
@@ -1214,12 +1709,11 @@
 
     // ---------- dom refs ----------
     const $ = (id) => document.getElementById(id);
-    const landing = $('landing'), app = $('app'), sidebar = $('sidebar');
+    const landing = $('main-menu'), app = $('app'), sidebar = $('sidebar');
     const messages = $('messages'), welcome = $('welcome'), welcomeModel = $('welcome-model');
     const composer = $('composer'), sendBtn = $('send-btn');
     const providerSelect = $('provider-select'), modelSelect = $('model-select');
     const connPill = $('conn-pill');
-    const appearancePanel = $('appearance-panel'), appearanceBtn = $('appearance-btn');
     const voiceMenu = $('voice-menu'), voiceBtn = $('voice-btn'), micToggle = $('mic-toggle');
     const moreMenu = $('more-menu'), menuBtn = $('menu-btn');
     const palette = $('palette'), paletteOverlay = $('palette-overlay');
@@ -1235,6 +1729,11 @@
         toastEl.classList.add('show');
         clearTimeout(toast._t);
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
+    }
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[ch]);
     }
     async function fetchJson(url, opts = {}) {
         const headers = {
@@ -1257,32 +1756,11 @@
         return res.json();
     }
 
-    // ---------- appearance ----------
+    // ---------- themes ----------
     function applyTheme(t) {
         THEMES.forEach((x) => document.body.classList.remove('theme-' + x));
         document.body.classList.add('theme-' + t);
         storage.set('hc_theme', t);
-        syncAppearance();
-    }
-    function applyAccent(a) {
-        ACCENTS.forEach((x) => document.body.classList.remove('accent-' + x));
-        document.body.classList.add('accent-' + a);
-        storage.set('hc_accent', a);
-        syncAppearance();
-    }
-    function applyFont(f) {
-        FONTS.forEach((x) => document.body.classList.remove('font-' + x));
-        document.body.classList.add('font-' + f);
-        storage.set('hc_font', f);
-        syncAppearance();
-    }
-    function currentTheme() { return THEMES.find((t) => document.body.classList.contains('theme-' + t)) || 'dark'; }
-    function currentAccent() { return ACCENTS.find((a) => document.body.classList.contains('accent-' + a)) || 'amber'; }
-    function currentFont() { return FONTS.find((f) => document.body.classList.contains('font-' + f)) || 'inter'; }
-    function syncAppearance() {
-        document.querySelectorAll('#theme-swatches .theme-swatch').forEach((b) => b.classList.toggle('selected', b.dataset.theme === currentTheme()));
-        document.querySelectorAll('#accent-swatches .accent-swatch').forEach((b) => b.classList.toggle('selected', b.dataset.accent === currentAccent()));
-        document.querySelectorAll('#font-seg button').forEach((b) => b.classList.toggle('selected', b.dataset.font === currentFont()));
     }
 
     // ---------- view switching ----------
@@ -1290,50 +1768,15 @@
         landing.classList.add('hidden');
         app.classList.add('active');
         document.body.style.overflow = 'hidden';
+        showChatView();
         composer.focus();
         if (!state.loaded) loadStatus();
     }
-    function showLanding() {
+    function showMainMenu() {
         app.classList.remove('active');
         landing.classList.remove('hidden');
         document.body.style.overflow = '';
         closeOverlays();
-    }
-
-    // ---------- landing motion ----------
-    function initLandingMotion() {
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const revealItems = document.querySelectorAll('.landing .motion-reveal');
-
-        if (reducedMotion || !('IntersectionObserver' in window)) {
-            revealItems.forEach((item) => item.classList.add('is-visible'));
-            return;
-        }
-
-        const revealObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach((entry) => {
-                if (!entry.isIntersecting) return;
-                entry.target.classList.add('is-visible');
-                observer.unobserve(entry.target);
-            });
-        }, { threshold: 0.14, rootMargin: '0px 0px -30px' });
-        revealItems.forEach((item) => revealObserver.observe(item));
-
-        const terminal = document.querySelector('.landing-terminal');
-        if (!terminal || !window.matchMedia('(pointer: fine)').matches) return;
-        terminal.addEventListener('pointermove', (event) => {
-            const rect = terminal.getBoundingClientRect();
-            const x = (event.clientX - rect.left) / rect.width;
-            const y = (event.clientY - rect.top) / rect.height;
-            terminal.style.setProperty('--pointer-x', `${x * 100}%`);
-            terminal.style.setProperty('--pointer-y', `${y * 100}%`);
-            terminal.style.setProperty('--terminal-glow', '1');
-            terminal.style.transform = `perspective(1100px) rotateX(${(0.5 - y) * 3.2}deg) rotateY(${(x - 0.5) * 4.4}deg) translateY(-4px)`;
-        });
-        terminal.addEventListener('pointerleave', () => {
-            terminal.style.setProperty('--terminal-glow', '0');
-            terminal.style.transform = '';
-        });
     }
 
     // ---------- auth (instant on loopback: server embeds the token) ----------
@@ -1481,6 +1924,8 @@
             const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
             set('stat-sessions', sess); set('w-sessions', sess);
             set('stat-ready', readyCount + '/' + (j.providers || []).length); set('w-ready', readyCount);
+            set('menu-ready', readyCount ? readyCount + ' ready' : 'No providers ready');
+            set('menu-history', sess ? sess + ' local sessions' : 'No saved sessions');
             $('memory-stat').innerHTML = '<span>' + sess + '</span> sessions · ' + (mem.summary ? esc(mem.summary.slice(0, 80)) + '...' : 'no summary');
             const lr = j.learnings || {};
             $('learnings-stat').innerHTML = '<span>' + (lr.patterns || 0) + '</span> patterns · <span>' + (lr.improvements || 0) + '</span> improvements';
@@ -1875,10 +2320,10 @@
 
     // ---------- overlays ----------
     function closeOverlays() {
-        appearancePanel.classList.remove('visible');
         voiceMenu.classList.remove('show');
         moreMenu.classList.remove('show');
         closePalette();
+        closeExtensionMarketplace();
     }
     function openPalette() {
         palette.classList.add('show');
@@ -1899,10 +2344,7 @@
         cmds.push({ icon: ICONS.sidebar, title: 'Toggle sidebar', desc: 'Show or hide provider panel', fn: toggleSidebar });
         cmds.push({ icon: ICONS.download, title: 'Export chat', desc: 'Download as Markdown', fn: exportChat });
         cmds.push({ icon: ICONS.refresh, title: 'Reload providers', desc: 'Refresh status and models', fn: () => loadStatus(true) });
-        cmds.push({ icon: ICONS.home, title: 'Back to landing', desc: 'Show marketing page', fn: showLanding });
-        THEMES.forEach((t) => cmds.push({ icon: ICONS.palette, title: 'Theme: ' + t, desc: 'Switch theme', fn: () => applyTheme(t) }));
-        ACCENTS.forEach((a) => cmds.push({ icon: ICONS.palette, title: 'Accent: ' + a, desc: 'Switch accent color', fn: () => applyAccent(a) }));
-        FONTS.forEach((f) => cmds.push({ icon: ICONS.palette, title: 'Font: ' + f, desc: 'Switch UI font', fn: () => applyFont(f) }));
+        cmds.push({ icon: ICONS.home, title: 'Back to main menu', desc: 'Return to the workspace', fn: showMainMenu });
         return cmds;
     }
     function buildPalette(q) {
@@ -1975,16 +2417,268 @@
         composer.style.height = Math.min(composer.scrollHeight, 160) + 'px';
     }
 
+    // ---------- local marketplace ----------
+    function showChatView() {
+        document.getElementById('chat-area').classList.remove('marketplace-hidden');
+        document.getElementById('marketplace-view').classList.remove('active');
+        document.getElementById('marketplace-cart').classList.remove('visible');
+    }
+
+    async function openMarketplace() {
+        document.getElementById('chat-area').classList.add('marketplace-hidden');
+        document.getElementById('marketplace-view').classList.add('active');
+        await loadMarketplace();
+    }
+
+    function money(cents) {
+        return '$' + (Number(cents) / 100).toFixed(2);
+    }
+
+    async function loadMarketplace() {
+        const grid = document.getElementById('marketplace-grid');
+        grid.innerHTML = '<div class="market-empty">Cargando catálogo local...</div>';
+        try {
+            const [categoryData, productData] = await Promise.all([
+                fetchJson('/marketplace/categories'),
+                fetchJson('/marketplace/products?category=' +
+                    encodeURIComponent(state.marketplaceCategory) +
+                    '&search=' + encodeURIComponent(document.getElementById('marketplace-search').value || '')),
+            ]);
+            const filters = document.getElementById('marketplace-filters');
+            filters.innerHTML = '';
+            (categoryData.categories || ['Todos']).forEach((category) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'marketplace-filter' +
+                    (category === state.marketplaceCategory ? ' selected' : '');
+                button.textContent = category;
+                button.addEventListener('click', () => {
+                    state.marketplaceCategory = category;
+                    loadMarketplace();
+                });
+                filters.appendChild(button);
+            });
+            state.marketplaceProducts = productData.products || [];
+            renderMarketplace();
+        } catch (error) {
+            grid.innerHTML = '<div class="market-empty">No se pudo cargar el mercado: ' +
+                esc(error.message) + '</div>';
+        }
+    }
+
+    function renderMarketplace() {
+        const grid = document.getElementById('marketplace-grid');
+        if (!state.marketplaceProducts.length) {
+            grid.innerHTML = '<div class="market-empty">No hay productos en esta búsqueda.</div>';
+            return;
+        }
+        grid.innerHTML = '';
+        state.marketplaceProducts.forEach((product) => {
+            const card = document.createElement('article');
+            card.className = 'market-card';
+            card.style.setProperty('--art', product.color || '#c89a64');
+            const initial = String(product.title).trim().charAt(0).toUpperCase();
+            card.innerHTML =
+                '<div class="market-art">' +
+                    '<span class="market-stock">' + product.stock + ' disponibles</span>' +
+                    '<span class="market-art-mark" aria-hidden="true">' + esc(initial) + '</span>' +
+                '</div>' +
+                '<div class="market-info">' +
+                    '<div class="market-category">' + esc(product.category) + '</div>' +
+                    '<h2 class="market-title">' + esc(product.title) + '</h2>' +
+                    '<p class="market-desc">' + esc(product.description) + '</p>' +
+                    '<div class="market-seller"><b>' + esc(product.seller) + '</b><span>· ' +
+                        esc(product.neighborhood) + ' · ★ ' + Number(product.rating).toFixed(1) + '</span></div>' +
+                    '<div class="market-buy"><span class="market-price">' + money(product.price_cents) +
+                        ' <small>USD</small></span>' +
+                        '<button class="market-cart-btn" type="button" aria-label="Añadir ' +
+                        esc(product.title) + '" ' + (product.stock < 1 ? 'disabled' : '') +
+                        ' data-product-id="' + product.id + '">+</button></div>' +
+                '</div>';
+            card.querySelector('.market-cart-btn').addEventListener('click', () => addToCart(product));
+            grid.appendChild(card);
+        });
+    }
+
+    function addToCart(product) {
+        const existing = state.marketplaceCart[product.id];
+        if (existing && existing.quantity >= product.stock) {
+            toast('No hay más stock disponible');
+            return;
+        }
+        state.marketplaceCart[product.id] = {
+            product,
+            quantity: existing ? existing.quantity + 1 : 1,
+        };
+        renderCart();
+        toast(product.title + ' añadido');
+    }
+
+    function renderCart() {
+        const items = Object.values(state.marketplaceCart);
+        const count = items.reduce((sum, item) => sum + item.quantity, 0);
+        const total = items.reduce((sum, item) =>
+            sum + item.quantity * item.product.price_cents, 0);
+        document.getElementById('marketplace-cart-count').textContent = count;
+        document.getElementById('marketplace-cart-total').textContent = money(total);
+        const container = document.getElementById('marketplace-cart-items');
+        container.innerHTML = '';
+        items.forEach((item) => {
+            const row = document.createElement('div');
+            row.className = 'cart-row';
+            row.innerHTML =
+                '<b>' + esc(item.product.title) + '</b><span>' + item.quantity + '</span>' +
+                '<button type="button" aria-label="Quitar ' + esc(item.product.title) + '">−</button>';
+            row.querySelector('button').addEventListener('click', () => {
+                if (item.quantity > 1) item.quantity -= 1;
+                else delete state.marketplaceCart[item.product.id];
+                renderCart();
+            });
+            container.appendChild(row);
+        });
+        if (!items.length) {
+            container.innerHTML = '<div class="side-stat">El carrito está vacío.</div>';
+        }
+    }
+
+    async function checkoutMarketplace() {
+        const items = Object.values(state.marketplaceCart).map((item) => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+        }));
+        const customerName = document.getElementById('marketplace-customer').value.trim();
+        if (!items.length) { toast('El carrito está vacío'); return; }
+        if (!customerName) { toast('Escribe el nombre para el pedido'); return; }
+        try {
+            const result = await fetchJson('/marketplace/orders', {
+                method: 'POST',
+                body: { customer_name: customerName, items },
+            });
+            state.marketplaceCart = {};
+            renderCart();
+            document.getElementById('marketplace-cart').classList.remove('visible');
+            document.getElementById('marketplace-customer').value = '';
+            toast('Pedido #' + result.order.id + ' confirmado');
+            await loadMarketplace();
+        } catch (error) {
+            toast(error.message);
+        }
+    }
+
+    async function publishMarketplaceProduct(form) {
+        const data = new FormData(form);
+        const price = Math.round(Number(data.get('price')) * 100);
+        try {
+            await fetchJson('/marketplace/products', {
+                method: 'POST',
+                body: {
+                    seller: data.get('seller'),
+                    neighborhood: data.get('neighborhood'),
+                    title: data.get('title'),
+                    description: data.get('description'),
+                    category: data.get('category'),
+                    price_cents: price,
+                    stock: Number(data.get('stock')),
+                },
+            });
+            document.getElementById('marketplace-product-dialog').close();
+            form.reset();
+            toast('Producto publicado');
+            await loadMarketplace();
+        } catch (error) {
+            toast(error.message);
+        }
+    }
+
     // ---------- init ----------
+    let extensionMarketplaceItems = [];
+    let extensionMarketplaceKind = 'all';
+    let extensionMarketplaceTrigger = null;
+    async function openExtensionMarketplace() {
+        extensionMarketplaceTrigger = document.activeElement;
+        const modal = $('marketplace-modal');
+        const overlay = $('marketplace-overlay');
+        modal.classList.add('show');
+        overlay.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+        $('marketplace-close').focus();
+        await loadExtensionMarketplace();
+    }
+    function closeExtensionMarketplace() {
+        const modal = $('marketplace-modal');
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+        $('marketplace-overlay').classList.remove('show');
+        if (extensionMarketplaceTrigger && typeof extensionMarketplaceTrigger.focus === 'function') extensionMarketplaceTrigger.focus();
+    }
+    function renderExtensionMarketplace() {
+        const grid = $('extension-marketplace-grid');
+        const search = ($('extension-marketplace-search').value || '').trim().toLowerCase();
+        const filtered = extensionMarketplaceItems.filter(item => {
+            const kindMatches = extensionMarketplaceKind === 'all' || item.kind === extensionMarketplaceKind;
+            const searchMatches = !search || (item.name + ' ' + item.description + ' ' + item.id).toLowerCase().includes(search);
+            return kindMatches && searchMatches;
+        });
+        const installedCount = extensionMarketplaceItems.filter(item => item.installed).length;
+        $('marketplace-summary').textContent = `${extensionMarketplaceItems.length} items · ${installedCount} installed`;
+        if (!filtered.length) {
+            grid.innerHTML = '<div class="marketplace-empty">No matching local items.</div>';
+            return;
+        }
+        grid.innerHTML = filtered.map(item => `
+            <article class="marketplace-card">
+                <h3 title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</h3>
+                <span class="marketplace-kind">${escapeHtml(item.kind)}</span>
+                <p>${escapeHtml(item.description)}</p>
+                <div class="marketplace-card-footer">
+                    <span class="marketplace-status ${item.installed ? 'installed' : ''}">${item.installed ? '● installed' : '○ available'}</span>
+                    <button class="${item.installed ? 'uninstall' : 'install'}" type="button"
+                        data-market-item="${escapeHtml(item.id)}"
+                        data-installed="${item.installed ? 'true' : 'false'}"
+                        aria-label="${item.installed ? 'Uninstall' : 'Install'} ${escapeHtml(item.name)}">
+                        ${item.installed ? 'Uninstall' : 'Install'}
+                    </button>
+                </div>
+            </article>
+        `).join('');
+        grid.querySelectorAll('[data-market-item]').forEach(button => {
+            button.addEventListener('click', async () => {
+                const id = button.dataset.marketItem;
+                const action = button.dataset.installed === 'true' ? 'uninstall' : 'install';
+                button.disabled = true;
+                button.textContent = action === 'install' ? 'Installing...' : 'Removing...';
+                try {
+                    await fetchJson(`/market/items/${encodeURIComponent(id)}/${action}`, {method: 'POST'});
+                    toast(action === 'install' ? 'Installed locally' : 'Uninstalled');
+                    await loadExtensionMarketplace();
+                } catch (err) {
+                    toast(err.message || 'Marketplace action failed');
+                    button.disabled = false;
+                    button.textContent = action === 'install' ? 'Install' : 'Uninstall';
+                }
+            });
+        });
+    }
+    async function loadExtensionMarketplace() {
+        const grid = $('extension-marketplace-grid');
+        grid.setAttribute('aria-busy', 'true');
+        try {
+            const data = await fetchJson('/market/items');
+            extensionMarketplaceItems = Array.isArray(data.items) ? data.items : [];
+            grid.removeAttribute('aria-busy');
+            renderExtensionMarketplace();
+        } catch (err) {
+            grid.removeAttribute('aria-busy');
+            grid.innerHTML = `<div class="marketplace-empty">${escapeHtml(err.message || 'Marketplace unavailable')}</div>`;
+            $('marketplace-summary').textContent = 'Catalog unavailable';
+        }
+    }
+
     function init() {
-        // appearance from storage
-        applyTheme(storage.get('hc_theme') || currentTheme());
-        applyAccent(storage.get('hc_accent') || currentAccent());
-        applyFont(storage.get('hc_font') || currentFont());
-        syncAppearance();
+        const savedTheme = storage.get('hc_theme');
+        applyTheme(savedTheme === 'light' ? 'light' : 'dark');
         if (storage.get('hc_sidebar') === '1') sidebar.classList.add('hidden');
         setVoiceMode(state.voiceMode);
-        initLandingMotion();
 
         // mark all decorative SVGs as aria-hidden
         document.querySelectorAll('svg.ic').forEach((s) => s.setAttribute('aria-hidden', 'true'));
@@ -1992,17 +2686,32 @@
         // size composer
         autoGrow();
 
-        // landing buttons (CSP: sin onclick inline)
-        const lt = $('launch-top'); if (lt) lt.addEventListener('click', showApp);
-        const lc = $('launch-cta'); if (lc) lc.addEventListener('click', showApp);
-        const ci = $('copy-install-btn'); if (ci) ci.addEventListener('click', copyInstall);
-        const icb = $('install-copy-btn'); if (icb) icb.addEventListener('click', copyInstall);
-        const bh = $('brand-home'); if (bh) bh.addEventListener('click', (e) => { e.preventDefault(); showLanding(); });
+        // main-menu buttons (CSP: no onclick inline)
+        const launch = $('launch-agent'); if (launch) launch.addEventListener('click', showApp);
+        $('workspace-providers').addEventListener('click', showApp);
+        $('workspace-history').addEventListener('click', () => { showApp(); clearTimeout(window._landingHistoryFocus); });
+        $('workspace-chat').addEventListener('click', showApp);
+        syncThemeSwitch();
+        const mc = $('marketplace-close'); if (mc) mc.addEventListener('click', closeExtensionMarketplace);
+        const mo = $('marketplace-overlay'); if (mo) mo.addEventListener('click', closeExtensionMarketplace);
+        const ms = $('extension-marketplace-search'); if (ms) ms.addEventListener('input', renderExtensionMarketplace);
+        document.querySelectorAll('.extension-marketplace-filter').forEach(button => {
+            button.addEventListener('click', () => {
+                extensionMarketplaceKind = button.dataset.kind || 'all';
+                document.querySelectorAll('.extension-marketplace-filter').forEach(filter => {
+                    const active = filter === button;
+                    filter.classList.toggle('active', active);
+                    filter.setAttribute('aria-pressed', String(active));
+                });
+                renderExtensionMarketplace();
+            });
+        });
+        const bh = $('brand-home'); if (bh) bh.addEventListener('click', (e) => { e.preventDefault(); showMainMenu(); });
 
         // header buttons
-        appearanceBtn.addEventListener('click', (e) => { e.stopPropagation(); appearancePanel.classList.toggle('visible'); voiceMenu.classList.remove('show'); moreMenu.classList.remove('show'); });
-        voiceBtn.addEventListener('click', (e) => { e.stopPropagation(); voiceMenu.classList.toggle('show'); appearancePanel.classList.remove('visible'); moreMenu.classList.remove('show'); });
-        menuBtn.addEventListener('click', (e) => { e.stopPropagation(); moreMenu.classList.toggle('show'); appearancePanel.classList.remove('visible'); voiceMenu.classList.remove('show'); });
+        $('marketplace-open').addEventListener('click', openMarketplace);
+        voiceBtn.addEventListener('click', (e) => { e.stopPropagation(); voiceMenu.classList.toggle('show'); moreMenu.classList.remove('show'); });
+        menuBtn.addEventListener('click', (e) => { e.stopPropagation(); moreMenu.classList.toggle('show'); voiceMenu.classList.remove('show'); });
         $('sidebar-toggle').addEventListener('click', toggleSidebar);
 
         // voice menu
@@ -2018,16 +2727,35 @@
         $('menu-export').addEventListener('click', () => { moreMenu.classList.remove('show'); exportChat(); });
         $('menu-clear').addEventListener('click', () => { moreMenu.classList.remove('show'); clearHistory(); });
         $('menu-reload').addEventListener('click', () => { moreMenu.classList.remove('show'); loadStatus(true); });
-        $('menu-landing').addEventListener('click', () => { moreMenu.classList.remove('show'); showLanding(); });
+        $('menu-marketplace').addEventListener('click', () => { moreMenu.classList.remove('show'); openExtensionMarketplace(); });
+        $('menu-landing').addEventListener('click', () => { moreMenu.classList.remove('show'); showMainMenu(); });
 
         // sidebar actions
         $('side-reload').addEventListener('click', () => loadStatus(true));
-        $('side-landing').addEventListener('click', showLanding);
+        $('side-landing').addEventListener('click', showMainMenu);
 
-        // appearance panel
-        document.querySelectorAll('#theme-swatches .theme-swatch').forEach((b) => b.addEventListener('click', () => applyTheme(b.dataset.theme)));
-        document.querySelectorAll('#accent-swatches .accent-swatch').forEach((b) => b.addEventListener('click', () => applyAccent(b.dataset.accent)));
-        document.querySelectorAll('#font-seg button').forEach((b) => b.addEventListener('click', () => applyFont(b.dataset.font)));
+        // local marketplace
+        $('marketplace-cart-open').addEventListener('click', () => {
+            document.getElementById('marketplace-cart').classList.toggle('visible');
+        });
+        $('marketplace-checkout').addEventListener('click', checkoutMarketplace);
+        $('marketplace-sell').addEventListener('click', () => {
+            document.getElementById('marketplace-product-dialog').showModal();
+        });
+        $('marketplace-product-cancel').addEventListener('click', () => {
+            document.getElementById('marketplace-product-dialog').close();
+        });
+        const marketplaceForm = $('marketplace-product-form');
+        marketplaceForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            publishMarketplaceProduct(marketplaceForm);
+        });
+        let marketplaceSearchTimer = null;
+        $('marketplace-search').addEventListener('input', () => {
+            clearTimeout(marketplaceSearchTimer);
+            marketplaceSearchTimer = setTimeout(loadMarketplace, 250);
+        });
+
 
         // palette
         $('palette-btn').addEventListener('click', openPalette);
@@ -2080,7 +2808,6 @@
 
         // close overlays on outside click
         document.addEventListener('click', (e) => {
-            if (!appearancePanel.contains(e.target) && !appearanceBtn.contains(e.target)) appearancePanel.classList.remove('visible');
             if (!voiceMenu.contains(e.target) && !voiceBtn.contains(e.target)) voiceMenu.classList.remove('show');
             if (!moreMenu.contains(e.target) && !menuBtn.contains(e.target)) moreMenu.classList.remove('show');
         });

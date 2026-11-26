@@ -352,8 +352,6 @@ class SafeBinPolicy:
         Catastrophic patterns → DENY always.
         Medium-risk patterns  → ASK (but ASK becomes DENY if no TTY).
         """
-        first_token = command.split()[0] if command.split() else ""
-
         # Phase 1: catastrophic → hard DENY
         cat_reason = self._is_catastrophic(command)
         if cat_reason:
