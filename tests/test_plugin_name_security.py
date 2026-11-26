@@ -29,13 +29,14 @@ class TestPluginNameSecurity(unittest.TestCase):
         ), patch.object(plugins, "_loaded_plugins", None), patch.object(
             plugins, "_registry", None
         ):
-            (Path(tmp_dir) / "once.py").write_text(
+            plugin_file = Path(tmp_dir) / "once.py"
+            plugin_file.write_text(
                 "PLUGIN_NAME = 'once'\nRUNS = globals().get('RUNS', 0) + 1\n"
             )
+            plugin_file.chmod(0o600)
             first = plugins.load_plugins()
             second = plugins.load_plugins()
 
             self.assertIs(first, second)
             self.assertEqual([p["name"] for p in first], ["once"])
             self.assertEqual(first[0]["run"], None)
-
