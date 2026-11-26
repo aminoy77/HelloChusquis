@@ -1,7 +1,5 @@
-from tools.base import BaseTool, ToolResult
 import httpx
 import os
-import json
 
 
 PLUGIN_NAME = "spotify"

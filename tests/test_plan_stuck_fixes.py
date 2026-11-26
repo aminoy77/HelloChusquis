@@ -1,7 +1,6 @@
 """Regression tests for plan-stuck bug + runaway loop fixes."""
 from types import SimpleNamespace
 
-import pytest
 
 from core.agent import Agent
 from core.planner import execute_plan, generate_plan

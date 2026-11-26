@@ -7,6 +7,7 @@ import asyncio
 import logging
 import threading
 import queue
+import time
 import uuid
 from typing import Optional
 from urllib.parse import urlsplit
@@ -171,17 +172,49 @@ class PersistentBrowser:
 
                 # Process next task with short timeout
                 try:
-                    task_id, task_name, kwargs = await asyncio.wait_for(
+                    task_id, task_name, kwargs, deadline = await asyncio.wait_for(
                         self._get_task_async(), timeout=1.0
                     )
                 except asyncio.TimeoutError:
+                    # Idle: a video ad can appear with no tool call in flight.
+                    # Shortcut: checks once per second, so a skip button live
+                    # for <1s is missed; add a page observer if that matters.
+                    try:
+                        handled = await self._agent.auto_handle()
+                        if handled:
+                            logger.info("auto-handled: %s", handled)
+                    except Exception:
+                        pass
                     continue
 
-                # Execute the task
-                try:
-                    result = await self._execute_task(task_name, kwargs)
-                except Exception as e:
-                    result = {'success': False, 'error': str(e)}
+                # Execute the task. `deadline` is an absolute monotonic time: the
+                # caller stops waiting then, so a task that only reaches the
+                # front of the queue after that must not run at all, and a
+                # running one is cancelled just before the caller gives up.
+                # shortcut: cancels between awaits, not inside a blocking sync call.
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    result = {'success': False,
+                              'error': 'Task expired while queued'}
+                else:
+                    budget = max(remaining - 1, 1)
+                    try:
+                        result = await asyncio.wait_for(
+                            self._execute_task(task_name, kwargs), timeout=budget
+                        )
+                    except asyncio.TimeoutError:
+                        result = {'success': False,
+                                  'error': f'Task cancelled after {budget:.0f}s'}
+                    except Exception as e:
+                        result = {'success': False, 'error': str(e)}
+
+                # A failure is easier to recover from when the agent knows
+                # which page it failed on.
+                if (isinstance(result, dict) and not result.get('success')
+                        and 'url' not in result):
+                    page = getattr(self._agent, 'page', None)
+                    if page is not None:
+                        result['url'] = page.url
 
                 # Send result back
                 with self._result_lock:
@@ -275,10 +308,26 @@ class PersistentBrowser:
         except (SsrFBlockedError, ValueError):
             return {'success': False, 'error': 'Unsafe navigation URL blocked'}
         success = await self._agent.navigate(url)
-        return {
+        result = {
             'success': success,
             'url': self._agent.state.url,
             'title': self._agent.state.title,
+        }
+        result.update(await self._captcha_note())
+        report = await self._agent.page_report()
+        if report:
+            result['report'] = report
+        return result
+
+    async def _captcha_note(self) -> dict:
+        """CAPTCHA is detected, never solved: a human must do it."""
+        captcha = await self._agent.detect_captcha()
+        if not captcha:
+            return {}
+        return {
+            'captcha': captcha,
+            'note': f'{captcha} challenge detected — solve it in the visible '
+                    f'browser window, then retry the action',
         }
 
     async def _handle_click(self, **kwargs) -> dict:
@@ -288,7 +337,10 @@ class PersistentBrowser:
             xpath=kwargs.get('xpath'),
             index=kwargs.get('index', 0),
         )
-        return {'success': success}
+        if success:
+            return {'success': True}
+        return {'success': False,
+                'error': getattr(self._agent.state, 'last_error', '') or 'click failed'}
 
     async def _handle_double_click(self, **kwargs) -> dict:
         success = await self._agent.double_click(
@@ -312,7 +364,10 @@ class PersistentBrowser:
             selector=kwargs.get('selector'),
             clear_first=kwargs.get('clear_first', True),
         )
-        return {'success': success}
+        if success:
+            return {'success': True}
+        return {'success': False,
+                'error': getattr(self._agent.state, 'last_error', '') or 'type failed'}
 
     async def _handle_scroll(self, **kwargs) -> dict:
         success = await self._agent.scroll(
@@ -390,13 +445,13 @@ class PersistentBrowser:
     async def _handle_wait_for_element(self, **kwargs) -> dict:
         success = await self._agent.wait_for_element(
             kwargs.get('selector', ''),
-            timeout=kwargs.get('timeout', 30),
+            timeout=kwargs.get('wait_timeout', 30),
         )
         return {'success': success}
 
     async def _handle_wait_for_navigation(self, **kwargs) -> dict:
         success = await self._agent.wait_for_navigation(
-            timeout=kwargs.get('timeout', 30)
+            timeout=kwargs.get('wait_timeout', 30)
         )
         return {'success': success}
 
@@ -414,17 +469,22 @@ class PersistentBrowser:
         return {'success': filled > 0, 'filled': filled}
 
     async def _handle_select_option(self, **kwargs) -> dict:
-        success = await self._agent.select_option(
-            kwargs.get('selector', ''),
-            value=kwargs.get('value'),
-            label=kwargs.get('label'),
-            index=kwargs.get('index'),
-        )
+        try:
+            success = await self._agent.select_option(
+                kwargs.get('selector', ''),
+                value=kwargs.get('value'),
+                label=kwargs.get('label'),
+                index=kwargs.get('index'),
+            )
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
         return {'success': success}
 
     async def _handle_submit_form(self, **kwargs) -> dict:
         success = await self._agent.submit_form(kwargs.get('selector', 'form'))
-        return {'success': success}
+        result = {'success': success}
+        result.update(await self._captcha_note())
+        return result
 
     async def _handle_upload_file(self, **kwargs) -> dict:
         file_path = kwargs.get('file_path', '')
@@ -441,10 +501,13 @@ class PersistentBrowser:
         if not any(resolved.is_relative_to(root) for root in allowed_roots):
             return {'success': False,
                     'error': 'upload_file path outside workspace/cwd blocked'}
-        success = await self._agent.upload_file(
-            kwargs.get('selector', ''),
-            str(resolved),
-        )
+        try:
+            success = await self._agent.upload_file(
+                kwargs.get('selector', ''),
+                str(resolved),
+            )
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
         return {'success': success}
 
     async def _handle_check_checkbox(self, **kwargs) -> dict:
@@ -503,7 +566,10 @@ class PersistentBrowser:
         return {'success': success}
 
     async def _handle_close_current_tab(self, **kwargs) -> dict:
-        success = await self._agent.close_current_tab()
+        try:
+            success = await self._agent.close_current_tab()
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
         return {'success': success}
 
     async def _handle_press_key(self, **kwargs) -> dict:
@@ -547,10 +613,20 @@ class PersistentBrowser:
 
     async def _handle_health(self, **kwargs) -> dict:
         healthy = await self._agent.health_check()
+        # state.url/state.title lag behind tab switches; read the live page.
+        url = self._agent.state.url
+        title = self._agent.state.title
+        page = getattr(self._agent, "page", None)
+        if page is not None:
+            try:
+                url = page.url
+                title = await page.title()
+            except Exception:
+                pass
         return {
             'success': healthy,
-            'url': self._agent.state.url,
-            'title': self._agent.state.title,
+            'url': url,
+            'title': title,
             'pages': len(self._agent.context.pages) if self._agent.context else 0,
         }
 
@@ -585,7 +661,8 @@ class PersistentBrowser:
         with self._result_lock:
             self._result_queues[task_id] = result_queue
 
-        self._task_queue.put((task_id, task_name, kwargs))
+        self._task_queue.put((task_id, task_name, kwargs,
+                              time.monotonic() + timeout))
 
         try:
             result = result_queue.get(timeout=timeout)
@@ -602,7 +679,7 @@ class PersistentBrowser:
         """Stop the browser."""
         self._stopped = True
         if self._task_queue:
-            self._task_queue.put(('__stop__', '', {}))
+            self._task_queue.put(('__stop__', '', {}, time.monotonic() + 1))
         if self._agent:
             try:
                 future = asyncio.run_coroutine_threadsafe(
@@ -702,7 +779,12 @@ def browser_find(pattern: str) -> dict:
 
 def browser_wait_for_element(selector: str, timeout: int = 30) -> dict:
     """Wait for element to appear."""
-    return _ensure_browser().do('wait_for_element', selector=selector, timeout=timeout)
+    # Outer task deadline must outlast the inner wait, otherwise the caller
+    # only ever sees "Task timed out" and never the real success/failure.
+    wait = max(int(timeout), 0)
+    return _ensure_browser().do(
+        'wait_for_element', timeout=wait + 10, selector=selector, wait_timeout=wait
+    )
 
 
 def browser_execute_script(script: str) -> dict:
@@ -727,7 +809,10 @@ def browser_get_title() -> dict:
 
 def browser_wait_for_navigation(timeout: int = 30) -> dict:
     """Wait for page navigation."""
-    return _ensure_browser().do('wait_for_navigation', timeout=timeout)
+    wait = max(int(timeout), 0)
+    return _ensure_browser().do(
+        'wait_for_navigation', timeout=wait + 10, wait_timeout=wait
+    )
 
 
 def browser_go_back() -> dict:
@@ -763,6 +848,27 @@ def browser_open_new_tab(url: str = None) -> dict:
 def browser_switch_to_page(index: int = 0) -> dict:
     """Switch to a specific tab."""
     return _ensure_browser().do('switch_to_page', index=index)
+
+
+def browser_close_current_tab() -> dict:
+    """Close the active tab."""
+    return _ensure_browser().do('close_current_tab')
+
+
+def browser_select_option(
+    selector: str, value: str = None, label: str = None, index: int = None
+) -> dict:
+    """Select an option in a <select> element."""
+    return _ensure_browser().do(
+        'select_option', selector=selector, value=value, label=label, index=index
+    )
+
+
+def browser_upload_file(file_path: str, selector: str = '') -> dict:
+    """Upload a local file into a file input."""
+    return _ensure_browser().do(
+        'upload_file', file_path=file_path, selector=selector
+    )
 
 
 def browser_fill_form(form_data: dict) -> dict:

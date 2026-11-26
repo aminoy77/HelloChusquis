@@ -2,7 +2,6 @@
 import json
 
 import httpx
-import pytest
 
 from core.provider import Provider, ProviderPool
 

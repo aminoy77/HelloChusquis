@@ -2,24 +2,22 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 from starlette.responses import StreamingResponse
 import uvicorn
 import json
 import re
 import secrets
-import urllib.parse
 from pathlib import Path
 from typing import Literal
 
-from core.identity import Permission, Principal, authenticate_bearer, legacy_owner
+from core.identity import Permission, Principal
 from core.provider import validate_provider_base_url
-from core.runtime import AgentNotReadyError, AgentRuntime
+from core.runtime import AgentBusyError, AgentNotReadyError, AgentRuntime
 from core.version import __version__
 import core.db_memory as db_memory
 from core.http_limits import RequestBodyLimitMiddleware
@@ -93,7 +91,15 @@ def require_permission(request: Request, permission: Permission) -> Principal:
     return _shared_require_permission(request, permission, REQUIRED_API_KEY, AUTH_ENABLED)
 
 
-app = FastAPI()
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Stop rate-limiter cleanup threads when the server stops."""
+    yield
+    for limiter in _ALL_LIMITERS:
+        limiter.close()
+
+
+app = FastAPI(lifespan=_lifespan)
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(AuthMiddleware, required_api_key=REQUIRED_API_KEY, auth_enabled=AUTH_ENABLED,
                    public_get_paths=("/", "/health/live", "/health/ready", "/health"),
@@ -132,6 +138,9 @@ def _require_agent(http_request: Request | None = None):
     except AgentNotReadyError as exc:
         logger.warning("Agent runtime requested before ready: %s", exc)
         raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
+    except AgentBusyError as exc:
+        logger.warning("Agent sessions exhausted: %s", exc)
+        raise HTTPException(status_code=503, detail="All agent sessions are busy. Retry shortly.") from exc
 
 
 # Rate limiters: /chat and /models = 30/min, /feedback = 10/min, forced model refresh = 5/min,
@@ -143,6 +152,10 @@ _models_refresh_limiter = RateLimiter(requests_per_minute=5)
 _reload_limiter = RateLimiter(requests_per_minute=3)
 _provider_update_limiter = RateLimiter(requests_per_minute=15)
 _auth_verify_limiter = RateLimiter(requests_per_minute=20)
+_ALL_LIMITERS = (
+    _chat_limiter, _feedback_limiter, _models_limiter, _models_refresh_limiter,
+    _reload_limiter, _provider_update_limiter, _auth_verify_limiter,
+)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -542,6 +555,7 @@ def update_config(req: ConfigRequest):
 
 @app.get("/status")
 def status(http_request: Request):
+    require_permission(http_request, Permission.READ_STATE)
     if not runtime.is_ready:
         return {
             "agent_ready": False,
@@ -577,11 +591,14 @@ def status(http_request: Request):
 @app.get("/models")
 def models(http_request: Request, provider: str = "", refresh: bool = False):
     """Available models for the requesting session's provider configuration."""
+    require_permission(http_request, Permission.READ_STATE)
     _require_rate_limit(_models_limiter, http_request, "/models")
     if refresh:
         _require_rate_limit(_models_refresh_limiter, http_request, "/models?refresh=true")
     agent = _require_agent(http_request)
     known_names = {provider_status["name"] for provider_status in agent.pool.status()}
+    if not provider:
+        raise HTTPException(status_code=400, detail="provider query parameter is required")
     if provider not in known_names:
         raise HTTPException(status_code=404, detail=f"Provider '{provider}' not found")
     try:

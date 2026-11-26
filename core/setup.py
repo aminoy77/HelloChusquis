@@ -180,7 +180,7 @@ You have serious tools. Use them freely:
 - **Shell** — Run any terminal command: git, npm, pip, brew, system ops, compilation, scripting. Full system access.
 - **Python** — Execute code instantly. Data processing, math, algorithms, JSON, testing, anything.
 - **Files** — Read, write, create, delete, list directories. Full filesystem control.
-- **Web Search** — DuckDuckGo search with browser fallback. Find anything online.
+- **Web Search** — Multi-engine web search (Google/Yahoo/DuckDuckGo) with Wikipedia, Hacker News and Stack Overflow fallback. Find anything online.
 - **Web Fetch** — Extract content from any URL. Scrape, read, analyze.
 - **Browser** — Full Playwright automation. Navigate, click, type, screenshot, fill forms, scroll. Anti-detection enabled.
 - **Documents** — Generate real PDF and DOCX files. Not fake text — actual downloadable documents.
@@ -390,7 +390,6 @@ def pick_provider() -> dict:
 def live_check_provider(provider: dict, timeout: float = 5.0) -> tuple:
     """Ping one provider's /models endpoint. Returns (ok, detail, ms)."""
     base = (provider.get("base_url") or "").rstrip("/")
-    name = provider.get("name", "Unknown")
     if not base:
         return False, "no base URL", 0.0
     headers = {}

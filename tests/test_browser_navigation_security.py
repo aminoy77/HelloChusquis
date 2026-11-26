@@ -20,6 +20,12 @@ class _Agent:
         self.state.url = url
         return True
 
+    async def detect_captcha(self):
+        return None
+
+    async def page_report(self):
+        return None
+
 
 class TestBrowserNavigationSecurity(unittest.IsolatedAsyncioTestCase):
     async def test_private_and_credential_urls_are_blocked_before_navigation(self):

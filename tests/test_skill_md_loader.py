@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 
 from core.skills import (
-    SkillRegistry, discover_skill_md, parse_skill_md, skills_prompt_section,
+    SkillRegistry, parse_skill_md,
 )
 
 

@@ -1,6 +1,8 @@
 """Security regressions for plugin file names."""
 
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from core import plugins
@@ -20,4 +22,20 @@ class TestPluginNameSecurity(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 plugins.validate_plugin_download_url(url)
+
+    def test_load_plugins_runs_once_per_process(self):
+        with tempfile.TemporaryDirectory() as tmp_dir, patch.object(
+            plugins, "PLUGINS_DIR", Path(tmp_dir)
+        ), patch.object(plugins, "_loaded_plugins", None), patch.object(
+            plugins, "_registry", None
+        ):
+            (Path(tmp_dir) / "once.py").write_text(
+                "PLUGIN_NAME = 'once'\nRUNS = globals().get('RUNS', 0) + 1\n"
+            )
+            first = plugins.load_plugins()
+            second = plugins.load_plugins()
+
+            self.assertIs(first, second)
+            self.assertEqual([p["name"] for p in first], ["once"])
+            self.assertEqual(first[0]["run"], None)
 

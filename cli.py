@@ -178,12 +178,15 @@ def main():
     parser.add_argument("--live", action="store_true", help="Ping each provider endpoint (with doctor)")
     parser.add_argument("--no-browser", action="store_true", help="Don't auto-open the browser (with web)")
     parser.add_argument("--reingest", action="store_true", help="Force knowledge reingest (with knowledge)")
+    parser.add_argument("--overwrite", action="store_true", help="Replace an existing generated tool (with build-tool)")
     parser.add_argument("--role", type=str, default="operator", help="Role for 'users add' (viewer, operator, owner)")
     parser.add_argument("--token", type=str, default=None, help="Telegram bot token")
     parser.add_argument("--allow", type=str, default=None, help="Telegram chat IDs, comma-separated")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
     parser.add_argument("--version", action="store_true", help="Show version and exit")
-    args = parser.parse_args()
+    # Intermixed: `build-tool spec.json --overwrite` must parse like
+    # `build-tool --overwrite spec.json`.
+    args = parser.parse_intermixed_args()
 
     # Handle --help
     if args.show_help:
@@ -265,7 +268,7 @@ def main():
             return 1
         description = " ".join(args.args[1:]) or f"{source} API integration"
         if source.startswith(("http://", "https://")) or Path(source).suffix in (".json", ".yaml", ".yml"):
-            ok = tool_builder.synthesize_from_openapi(source)
+            ok = tool_builder.synthesize_from_openapi(source, overwrite=args.overwrite)
         else:
             ok = tool_builder.synthesize_basic_tool(source, description)
         return 0 if ok else 1
