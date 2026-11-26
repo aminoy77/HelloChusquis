@@ -9,11 +9,14 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
+from textual.screen import ModalScreen
 from textual.widget import Widget
 from textual.widgets import (
+    Button,
     Collapsible,
     Input,
     Markdown,
+    Select,
     Static,
     TextArea,
 )
@@ -36,21 +39,21 @@ BORDER = "#1e1d1a"
 # ─── CSS ───
 TUI_CSS = """
 Screen {
-    background: #050504;
+    background: #090a0c;
 }
 
 #top-bar {
     height: 1;
-    background: #0c0c0a;
+    background: #111318;
     dock: top;
     padding: 0 1;
-    color: #a09a8e;
+    color: #b0b3ba;
 }
 
 #messages {
     height: 1fr;
-    background: #050504;
-    padding: 0 1 1 1;
+    background: #090a0c;
+    padding: 1 2 1 2;
     overflow-y: auto;
     scrollbar-size: 0 0;
 }
@@ -62,13 +65,13 @@ Screen {
 
 #input-area {
     height: 4;
-    background: #0c0c0a;
-    border-top: tall #1e1d1a;
+    background: #111318;
+    border-top: tall #2a2d34;
     padding: 0 1;
 }
 
 #input-area ChatInput {
-    background: #0c0c0a;
+    background: #111318;
     border: none;
     color: #e8e3d8;
     height: 3;
@@ -79,28 +82,29 @@ Screen {
 }
 
 #sidebar {
-    width: 34;
+    width: 30;
     min-width: 28;
-    background: #0c0c0a;
-    border-left: tall #1e1d1a;
-    padding: 0 1;
+    background: #111318;
+    border-left: tall #2a2d34;
+    padding: 1 2;
     overflow-y: auto;
     scrollbar-size: 0 0;
 }
 
 #status-bar {
     height: 1;
-    background: #0c0c0a;
-    color: #7e7a70;
+    background: #111318;
+    color: #b0b3ba;
     padding: 0 1;
 }
 
 #command-palette {
     layer: overlay;
-    width: 78;
+    width: 70;
+    max-width: 90%;
     height: auto;
     max-height: 36;
-    background: #0c0c0a;
+    background: #15171c;
     border: tall #f5a623;
     padding: 1 2;
     display: none;
@@ -111,15 +115,34 @@ Screen {
     display: block;
 }
 
+#model-dialog {
+    width: 70;
+    max-width: 90%;
+    height: auto;
+    max-height: 80%;
+    padding: 1 2;
+    border: tall #f5a623;
+    background: #15171c;
+}
+
+#model-dialog Select {
+    margin: 1 0;
+}
+
+#model-actions {
+    height: auto;
+    align-horizontal: right;
+}
+
 #palette-input {
-    background: #0c0c0a;
+    background: #15171c;
     border: none;
     color: #e8e3d8;
     margin: 0 1;
 }
 
 #palette-list {
-    background: #0c0c0a;
+    background: #15171c;
     height: auto;
     max-height: 24;
     overflow-y: auto;
@@ -128,7 +151,7 @@ Screen {
 .palette-item {
     padding: 0 1;
     height: 1;
-    color: #a09a8e;
+    color: #b0b3ba;
 }
 
 .palette-item.selected {
@@ -163,15 +186,14 @@ class TopBar(Widget):
 
     def render(self) -> Text:
         t = Text()
-        t.append(" ⬡ ", style=f"bold {AMBER}")
-        t.append("hellochusquis ", style="dim")
+        t.append(" ⌬ ", style=f"bold {AMBER}")
+        t.append("HelloChusquis", style="bold")
         if self._processing:
-            t.append(" ● processing", style=f"bold {AMBER}")
-        else:
-            t.append(f"  {self._elapsed}", style="dim")
-        t.append(f"  msgs:{self._msgs}  tools:{self._tools}", style="dim")
+            t.append("  ·  Working…", style=f"bold {AMBER}")
+        elif self._elapsed:
+            t.append(f"  ·  {self._elapsed}", style="dim")
         if self._provider:
-            t.append(f"  {self._provider}", style=f"bold {GREEN}")
+            t.append(f"  ·  {self._provider}", style=f"bold {GREEN}")
         return t
 
 
@@ -188,13 +210,14 @@ class StatusBar(Widget):
 
     def render(self) -> Text:
         t = Text()
-        t.append(" Ctrl+P commands", style="dim")
-        t.append(" · ", style="dim")
-        t.append("Ctrl+S status", style="dim")
-        t.append(" · ", style="dim")
-        t.append("Ctrl+L clear", style="dim")
-        t.append(" · ", style="dim")
-        t.append("exit quit", style="dim")
+        t.append("Ctrl+P", style=f"bold {AMBER}")
+        t.append(" commands   ", style="dim")
+        t.append("F2", style=f"bold {AMBER}")
+        t.append(" model   ", style="dim")
+        t.append("Ctrl+L", style=f"bold {AMBER}")
+        t.append(" clear   ", style="dim")
+        t.append("Ctrl+X", style=f"bold {AMBER}")
+        t.append(" cancel", style="dim")
         return t
 
 
@@ -274,6 +297,7 @@ class CommandPalette(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._commands = [
+            ("model", "Choose Model", "Select the provider and model for this session"),
             ("status", "Provider Status", "Show provider status and latency"),
             ("clear", "Clear History", "Clear conversation history"),
             ("help", "Show Help", "Display available commands"),
@@ -304,11 +328,7 @@ class CommandPalette(Widget):
         if not self._filtered:
             t.append(" No matching commands.\n", style="dim")
         t.append("\n ", style="dim")
-        t.append("↑↓ navigate", style="dim")
-        t.append(" · ", style="dim")
-        t.append("enter select", style="dim")
-        t.append(" · ", style="dim")
-        t.append("esc close", style="dim")
+        t.append("↑↓ navigate  ·  enter select  ·  esc close", style="dim")
         lst.update(t)
 
     def on_mount(self) -> None:
@@ -356,6 +376,109 @@ class CommandPalette(Widget):
         if self._visible and self._filtered:
             return self._filtered[self._selected][0]
         return None
+
+
+def _models_for_provider(provider: dict) -> list[str]:
+    models = [provider.get("model", "")]
+    try:
+        from core.setup import KNOWN_PROVIDERS
+        catalog_entry = next(
+            (
+                item for item in KNOWN_PROVIDERS
+                if item.get("base_url", "").rstrip("/") == str(provider.get("base_url") or "").rstrip("/")
+            ),
+            None,
+        )
+        if catalog_entry:
+            models.extend(catalog_entry.get("models", []))
+    except ImportError:
+        pass
+    return list(dict.fromkeys(model for model in models if model))
+
+
+def _model_choices(providers: list[dict]) -> list[tuple[str, str, str]]:
+    choices = []
+    for provider in providers:
+        name = provider.get("name", "")
+        for model in _models_for_provider(provider):
+            choices.append((f"{name}  ·  {model}", name, model))
+    return choices
+
+
+class ModelPicker(ModalScreen[tuple[str, str] | None]):
+    """Focused chooser for the provider and model used by TUI requests."""
+
+    BINDINGS = [Binding("escape", "cancel", "Cancel", show=False)]
+
+    CSS = """
+    ModelPicker {
+        align: center middle;
+        background: $background 80%;
+    }
+
+    #model-dialog {
+        width: 70;
+        max-width: 90%;
+        height: auto;
+        max-height: 80%;
+        padding: 1 2;
+        border: tall #f5a623;
+        background: #15171c;
+    }
+
+    #model-choice {
+        margin: 1 0;
+        max-height: 18;
+    }
+
+    #model-actions {
+        height: auto;
+        align-horizontal: right;
+    }
+    """
+
+    def __init__(self, choices: list[tuple[str, str, str]], selected_provider: str, selected_model: str):
+        super().__init__()
+        self.choices = choices
+        self.selected = next(
+            (
+                str(index)
+                for index, (_, provider, model) in enumerate(choices)
+                if provider == selected_provider and model == selected_model
+            ),
+            "0",
+        )
+
+    def compose(self) -> ComposeResult:
+        options = [(label, str(index)) for index, (label, _, _) in enumerate(self.choices)]
+        with Vertical(id="model-dialog"):
+            yield Static("Choose a model", classes="title")
+            yield Static("This choice is used for chat and planned tasks.", classes="subtitle")
+            yield Select(options, value=self.selected, allow_blank=False, id="model-choice")
+            with Horizontal(id="model-actions"):
+                yield Button("Cancel", id="cancel-model")
+                yield Button("Use model", id="apply-model", variant="primary")
+
+    def on_mount(self) -> None:
+        self.query_one("#model-choice", Select).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id != "apply-model":
+            self.dismiss(None)
+            return
+        selected = self.query_one("#model-choice", Select).value
+        if selected is None:
+            self.dismiss(None)
+            return
+        try:
+            _, provider, model = self.choices[int(selected)]
+        except (ValueError, IndexError):
+            self.dismiss(None)
+            return
+        self.dismiss((provider, model))
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
 
 
 class CircularSpinner(Widget):
@@ -453,6 +576,7 @@ class HelloChusquisTUI(App):
         Binding("ctrl+x", "cancel", "Cancel", show=True),
         Binding("ctrl+l", "clear", "Clear", show=True),
         Binding("ctrl+s", "status", "Status", show=True),
+        Binding("f2", "select_model", "Model", show=True),
         Binding("ctrl+p", "command_palette", "Commands", show=True),
         Binding("ctrl+k", "command_palette", "Commands", show=False),
     ]
@@ -471,6 +595,16 @@ class HelloChusquisTUI(App):
         self._processing = False
         self._palette_open = False
         self._cancel_requested = False
+        providers = self._configured_providers()
+        initial = next(iter(sorted(providers, key=lambda item: item.get("priority", 0))), {})
+        self._selected_provider = initial.get("name", "")
+        self._selected_model = initial.get("model", "")
+
+    def _configured_providers(self) -> list[dict]:
+        configured = (self.config or {}).get("providers", [])
+        if isinstance(configured, dict):
+            configured = list(configured.values())
+        return [provider for provider in configured if isinstance(provider, dict)]
 
     def compose(self) -> ComposeResult:
         yield TopBar(id="top-bar")
@@ -484,8 +618,16 @@ class HelloChusquisTUI(App):
 
     def on_mount(self) -> None:
         self.query_one("#input").focus()
+        self._set_sidebar_visibility(self.size.width)
         self._update_topbar()
-        self._add_system_msg("Type a message or Ctrl+P for commands.")
+        self._add_system_msg("Ask anything. Ctrl+P opens commands; F2 changes your model.")
+
+    def on_resize(self, event) -> None:
+        self._set_sidebar_visibility(event.size.width)
+
+    def _set_sidebar_visibility(self, width: int) -> None:
+        sidebar = self.query_one("#sidebar", SideBar)
+        sidebar.display = width >= 112
 
     def _update_topbar(self):
         bar = self.query_one("#top-bar")
@@ -510,6 +652,10 @@ class HelloChusquisTUI(App):
                 tokens = f"{n / 1000:.1f}k" if n >= 1000 else str(n)
             except Exception:
                 pass
+        if self._selected_provider and self._selected_model:
+            provider = self._selected_provider
+            model = self._selected_model
+            bar._provider = f"{provider} · {model}"
         try:
             side = self.query_one("#sidebar", SideBar)
             side._provider = provider or "–"
@@ -647,6 +793,8 @@ class HelloChusquisTUI(App):
 
         if cmd_id == "status":
             self._add_status()
+        elif cmd_id == "model":
+            self.action_select_model()
         elif cmd_id == "clear":
             self.action_clear()
         elif cmd_id == "help":
@@ -660,13 +808,92 @@ class HelloChusquisTUI(App):
                 uvicorn.run(app, host="127.0.0.1", port=8000)
             threading.Thread(target=run_web, daemon=True).start()
         elif cmd_id == "config":
-            self._add_system_msg("Run 'hellochusquis config' in another terminal.")
+            self._open_config()
         elif cmd_id == "plan":
             self._add_system_msg("Type /plan <task> to generate a plan.")
         elif cmd_id == "feedback+":
             self._add_system_msg("👍 Feedback noted.")
         elif cmd_id == "feedback-":
             self._add_system_msg("👎 Feedback noted.")
+
+    def action_select_model(self) -> None:
+        providers = self._configured_providers()
+        choices = _model_choices(providers)
+        if not choices:
+            self._add_error("No configured models are available. Run 'hellochusquis config' first.")
+            return
+        self.push_screen(
+            ModelPicker(choices, self._selected_provider, self._selected_model),
+            self._model_selected,
+        )
+
+    def _model_selected(self, selection: tuple[str, str] | None) -> None:
+        if not selection:
+            return
+        provider_name, model = selection
+        provider = next(
+            (item for item in self._configured_providers() if item.get("name") == provider_name),
+            None,
+        )
+        if provider is None:
+            self._add_error("That provider is no longer configured.")
+            return
+        previous_model = provider.get("model", "")
+        provider["model"] = model
+        try:
+            from core.setup import _save_config_securely
+            _save_config_securely(self.config)
+        except Exception as exc:
+            provider["model"] = previous_model
+            self._add_error(f"Could not save model selection: {exc}")
+            return
+        self._selected_provider = provider_name
+        self._selected_model = model
+        self._add_system_msg(f"Using {provider_name} · {model}.")
+        self._update_topbar()
+
+    def _open_config(self) -> None:
+        if self._processing:
+            self._add_system_msg("Finish the current task before opening setup.")
+            return
+        self._set_processing(True)
+        self._add_system_msg("Opening local setup in your browser…")
+
+        def edit_config():
+            from web.setup import run_setup_frontend
+
+            try:
+                updated = run_setup_frontend(
+                    on_url=lambda url: self.call_from_thread(
+                        self._add_system_msg, f"Setup page: {url}"
+                    )
+                )
+                self.call_from_thread(self._apply_config, updated)
+            except Exception as exc:
+                self.call_from_thread(self._config_failed, str(exc))
+
+        import threading
+        threading.Thread(target=edit_config, name="hc-config-setup", daemon=True).start()
+
+    def _config_failed(self, error: str) -> None:
+        self._add_error(f"Could not open browser setup: {error}")
+        self._set_processing(False)
+
+    def _apply_config(self, config: dict) -> None:
+        try:
+            from core.provider import ProviderPool
+            self.agent.pool = ProviderPool(config=config)
+            self.agent.config = config
+            self.config = config
+            providers = self._configured_providers()
+            selected = next(iter(sorted(providers, key=lambda item: item.get("priority", 0))), {})
+            self._selected_provider = selected.get("name", "")
+            self._selected_model = selected.get("model", "")
+            self._add_system_msg("Configuration saved and providers refreshed.")
+        except Exception as exc:
+            self._add_error(f"Configuration saved, but providers could not be refreshed: {exc}")
+        finally:
+            self._set_processing(False)
 
     # ─── Input Handling (Enter sends, Shift+Enter newline via ChatInput) ───
     def submit_chat_text(self, raw: str) -> None:
@@ -752,7 +979,10 @@ class HelloChusquisTUI(App):
                     last_flush[0] = now
                     self.call_from_thread(self._stream_set_text, "".join(full))
 
-            for ev in self.agent.stream_run(text):
+            for ev in self.agent.stream_run(
+                text, provider=self._selected_provider or None,
+                model=self._selected_model or None,
+            ):
                 if self._cancel_requested:
                     self._cancel_requested = False
                     self.call_from_thread(self._add_system_msg, "Cancelled.")
@@ -797,10 +1027,13 @@ class HelloChusquisTUI(App):
         # Spinner row stays up through plan generation + execution:
         # this path has no streaming, so without it the UI looks dead.
         self.call_from_thread(self._start_stream_ui)
-        steps = generate_plan(task, self.agent.pool)
+        steps = generate_plan(
+            task, self.agent.pool,
+            provider_name=self._selected_provider or None,
+            model=self._selected_model or None,
+        )
         if steps:
             self.call_from_thread(self._add_plan, steps, task)
-            step_idx = [0]
 
             def notify(msg: str):
                 # "Step N/M:" lines mark step completion in the sidebar.
@@ -815,7 +1048,11 @@ class HelloChusquisTUI(App):
 
             # notify → visible in TUI (execute_plan's stdout is invisible
             # here); quiet skips stdout prints that would corrupt the screen.
-            execute_plan(steps, self.agent, notify=notify, quiet=True)
+            execute_plan(
+                steps, self.agent, notify=notify, quiet=True,
+                provider_name=self._selected_provider or None,
+                model=self._selected_model or None,
+            )
             if steps:
                 self.call_from_thread(self._mark_plan_step, len(steps) - 1)
         else:

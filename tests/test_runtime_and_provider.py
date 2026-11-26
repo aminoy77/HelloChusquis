@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from core.provider import ProviderPool
-from core.runtime import AgentNotReadyError, AgentRuntime
+from core.runtime import AgentBusyError, AgentNotReadyError, AgentRuntime
 from core.setup import ensure_config
 
 
@@ -89,6 +90,15 @@ class _FakeAgent:
         self.dispose_calls += 1
 
 
+class _BusyAgent(_FakeAgent):
+    """Agent whose turn lock is held, so it must never be evicted."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._turn_lock = threading.Lock()
+        self._turn_lock.acquire()
+
+
 class TestAgentRuntime(unittest.TestCase):
     def test_failed_initialization_keeps_runtime_inspectable(self):
         runtime = AgentRuntime(
@@ -145,6 +155,19 @@ class TestAgentRuntime(unittest.TestCase):
         self.assertEqual(runtime.session_count, 2)
         self.assertEqual(alpha.dispose_calls, 1)
         self.assertIsNot(alpha, runtime.get("alpha"))
+
+    def test_refuses_new_session_when_all_cached_sessions_are_busy(self):
+        runtime = AgentRuntime(
+            config_loader=lambda interactive: {"provider": "test"},
+            agent_factory=_BusyAgent,
+            max_sessions=1,
+        )
+
+        runtime.get("alpha")
+
+        with self.assertRaises(AgentBusyError):
+            runtime.get("beta")
+        self.assertEqual(runtime.session_count, 1)
 
     def test_refresh_clears_cached_sessions(self):
         runtime = AgentRuntime(

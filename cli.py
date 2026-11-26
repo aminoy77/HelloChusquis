@@ -119,12 +119,14 @@ Usage:
   hellochusquis api              Launch REST API
   hellochusquis telegram         Chat from Telegram (needs bot token)
   hellochusquis config           Edit configuration
+  hellochusquis config --terminal  Edit configuration in the terminal
   hellochusquis setup            Run setup wizard
   hellochusquis status           Show local readiness summary
   hellochusquis doctor           Check providers & dependencies
   hellochusquis models           List configured providers and models
   hellochusquis memory [QUERY]   Memory stats, search, or remember|forget FACT
   hellochusquis knowledge        Knowledge base stats (--reingest to refresh)
+  hellochusquis market [list|search|install|uninstall] [ITEM]
   hellochusquis skills list      List installed SKILL.md skills
   hellochusquis skills show NAME Show a skill body
   hellochusquis users list       List HTTP users and their roles
@@ -139,6 +141,7 @@ Flags:
   --show             Show current config (masked keys)
   --api-keys         Edit API keys only
   --providers        Edit providers only
+  --terminal         Use the terminal configuration editor (with config)
   --port PORT        Port for web/api (default: 8080 api / 7272 web)
   --host HOST        Host for web/api (default: 127.0.0.1)
   --contracts        Verify bundled integration contracts offline (with doctor)
@@ -166,6 +169,7 @@ def main():
     parser.add_argument("--show", action="store_true", help="Show current config")
     parser.add_argument("--api-keys", action="store_true", help="Edit API keys only")
     parser.add_argument("--providers", action="store_true", help="Edit providers only")
+    parser.add_argument("--terminal", action="store_true", help="Use the terminal configuration editor")
     parser.add_argument("--login", type=str, default=None, metavar="PROVIDER", help="Login to an OAuth provider via browser (copilot, qwen)")
     parser.add_argument("--quick", action="store_true", help="Quick setup with OpenRouter only")
     parser.add_argument("--full", action="store_true", help="Full setup wizard with all providers")
@@ -175,12 +179,15 @@ def main():
     parser.add_argument("--live", action="store_true", help="Ping each provider endpoint (with doctor)")
     parser.add_argument("--no-browser", action="store_true", help="Don't auto-open the browser (with web)")
     parser.add_argument("--reingest", action="store_true", help="Force knowledge reingest (with knowledge)")
+    parser.add_argument("--overwrite", action="store_true", help="Replace an existing generated tool (with build-tool)")
     parser.add_argument("--role", type=str, default="operator", help="Role for 'users add' (viewer, operator, owner)")
     parser.add_argument("--token", type=str, default=None, help="Telegram bot token")
     parser.add_argument("--allow", type=str, default=None, help="Telegram chat IDs, comma-separated")
     parser.add_argument("--help", action="store_true", dest="show_help", help="Show help message")
     parser.add_argument("--version", action="store_true", help="Show version and exit")
-    args = parser.parse_args()
+    # Intermixed: `build-tool spec.json --overwrite` must parse like
+    # `build-tool --overwrite spec.json`.
+    args = parser.parse_intermixed_args()
 
     # Handle --help
     if args.show_help:
@@ -262,24 +269,30 @@ def main():
             return 1
         description = " ".join(args.args[1:]) or f"{source} API integration"
         if source.startswith(("http://", "https://")) or Path(source).suffix in (".json", ".yaml", ".yml"):
-            ok = tool_builder.synthesize_from_openapi(source)
+            ok = tool_builder.synthesize_from_openapi(source, overwrite=args.overwrite)
         else:
             ok = tool_builder.synthesize_basic_tool(source, description)
         return 0 if ok else 1
 
     if args.command == "setup":
-        from core.setup import run_quick_setup, run_setup
         if args.full:
+            from core.setup import run_setup
             run_setup()
         else:
-            run_quick_setup()
+            from web.setup import run_setup_frontend
+            run_setup_frontend()
         return
 
     if args.command == "config":
-        from core.setup import show_config, edit_config, ensure_config
+        from core.setup import show_config, edit_config
 
         if args.show:
             show_config()
+            return
+
+        if not args.terminal:
+            from web.setup import run_setup_frontend
+            run_setup_frontend()
             return
 
         section = None
@@ -594,6 +607,58 @@ def main():
             print(f"files: {count_kb_files()}  ingested sources: {db_memory.kb_ingested_count()}")
         return
 
+    if args.command == "market":
+        from core.marketplace import MarketplaceError, install_item, is_installed, list_items, uninstall_item
+
+        sub = args.args[0] if args.args else ""
+        if sub in ("", "open"):
+            from web.server import start
+            host = args.host or "127.0.0.1"
+            port = args.port or 7272
+            print(f"Starting HelloChusquis marketplace on http://{host}:{port}")
+            if not args.no_browser:
+                _open_browser(host, port)
+            start(host=host, port=port)
+            return
+
+        if sub in ("list", "search"):
+            query = " ".join(args.args[1:]).strip().lower()
+            items = list_items()
+            for item in items:
+                haystack = f"{item.get('name', '')} {item.get('description', '')} {item.get('kind', '')}".lower()
+                if query and query not in haystack:
+                    continue
+                state = "installed" if is_installed(item) else "available"
+                print(f"{item['id']:<24} {item['kind']:<7} [{state}]  {item.get('name', '')}")
+            return
+
+        if sub == "install":
+            if len(args.args) < 2:
+                print("Usage: hellochusquis market install <item-id>")
+                return 1
+            try:
+                result = install_item(args.args[1])
+            except MarketplaceError as exc:
+                print(f"Error: {exc}")
+                return 1
+            print(f"Installed {result['kind']} '{result['item']}'.")
+            return
+
+        if sub == "uninstall":
+            if len(args.args) < 2:
+                print("Usage: hellochusquis market uninstall <item-id>")
+                return 1
+            try:
+                result = uninstall_item(args.args[1])
+            except MarketplaceError as exc:
+                print(f"Error: {exc}")
+                return 1
+            print(f"Uninstalled {result['kind']} '{result['item']}'.")
+            return
+
+        print(f"Unknown market subcommand '{sub}'. Try: list, search, install, uninstall.")
+        return 1
+
     if args.command == "skills":
         from pathlib import Path as _Path
         from core import skills as _skills
@@ -625,7 +690,7 @@ def main():
     # Validate unknown commands
     if args.command is not None and args.command not in {
         "web", "api", "telegram", "config", "setup", "status", "users",
-        "doctor", "version", "help", "models", "memory", "knowledge", "skills",
+        "doctor", "version", "help", "models", "memory", "knowledge", "market", "skills",
         "build-tool",
     }:
         print(f"Unknown command '{args.command}'. Try: web, api, telegram, config, setup, status, or nothing for chat.")

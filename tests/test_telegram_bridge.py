@@ -1,5 +1,4 @@
 """Tests for the Telegram bridge (core/telegram_bridge.py). No network."""
-import pytest
 
 
 class FakeTransport:

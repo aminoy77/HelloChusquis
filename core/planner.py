@@ -1,14 +1,20 @@
 import json
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Prompt
 from rich.table import Table
 
 console = Console()
 
 
-def generate_plan(user_input: str, pool) -> list[str]:
+def generate_plan(user_input: str, pool, provider_name: str | None = None,
+                  model: str | None = None) -> list[str]:
     try:
+        options = {}
+        if provider_name:
+            options["provider_name"] = provider_name
+        if model:
+            options["model"] = model
         response = pool.chat_with_retry([
             {
                 "role": "system",
@@ -21,7 +27,7 @@ def generate_plan(user_input: str, pool) -> list[str]:
                 )
             },
             {"role": "user", "content": user_input}
-        ])
+        ], **options)
         choices = response.get("choices", [])
         if not choices:
             return []
@@ -44,7 +50,9 @@ def show_plan(steps: list[str]) -> None:
     console.print(Panel(table, title="[bold]Execution Plan[/bold]", expand=False))
 
 
-def confirm_plan(steps: list[str], pool, user_input: str) -> list[str] | None:
+def confirm_plan(steps: list[str], pool, user_input: str,
+                 provider_name: str | None = None,
+                 model: str | None = None) -> list[str] | None:
     # Auto-confirm in non-interactive mode (when stdin is not a tty)
     import sys
     if not sys.stdin.isatty():
@@ -64,14 +72,18 @@ def confirm_plan(steps: list[str], pool, user_input: str) -> list[str] | None:
             return None
         elif choice == "e":
             feedback = Prompt.ask("What should I change?")
-            steps = generate_plan(f"{user_input}. Changes: {feedback}", pool)
+            steps = generate_plan(
+                f"{user_input}. Changes: {feedback}", pool,
+                provider_name=provider_name, model=model,
+            )
             if not steps:
                 console.print("[red]Could not regenerate plan.[/red]")
                 return None
 
 
 def execute_plan(steps: list[str], agent, notify=None, depth: int = 0,
-                 quiet: bool = False) -> None:
+                 quiet: bool = False, provider_name: str | None = None,
+                 model: str | None = None) -> None:
     """Execute plan steps; *notify* receives progress strings (for TUIs).
 
     Re-planning is capped at depth 2: without a cap a failing plan recursed
@@ -92,20 +104,30 @@ def execute_plan(steps: list[str], agent, notify=None, depth: int = 0,
     for i, step in enumerate(steps, 1):
         say(f"Step {i}/{len(steps)}: {step}")
         try:
-            result = agent.run(step)
+            if provider_name or model:
+                result = agent.run(step, provider=provider_name, model=model)
+            else:
+                result = agent.run(step)
             if not quiet:
                 from ui.terminal import print_assistant
                 print_assistant(result)
-        except Exception as e:
+        except Exception:
             if depth >= 2:
                 say(f"[red]Step {i} failed and re-plan limit reached. Stopping.[/red]")
                 return
             say(f"[yellow]⚠ Step {i} failed. Attempting to re-plan...[/yellow]")
             try:
-                new_plan = generate_plan(f"The step '{step}' failed. The original goal was: {original_goal}. Please generate a new plan to achieve the goal, avoiding the previous error.", agent.pool)
+                new_plan = generate_plan(
+                    f"The step '{step}' failed. The original goal was: {original_goal}. "
+                    "Please generate a new plan to achieve the goal, avoiding the previous error.",
+                    agent.pool, provider_name=provider_name, model=model,
+                )
                 if new_plan:
                     say("[bold green]New plan generated. Continuing execution.[/bold green]")
-                    execute_plan(new_plan, agent, notify=notify, depth=depth + 1)
+                    execute_plan(
+                        new_plan, agent, notify=notify, depth=depth + 1,
+                        quiet=quiet, provider_name=provider_name, model=model,
+                    )
                     return # Exit the current execution loop
                 else:
                     say("[red]Could not generate a new plan. Skipping step.[/red]")

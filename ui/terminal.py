@@ -1,8 +1,6 @@
 """HelloChusquis terminal UI — opencode-style with left borders."""
 from rich.console import Console
-from rich.text import Text
 from rich.markdown import Markdown
-from rich.panel import Panel
 from rich.table import Table
 from rich import box
 import time

@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Literal
 from fastapi import FastAPI, HTTPException, Request
@@ -13,7 +14,7 @@ from core.identity import (
     default_store,
     parse_role,
 )
-from core.runtime import AgentNotReadyError, AgentRuntime
+from core.runtime import AgentBusyError, AgentNotReadyError, AgentRuntime
 from core.http_auth import (
     AuthMiddleware,
     SecurityHeadersMiddleware,
@@ -49,7 +50,15 @@ def require_permission(request: Request, permission: Permission) -> Principal:
     return _shared_require_permission(request, permission, REQUIRED_API_KEY, AUTH_ENABLED)
 
 
-app = FastAPI(title="HelloChusquis API", version=__version__)
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Stop rate-limiter cleanup threads when the server stops."""
+    yield
+    for limiter in _ALL_LIMITERS:
+        limiter.close()
+
+
+app = FastAPI(title="HelloChusquis API", version=__version__, lifespan=_lifespan)
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(AuthMiddleware, required_api_key=REQUIRED_API_KEY, auth_enabled=AUTH_ENABLED,
                    public_get_paths=("/", "/health", "/health/live", "/health/ready"))
@@ -61,6 +70,10 @@ _feedback_limiter = RateLimiter(requests_per_minute=10)
 _reload_limiter = RateLimiter(requests_per_minute=3)
 _users_limiter = RateLimiter(requests_per_minute=10)
 _models_limiter = RateLimiter(requests_per_minute=30)
+_ALL_LIMITERS = (
+    _chat_limiter, _feedback_limiter, _reload_limiter,
+    _users_limiter, _models_limiter,
+)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -114,6 +127,9 @@ def _require_agent(http_request: Request | None = None):
     except AgentNotReadyError as exc:
         logger.warning("Agent runtime requested before ready: %s", exc)
         raise HTTPException(status_code=503, detail="Agent runtime is not ready. Complete setup and retry.") from exc
+    except AgentBusyError as exc:
+        logger.warning("Agent sessions exhausted: %s", exc)
+        raise HTTPException(status_code=503, detail="All agent sessions are busy. Retry shortly.") from exc
 
 
 class ChatRequest(BaseModel):
@@ -215,6 +231,44 @@ def get_status():
     }
 
 
+@app.get("/market/items")
+def market_items(http_request: Request, kind: str = ""):
+    from core.marketplace import MarketplaceError, is_installed, list_items
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        return {
+            "items": [
+                {**item, "installed": is_installed(item)}
+                for item in list_items(kind)
+            ]
+        }
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/install")
+def market_install(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, install_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        return install_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/market/items/{item_id}/uninstall")
+def market_uninstall(item_id: str, http_request: Request):
+    from core.marketplace import MarketplaceError, uninstall_item
+
+    require_permission(http_request, Permission.MANAGE_RUNTIME)
+    try:
+        return uninstall_item(item_id)
+    except MarketplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/models")
 def list_models(http_request: Request, provider: str = "", refresh: bool = False):
     """Available models for a configured provider."""
@@ -222,6 +276,8 @@ def list_models(http_request: Request, provider: str = "", refresh: bool = False
     _require_administrative_rate_limit(_models_limiter, http_request, "/models")
     agent = _require_agent(http_request)
     known_names = {provider_status["name"] for provider_status in agent.pool.status()}
+    if not provider:
+        raise HTTPException(status_code=400, detail="provider query parameter is required")
     if provider not in known_names:
         raise HTTPException(status_code=404, detail=f"Provider '{provider}' not found")
     try:
@@ -390,10 +446,12 @@ def _sse_generator(agent, message: str, release_turn: bool = False,
         if not terminal_emitted:
             yield f'data: {json.dumps({"type": "error", "content": "Stream failed. Check server logs."})}\n\n'
     finally:
-        if not terminal_emitted:
-            yield f'data: {json.dumps({"type": "done"})}\n\n'
         if release_turn:
             agent.release_turn()
+    # Terminal marker lives outside finally: yielding there after a client
+    # disconnect raises "generator ignored GeneratorExit".
+    if not terminal_emitted:
+        yield f'data: {json.dumps({"type": "done"})}\n\n'
 
 
 @app.post("/feedback")

@@ -1,6 +1,4 @@
-from tools.base import BaseTool, ToolResult
 import os
-import json
 
 
 PLUGIN_NAME = "postgresql"

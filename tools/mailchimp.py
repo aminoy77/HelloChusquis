@@ -1,7 +1,5 @@
 from  httpx import AsyncClient
 import hashlib
-from  json import dumps
-from  typing import Any
 from typing_extensions import TypedDict
 import os
 import httpx
@@ -98,7 +96,7 @@ async def remove_subscriber(api_key: str, server: str, list_id: str, email: str)
     """Remove subscriber from Mailchimp list."""
     url = f"https://{server}.api.mailchimp.com/3.0/lists/{list_id}/members/{_subscriber_hash(email)}"
     async with AsyncClient() as client:
-        r = await client.delete(url, headers={"Authorization": f"apikey {api_key}"})
+        await client.delete(url, headers={"Authorization": f"apikey {api_key}"})
         return {"status": "deleted"}
 
 
@@ -122,5 +120,5 @@ async def send_campaign(api_key: str, server: str, campaign_id: str) -> dict:
     """Send Mailchimp campaign."""
     url = f"https://{server}.api.mailchimp.com/3.0/campaigns/{campaign_id}/actions/send"
     async with AsyncClient() as client:
-        r = await client.post(url, headers={"Authorization": f"apikey {api_key}"})
+        await client.post(url, headers={"Authorization": f"apikey {api_key}"})
         return {"status": "sent"}

@@ -34,11 +34,17 @@ python -m pip install hellochusquis
 
 ### 2. Configure a provider
 
-The setup wizard stores provider configuration under `~/.hellochusquis`.
+On first launch, HelloChusquis opens a private setup page at `127.0.0.1` so you can choose
+a provider and model in your browser. The setup server listens only on this computer, and
+provider keys are stored in `~/.hellochusquis` with owner-only permissions.
 
 ```bash
 hellochusquis config
 ```
+
+Run `hellochusquis config --terminal` to use the terminal editor instead. In the TUI,
+use the terminal editor for custom endpoints. Press `F2` to choose a configured
+provider and model; that choice is saved for next time.
 
 For a fast OpenRouter setup:
 

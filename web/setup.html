@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#090a0c">
+  <title>Set up HelloChusquis</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #090a0c;
+      color: #f1efe9;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --surface: #121419;
+      --raised: #191c22;
+      --line: #2a2d34;
+      --muted: #b0b3ba;
+      --quiet: #858a94;
+      --accent: #f5a623;
+      --success: #55c99a;
+      --danger: #ff8585;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      padding: 28px 18px 36px;
+      background:
+        radial-gradient(ellipse at 50% -18%, rgba(245, 166, 35, .13), transparent 46%),
+        #090a0c;
+    }
+    main { width: min(100%, 620px); margin: 0 auto; }
+    header { display: flex; align-items: center; gap: 12px; margin: 8px 0 42px; }
+    .mark {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border: 1px solid rgba(245, 166, 35, .45);
+      border-radius: 12px;
+      color: var(--accent);
+      font-size: 22px;
+      font-weight: 700;
+      background: rgba(245, 166, 35, .08);
+    }
+    .mark { overflow: hidden; }
+    .mark img { width: 42px; height: 42px; object-fit: contain; transform: scale(1.7); }
+    .brand { font-weight: 700; letter-spacing: -.02em; }
+    .local { margin-left: auto; color: var(--success); font-size: 13px; }
+    h1 { margin: 0; font-size: clamp(30px, 7vw, 42px); line-height: 1.1; letter-spacing: -.04em; }
+    .intro { max-width: 48ch; margin: 12px 0 26px; color: var(--muted); line-height: 1.65; }
+    .setup-card {
+      padding: clamp(20px, 5vw, 30px);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .28);
+    }
+    .card-heading { margin: 0 0 24px; font-size: 16px; }
+    .field { margin: 0 0 21px; }
+    label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 650; }
+    .hint { margin: 7px 0 0; color: var(--quiet); font-size: 13px; line-height: 1.5; }
+    select, input {
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--raised);
+      color: #f1efe9;
+      font: inherit;
+      font-size: 16px;
+    }
+    select:focus-visible, input:focus-visible, button:focus-visible {
+      outline: 3px solid rgba(245, 166, 35, .7);
+      outline-offset: 2px;
+    }
+    .field-row { display: flex; gap: 10px; align-items: stretch; }
+    .field-row input { min-width: 0; }
+    .secondary {
+      flex: 0 0 auto;
+      min-height: 48px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .secondary:hover { border-color: #555b66; color: #fff; }
+    .primary {
+      width: 100%;
+      min-height: 50px;
+      margin-top: 5px;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--accent);
+      color: #17120a;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .primary:hover { background: #ffb840; }
+    button:disabled { opacity: .58; cursor: progress; }
+    #message {
+      min-height: 22px;
+      margin: 15px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    #message.error { color: var(--danger); }
+    #message.success { color: var(--success); }
+    .privacy {
+      margin: 18px 2px 0;
+      color: var(--quiet);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .privacy strong { color: var(--muted); font-weight: 600; }
+    footer { margin: 21px 2px 0; color: var(--quiet); font-size: 12px; line-height: 1.6; }
+    .hidden { display: none; }
+
+    @media (max-width: 520px) {
+      body { padding: 18px 14px 28px; }
+      header { margin: 3px 0 34px; }
+      .local { font-size: 12px; }
+      .field-row { flex-direction: column; }
+      .secondary { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="mark"><img src="/logo.png?token=__SETUP_TOKEN__" alt=""></div>
+      <div class="brand">HelloChusquis</div>
+      <div class="local">●&nbsp; This device only</div>
+    </header>
+
+    <h1>Connect your model.</h1>
+    <p class="intro">Choose the AI provider you already use. Your key stays in this device's private HelloChusquis configuration.</p>
+
+    <form class="setup-card" id="setup-form">
+      <h2 class="card-heading">Provider setup</h2>
+      <div class="field">
+        <label for="provider">AI provider</label>
+        <select id="provider" name="provider" required>
+          <option value="">Choose a provider</option>
+        </select>
+        <p class="hint" id="provider-hint">Local providers can run without an API key.</p>
+      </div>
+
+      <div class="field" id="key-field">
+        <label for="api-key">API key</label>
+        <input id="api-key" name="api_key" type="password" autocomplete="new-password" spellcheck="false">
+        <p class="hint" id="key-hint">Used locally to contact your provider, then stored in your private config.</p>
+      </div>
+
+      <div class="field">
+        <label for="model">Model</label>
+        <div class="field-row">
+          <input id="model" name="model" list="models" maxlength="256" placeholder="Choose a provider first" required>
+          <datalist id="models"></datalist>
+          <button class="secondary" type="button" id="load-models">Find models</button>
+        </div>
+        <p class="hint">Pick a suggestion or enter a model ID from your provider.</p>
+      </div>
+
+      <button class="primary" type="submit" id="save">Save and start</button>
+      <p id="message" role="status" aria-live="polite"></p>
+    </form>
+
+    <p class="privacy"><strong>Private by default.</strong> Setup listens only on this device. Existing providers and settings are kept when you add another. Use <code>hellochusquis config --terminal</code> for custom endpoints.</p>
+    <footer id="provider-count"></footer>
+  </main>
+
+  <script nonce="__SETUP_NONCE__">
+    const token = new URLSearchParams(location.search).get("token") || "";
+    const providerSelect = document.querySelector("#provider");
+    const keyInput = document.querySelector("#api-key");
+    const keyField = document.querySelector("#key-field");
+    const keyHint = document.querySelector("#key-hint");
+    const modelInput = document.querySelector("#model");
+    const modelsList = document.querySelector("#models");
+    const message = document.querySelector("#message");
+    const saveButton = document.querySelector("#save");
+    let catalog = [];
+    let state = null;
+
+    async function api(path, body) {
+      const response = await fetch(path, {
+        method: body ? "POST" : "GET",
+        headers: { "X-Setup-Token": token, ...(body ? { "Content-Type": "application/json" } : {}) },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Setup request failed.");
+      return result;
+    }
+
+    function selectedProvider() {
+      return catalog.find(item => item.name === providerSelect.value);
+    }
+
+    function showMessage(text, kind = "") {
+      message.textContent = text;
+      message.className = kind;
+    }
+
+    function updateProvider() {
+      const provider = selectedProvider();
+      modelsList.replaceChildren();
+      modelInput.value = "";
+      modelInput.placeholder = provider ? "Enter a model ID" : "Choose a provider first";
+      const configured = provider && state.configured_providers.find(item => item.base_url === provider.base_url);
+      const hasSavedKey = Boolean(configured && configured.key_configured);
+      keyField.classList.toggle("hidden", Boolean(provider && !provider.requires_key));
+      keyInput.required = Boolean(provider && provider.requires_key && !hasSavedKey);
+      keyHint.textContent = hasSavedKey
+        ? "Leave blank to keep the saved key. Enter a new key to replace it."
+        : "Used locally to contact your provider, then stored in your private config.";
+      if (!provider) return;
+      document.querySelector("#provider-hint").textContent = provider.requires_key
+        ? `Provider endpoint: ${provider.base_url}`
+        : "This provider runs locally and does not need an API key.";
+      if (configured) modelInput.value = configured.model;
+      if (provider.models.length) {
+        for (const model of provider.models) {
+          const option = document.createElement("option");
+          option.value = model;
+          modelsList.append(option);
+        }
+      }
+    }
+
+    async function loadModels() {
+      const provider = selectedProvider();
+      if (!provider) return showMessage("Choose a provider first.", "error");
+      const button = document.querySelector("#load-models");
+      button.disabled = true;
+      showMessage("Checking the provider's available models…");
+      try {
+        const result = await api("/api/models", { provider: provider.name, api_key: keyInput.value });
+        modelsList.replaceChildren();
+        for (const model of result.models) {
+          const option = document.createElement("option");
+          option.value = model;
+          modelsList.append(option);
+        }
+        showMessage(result.models.length ? `${result.models.length} model suggestions loaded.` : "No models found. Enter the model ID manually.");
+      } catch (error) {
+        showMessage(`${error.message} You can still enter the model ID manually.`, "error");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    document.querySelector("#load-models").addEventListener("click", loadModels);
+    providerSelect.addEventListener("change", updateProvider);
+    document.querySelector("#setup-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const provider = selectedProvider();
+      if (!provider) return showMessage("Choose a provider first.", "error");
+      if (!modelInput.value.trim()) return showMessage("Enter a model ID.", "error");
+      if (provider.requires_key && keyInput.required && !keyInput.value.trim()) {
+        return showMessage("Enter an API key for this provider.", "error");
+      }
+      saveButton.disabled = true;
+      showMessage("Saving your local configuration…");
+      try {
+        await api("/api/save", {
+          provider: provider.name,
+          api_key: keyInput.value,
+          model: modelInput.value.trim()
+        });
+        document.querySelector("#setup-form").innerHTML =
+          '<h2 class="card-heading">You are ready.</h2><p>Your provider and model are saved on this device. Return to the terminal to start HelloChusquis.</p>';
+        showMessage("Configuration saved.", "success");
+      } catch (error) {
+        showMessage(error.message, "error");
+        saveButton.disabled = false;
+      }
+    });
+
+    api("/api/state").then(result => {
+      state = result;
+      catalog = result.catalog;
+      let previousGroup = "";
+      let group = null;
+      for (const provider of catalog) {
+        if (provider.category !== previousGroup) {
+          group = document.createElement("optgroup");
+          group.label = provider.category;
+          providerSelect.append(group);
+          previousGroup = provider.category;
+        }
+        const option = document.createElement("option");
+        option.value = provider.name;
+        option.textContent = provider.name;
+        group.append(option);
+      }
+      if (result.provider) providerSelect.value = result.provider;
+      document.querySelector("#provider-count").textContent = result.configured_count
+        ? `${result.configured_count} provider${result.configured_count === 1 ? "" : "s"} configured. Save another to add it without replacing the rest.`
+        : "Your first provider is all you need to get started.";
+      updateProvider();
+    }).catch(error => showMessage(error.message, "error"));
+  </script>
+</body>
+</html>

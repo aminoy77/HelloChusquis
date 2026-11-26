@@ -1,5 +1,4 @@
 """Tests for transparent OAuth refresh before provider calls."""
-import pytest
 
 from core import oauth
 from core.provider import Provider, ProviderPool
